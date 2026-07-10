@@ -1,8 +1,44 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Component } from 'react';
 import {
   View, Text, TouchableOpacity,
   ActivityIndicator, Platform
 } from 'react-native';
+
+// Prevents a single screen crash from blanking the entire app
+class ScreenErrorBoundary extends Component<
+  { children: React.ReactNode; screenName: string },
+  { hasError: boolean; error: string }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: '' };
+  }
+  static getDerivedStateFromError(err: any) {
+    return { hasError: true, error: String(err?.message ?? err) };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#faf9f6' }}>
+          <Text style={{ fontSize: 32, marginBottom: 12 }}>⚠️</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1c1a', textAlign: 'center', marginBottom: 8 }}>
+            {this.props.screenName} failed to load
+          </Text>
+          <Text style={{ fontSize: 11, color: '#747878', textAlign: 'center', marginBottom: 20 }}>
+            {this.state.error}
+          </Text>
+          <TouchableOpacity
+            onPress={() => this.setState({ hasError: false, error: '' })}
+            style={{ backgroundColor: '#1a1c1a', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 6 }}
+          >
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '500' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Font from 'expo-font';
@@ -80,30 +116,34 @@ function MainApp() {
     switch (activeTab) {
       case 'SCHEDULE':
         return (
-          <ScheduleScreen
-            isPunchedIn={isPunchedIn}
-            punchInTime={punchInTime}
-            onPunchPress={() => setPunchModalVisible(true)}
-            onNavigateToMap={() => setActiveTab('MAP')}
-            onNavigateToDailySummary={() => setScreen('DAILY_SUMMARY')}
-          />
+          <ScreenErrorBoundary screenName="Schedule">
+            <ScheduleScreen
+              isPunchedIn={isPunchedIn}
+              punchInTime={punchInTime}
+              onPunchPress={() => setPunchModalVisible(true)}
+              onNavigateToMap={() => setActiveTab('MAP')}
+              onNavigateToDailySummary={() => setScreen('DAILY_SUMMARY')}
+            />
+          </ScreenErrorBoundary>
         );
       case 'MAP':
-        return <MapScreen />;
+        return <ScreenErrorBoundary screenName="Map"><MapScreen /></ScreenErrorBoundary>;
       case 'TASKS':
-        return <TasksScreen />;
+        return <ScreenErrorBoundary screenName="Tasks"><TasksScreen /></ScreenErrorBoundary>;
       case 'CHAT':
-        return <ChatScreen />;
+        return <ScreenErrorBoundary screenName="Chat"><ChatScreen /></ScreenErrorBoundary>;
       case 'PROFILE':
         return (
-          <ProfileScreen
-            onSignOut={async () => {
-              await clearTokens();
-              setIsAuthenticated(false);
-              setUserRole(null);
-            }}
-            onNavigateToLeave={() => setScreen('LEAVE')}
-          />
+          <ScreenErrorBoundary screenName="Profile">
+            <ProfileScreen
+              onSignOut={async () => {
+                await clearTokens();
+                setIsAuthenticated(false);
+                setUserRole(null);
+              }}
+              onNavigateToLeave={() => setScreen('LEAVE')}
+            />
+          </ScreenErrorBoundary>
         );
     }
   };
