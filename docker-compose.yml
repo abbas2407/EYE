@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  fieldpulse-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fieldpulse-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_PATH=/app/data/fieldpulse.db
+      - UPLOAD_DIR=/app/data/uploads
+      - BASE_URL=http://167.233.90.245:8000
+      - JWT_SECRET=fieldpulse-jwt-secret-2024-cyberlink
+    volumes:
+      - fieldpulse_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  fieldpulse_data:
+    driver: local
