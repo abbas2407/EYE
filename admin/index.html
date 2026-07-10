@@ -95,7 +95,14 @@ textarea{min-height:70px;resize:vertical}
 .progress-fill{height:100%;background:#166534;border-radius:4px}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .alert-dot{width:6px;height:6px;border-radius:3px;background:#ba1a1a;flex-shrink:0}
+#live-map{height:380px;width:100%;border-radius:0 0 8px 8px;}
+.map-marker-label{background:#1a1c1a;color:#fff;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 </style>
+<script>
+(function(){const s=document.createElement('script');s.src='https://maps.googleapis.com/maps/api/js?key=AIzaSyAJHF-B2ulEDrxStgKH4NS7szhFdjErnos&callback=onGMapsReady&libraries=places';s.async=true;document.head.appendChild(s);})();
+let gMapsReady=false; let pendingMapInit=null;
+function onGMapsReady(){gMapsReady=true;if(pendingMapInit){pendingMapInit();pendingMapInit=null;}}
+</script>
 </head>
 <body>
 
@@ -145,6 +152,16 @@ textarea{min-height:70px;resize:vertical}
 
     <div id="tab-dashboard" class="section" style="display:none">
       <div class="stat-grid" id="stat-cards"></div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title">Live Worker Map</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="live-map-count" style="font-size:11px;color:#695d4a"></span>
+            <button class="btn btn-secondary btn-sm" onclick="loadLiveMap()">↻ Refresh</button>
+          </div>
+        </div>
+        <div id="live-map"><div style="display:flex;align-items:center;justify-content:center;height:380px;background:#f5f4f1;color:#747878;font-size:13px">Loading map...</div></div>
+      </div>
       <div class="card">
         <div class="card-header">
           <div class="card-title">Recent Attendance</div>
@@ -166,8 +183,8 @@ textarea{min-height:70px;resize:vertical}
       </div>
       <div class="card"><div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th></tr></thead>
-          <tbody id="workers-body"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="workers-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
         </table>
       </div></div>
     </div>
@@ -221,7 +238,10 @@ textarea{min-height:70px;resize:vertical}
     <div id="tab-chat" style="display:none">
       <div class="chat-layout">
         <div class="chat-rooms">
-          <div class="chat-rooms-header">Chat Rooms</div>
+          <div class="chat-rooms-header" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Messages</span>
+            <button class="btn btn-primary btn-sm" onclick="showNewDMModal()">✏ New DM</button>
+          </div>
           <div id="rooms-list"><div class="loading">Loading rooms...</div></div>
         </div>
         <div class="chat-main" id="chat-main">
@@ -344,8 +364,44 @@ function showTab(name) {
   if (loaders[name]) loaders[name]();
 }
 
+// ── Live Map ──────────────────────────────────────────────────────────────────
+let liveMap=null; let liveMarkers=[];
+async function loadLiveMap(){
+  const mapEl=document.getElementById('live-map'); if(!mapEl)return;
+  const res=await apiFetch('/api/admin/live-locations');
+  if(!res)return;
+  const locs=await res.json();
+  const countEl=document.getElementById('live-map-count');
+  if(countEl)countEl.textContent=`${locs.length} worker${locs.length!==1?'s':''} active`;
+  if(!locs.length){
+    mapEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:380px;background:#f5f4f1;color:#c4c7c7;font-size:13px">No workers currently active</div>';
+    return;
+  }
+  const initMap=()=>{
+    const center={lat:locs[0].latitude,lng:locs[0].longitude};
+    if(!liveMap){
+      liveMap=new google.maps.Map(mapEl,{center,zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:true,zoomControl:true,styles:[]});
+    }
+    liveMarkers.forEach(m=>m.setMap(null)); liveMarkers=[];
+    const bounds=new google.maps.LatLngBounds();
+    locs.forEach(loc=>{
+      const pos={lat:loc.latitude,lng:loc.longitude};
+      bounds.extend(pos);
+      const marker=new google.maps.Marker({position:pos,map:liveMap,title:loc.user_name,
+        label:{text:loc.user_name.charAt(0).toUpperCase(),color:'#fff',fontWeight:'bold',fontSize:'13px'},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:20,fillColor:'#1a1c1a',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+      const info=new google.maps.InfoWindow({content:`<div style="font-family:-apple-system,sans-serif;padding:6px 2px"><div style="font-weight:700;font-size:13px">${esc(loc.user_name)}</div><div style="font-size:11px;color:#747878;margin-top:2px">${loc.user_email||''}</div><div style="font-size:10px;color:#695d4a;margin-top:4px">Last seen: ${fmtDT(loc.timestamp)}</div><div style="font-size:10px;color:#747878">${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}</div></div>`});
+      marker.addListener('click',()=>info.open(liveMap,marker));
+      liveMarkers.push(marker);
+    });
+    if(locs.length>1)liveMap.fitBounds(bounds,{padding:60}); else liveMap.setCenter({lat:locs[0].latitude,lng:locs[0].longitude});
+  };
+  if(gMapsReady)initMap(); else pendingMapInit=initMap;
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 async function loadDashboard() {
+  loadLiveMap();
   const res = await apiFetch('/api/admin/stats');
   if (!res) return;
   const s = await res.json();
@@ -374,7 +430,7 @@ async function loadWorkers() {
   if (!res) return;
   workerList = await res.json();
   const tbody = document.getElementById('workers-body');
-  tbody.innerHTML = workerList.length===0 ? '<tr><td colspan="5" class="empty">No users</td></tr>' :
+  tbody.innerHTML = workerList.length===0 ? '<tr><td colspan="6" class="empty">No users</td></tr>' :
     workerList.map(u=>`<tr>
       <td><div style="display:flex;align-items:center;gap:10px">
         ${u.photo_url?`<img src="${u.photo_url}" style="width:32px;height:32px;border-radius:16px;object-fit:cover">`:
@@ -384,6 +440,7 @@ async function loadWorkers() {
       <td><span class="badge ${u.role==='admin'?'badge-blue':u.role==='manager'?'badge-yellow':'badge-gray'}">${u.role.replace('_',' ')}</span></td>
       <td><span class="badge ${u.is_active?'badge-green':'badge-red'}">${u.is_active?'Active':'Inactive'}</span></td>
       <td style="color:#747878;font-size:11px">${u.created_at?fmtDate(u.created_at):'--'}</td>
+      <td><button class="btn btn-secondary btn-sm" onclick="openDMWithWorker('${u.id}','${esc(u.name)}')">💬 Chat</button></td>
     </tr>`).join('');
 }
 
@@ -566,24 +623,62 @@ async function loadChatRooms(){
   const res=await apiFetch('/api/admin/chat/rooms');
   if(!res)return;
   const rooms=await res.json();
-  document.getElementById('rooms-list').innerHTML=rooms.length===0?'<div class="empty">No rooms</div>':
-    rooms.map(r=>`<div class="room-item" onclick="selectChatRoom('${r.id}','${esc(r.name)}')" id="room-${r.id}">
-      <div style="width:38px;height:38px;border-radius:19px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💬</div>
+  const groups=rooms.filter(r=>r.room_type==='group');
+  const dms=rooms.filter(r=>r.room_type==='direct');
+  function roomHTML(r){
+    const icon=r.room_type==='direct'?'👤':'👥';
+    return `<div class="room-item" onclick="selectChatRoom('${r.id}','${esc(r.name)}','${r.room_type}')" id="room-${r.id}">
+      <div style="width:38px;height:38px;border-radius:19px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${icon}</div>
       <div style="overflow:hidden">
         <div class="room-name">${esc(r.name)}</div>
         ${r.last_message?`<div class="room-last">${r.last_sender?esc(r.last_sender)+': ':''}${esc(r.last_message)}</div>`:'<div class="room-last" style="color:#c4c7c7">No messages yet</div>'}
       </div>
-    </div>`).join('');
+    </div>`;
+  }
+  let html='';
+  if(groups.length>0){html+=`<div style="padding:8px 14px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f0efec">Group Chats</div>`;html+=groups.map(roomHTML).join('');}
+  if(dms.length>0){html+=`<div style="padding:8px 14px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f0efec;border-top:${groups.length?'1px solid #e3e2e0':'none'}">Direct Messages</div>`;html+=dms.map(roomHTML).join('');}
+  document.getElementById('rooms-list').innerHTML=html||'<div class="empty">No rooms yet</div>';
 }
 
-async function selectChatRoom(roomId,roomName){
+function showNewDMModal(){
+  const workers=workerList.length?workerList:[];
+  if(!workers.length){
+    apiFetch('/api/admin/users').then(async res=>{if(res){workerList=await res.json();showNewDMModal();}});
+    return;
+  }
+  document.getElementById('modal-content').innerHTML=`
+    <h3>New Direct Message</h3>
+    <p style="font-size:12px;color:#747878;margin-bottom:14px">Select a team member to start a conversation</p>
+    <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto">
+      ${workers.map(u=>`<div onclick="openDMWithWorker('${u.id}','${esc(u.name)}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;border:1px solid #e3e2e0;cursor:pointer;transition:background .1s" onmouseover="this.style.background='#faf9f6'" onmouseout="this.style.background='#fff'">
+        <div style="width:38px;height:38px;border-radius:19px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:14px;flex-shrink:0">${u.name.charAt(0)}</div>
+        <div><div style="font-weight:600;font-size:13px">${esc(u.name)}</div><div style="font-size:11px;color:#747878;text-transform:capitalize">${u.role.replace('_',' ')}</div></div>
+      </div>`).join('')}
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button></div>`;
+  openModal();
+}
+
+async function openDMWithWorker(userId,userName){
+  closeModal();
+  const res=await apiFetch(`/api/chat/direct/${userId}`,{method:'POST'});
+  if(!res||!res.ok){alert('Could not open conversation');return;}
+  const room=await res.json();
+  showTab('chat');
+  setTimeout(()=>selectChatRoom(room.id,userName,'direct'),200);
+}
+
+async function selectChatRoom(roomId,roomName,roomType='group'){
   currentRoomId=roomId;
   document.querySelectorAll('.room-item').forEach(el=>el.classList.remove('active'));
   const el=document.getElementById(`room-${roomId}`); if(el)el.classList.add('active');
+  const icon=roomType==='direct'?'👤':'👥';
+  const typeLabel=roomType==='direct'?'Direct Message':'Group Chat';
   document.getElementById('chat-main').innerHTML=`
     <div class="chat-header">
-      <div style="width:36px;height:36px;border-radius:18px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-size:16px">💬</div>
-      <div><div style="font-weight:600;font-size:14px">${esc(roomName)}</div><div style="font-size:10px;color:#747878">Group Chat</div></div>
+      <div style="width:36px;height:36px;border-radius:18px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-size:16px">${icon}</div>
+      <div><div style="font-weight:600;font-size:14px">${esc(roomName)}</div><div style="font-size:10px;color:#747878">${typeLabel}</div></div>
     </div>
     <div class="messages" id="chat-messages"></div>
     <div class="chat-input-area">

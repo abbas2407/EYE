@@ -290,7 +290,6 @@ export default function MapScreen() {
         showsUserLocation={true}
         showsMyLocationButton={false}
         showsCompass={false}
-        customMapStyle={GREYSCALE_MAP_STYLE}
       >
         {currentLocation && (
           <Marker
@@ -331,13 +330,13 @@ export default function MapScreen() {
         )}
       </MapView>
 
-      {/* Search bar overlay */}
+      {/* Search bar overlay — elevation 100 ensures Android MapView doesn't swallow touches */}
       <View style={{
         position: 'absolute', top: 12, left: 12, right: 12,
         backgroundColor: '#fff', borderRadius: 8,
         borderWidth: 0.5, borderColor: '#c4c7c7',
-        shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8,
-        elevation: 4,
+        shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10,
+        elevation: 100, zIndex: 100,
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 }}>
           <Ionicons name="search" size={18} color="#747878" />
@@ -396,7 +395,7 @@ export default function MapScreen() {
           position: 'absolute', right: 12, bottom: destination ? 220 : 100,
           width: 40, height: 40, borderRadius: 20,
           backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
-          borderWidth: 0.5, borderColor: '#c4c7c7', elevation: 3,
+          borderWidth: 0.5, borderColor: '#c4c7c7', elevation: 100, zIndex: 100,
         }}
         onPress={() => {
           if (currentLocation && mapRef.current) {
@@ -419,7 +418,7 @@ export default function MapScreen() {
           backgroundColor: '#faf9f6', borderTopLeftRadius: 16, borderTopRightRadius: 16,
           borderTopWidth: 0.5, borderTopColor: '#e3e2e0',
           padding: 20, paddingBottom: 32,
-          shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16, elevation: 8,
+          shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16, elevation: 100, zIndex: 100,
         }}>
           <View style={{ width: 36, height: 3, backgroundColor: '#c4c7c7', borderRadius: 2, alignSelf: 'center', marginBottom: 14 }} />
           <Text style={{ fontSize: 9, color: '#695d4a', textTransform: 'uppercase', letterSpacing: 1.5, fontFamily: 'DM-Sans', fontWeight: '500', marginBottom: 4 }}>
@@ -473,14 +472,3 @@ export default function MapScreen() {
   );
 }
 
-const GREYSCALE_MAP_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
-  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f5' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e9e8e5' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#dadada' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#e3e2e0' }] },
-  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-];

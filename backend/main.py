@@ -711,6 +711,33 @@ def payroll_csv(admin: User = Depends(require_admin), db: Session = Depends(get_
     return StreamingResponse(io.StringIO(content), media_type="text/csv",
                              headers={"Content-Disposition": "attachment; filename=payroll.csv"})
 
+@app.post("/api/chat/direct/{target_user_id}")
+def get_or_create_direct(target_user_id: str,
+                          current_user: User = Depends(get_current_user),
+                          db: Session = Depends(get_db)):
+    target = db.query(User).filter(User.id == target_user_id, User.is_active == True).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    my_rooms = {m.room_id for m in db.query(ChatMember).filter(ChatMember.user_id == current_user.id).all()}
+    their_rooms = {m.room_id for m in db.query(ChatMember).filter(ChatMember.user_id == target_user_id).all()}
+    for room_id in (my_rooms & their_rooms):
+        room = db.query(ChatRoom).filter(ChatRoom.id == room_id, ChatRoom.room_type == "direct").first()
+        if room:
+            return {"id": room.id, "name": target.name, "room_type": "direct"}
+    room = ChatRoom(name=f"{current_user.name} & {target.name}", room_type="direct")
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    db.add(ChatMember(room_id=room.id, user_id=current_user.id))
+    db.add(ChatMember(room_id=room.id, user_id=target_user_id))
+    db.commit()
+    return {"id": room.id, "name": target.name, "room_type": "direct"}
+
+@app.get("/api/users/list")
+def list_users_for_chat(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    users = db.query(User).filter(User.id != current_user.id, User.is_active == True).all()
+    return [{"id": u.id, "name": u.name, "role": u.role, "photo_url": u.photo_url} for u in users]
+
 @app.get("/api/admin/chat/rooms")
 def admin_chat_rooms(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     return get_rooms(admin, db)
