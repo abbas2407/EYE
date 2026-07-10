@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator, Platform
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Font from 'expo-font';
+import * as Notifications from 'expo-notifications';
 import NetInfo from '@react-native-community/netinfo';
 
 import LoginScreen from './src/screens/LoginScreen';
@@ -13,18 +14,31 @@ import ScheduleScreen from './src/screens/ScheduleScreen';
 import MapScreen from './src/screens/MapScreen';
 import TasksScreen from './src/screens/TasksScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import ChatScreen from './src/screens/ChatScreen';
+import DailySummaryScreen from './src/screens/DailySummaryScreen';
+import LeaveScreen from './src/screens/LeaveScreen';
 import PunchModal from './src/components/PunchModal';
 
 import {
   getAccessToken, getUserRole, clearTokens,
-  registerLogoutHandler
+  registerLogoutHandler, apiFetch
 } from './src/api/client';
 
-type Tab = 'SCHEDULE' | 'MAP' | 'TASKS' | 'PROFILE';
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+type Tab = 'SCHEDULE' | 'MAP' | 'TASKS' | 'CHAT' | 'PROFILE';
+type Screen = 'MAIN' | 'DAILY_SUMMARY' | 'LEAVE';
 
 function MainApp() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>('SCHEDULE');
+  const [screen, setScreen] = useState<Screen>('MAIN');
   const [punchModalVisible, setPunchModalVisible] = useState(false);
   const [isPunchedIn, setIsPunchedIn] = useState(false);
   const [punchInTime, setPunchInTime] = useState<string | null>(null);
@@ -42,8 +56,25 @@ function MainApp() {
     { key: 'SCHEDULE', label: 'Schedule', icon: 'calendar-outline', activeIcon: 'calendar' },
     { key: 'MAP', label: 'Map', icon: 'map-outline', activeIcon: 'map' },
     { key: 'TASKS', label: 'Tasks', icon: 'clipboard-outline', activeIcon: 'clipboard' },
+    { key: 'CHAT', label: 'Chat', icon: 'chatbubble-outline', activeIcon: 'chatbubble' },
     { key: 'PROFILE', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
   ];
+
+  if (screen === 'DAILY_SUMMARY') {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#faf9f6' }}>
+        <DailySummaryScreen onBack={() => setScreen('MAIN')} />
+      </View>
+    );
+  }
+
+  if (screen === 'LEAVE') {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#faf9f6' }}>
+        <LeaveScreen onBack={() => setScreen('MAIN')} />
+      </View>
+    );
+  }
 
   const renderScreen = () => {
     switch (activeTab) {
@@ -54,18 +85,20 @@ function MainApp() {
             punchInTime={punchInTime}
             onPunchPress={() => setPunchModalVisible(true)}
             onNavigateToMap={() => setActiveTab('MAP')}
+            onNavigateToDailySummary={() => setScreen('DAILY_SUMMARY')}
           />
         );
       case 'MAP':
         return <MapScreen />;
       case 'TASKS':
         return <TasksScreen />;
+      case 'CHAT':
+        return <ChatScreen />;
       case 'PROFILE':
         return (
           <ProfileScreen
-            onSignOut={async () => {
-              await clearTokens();
-            }}
+            onSignOut={async () => { await clearTokens(); }}
+            onNavigateToLeave={() => setScreen('LEAVE')}
           />
         );
     }
@@ -73,7 +106,6 @@ function MainApp() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#faf9f6' }}>
-      {/* Offline banner */}
       {!isOnline && (
         <View style={{
           backgroundColor: '#fef3c7', paddingTop: insets.top + 4,
@@ -87,12 +119,10 @@ function MainApp() {
         </View>
       )}
 
-      {/* Screen content */}
       <View style={{ flex: 1 }}>
         {renderScreen()}
       </View>
 
-      {/* Bottom tab bar */}
       <View style={{
         flexDirection: 'row',
         borderTopWidth: 0.5,
@@ -134,7 +164,6 @@ function MainApp() {
         })}
       </View>
 
-      {/* Punch Modal */}
       <PunchModal
         isVisible={punchModalVisible}
         isPunchedIn={isPunchedIn}
@@ -178,6 +207,7 @@ export default function App() {
       if (token) {
         setIsAuthenticated(true);
         setUserRole(role);
+        registerPushToken();
       }
       setIsCheckingAuth(false);
     }
@@ -188,6 +218,29 @@ export default function App() {
       setUserRole(null);
     });
   }, []);
+
+  async function registerPushToken() {
+    try {
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      let finalStatus = existing;
+      if (existing !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') return;
+
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: 'b127576c-b0cd-419b-81d9-95180fc33ba0',
+      });
+      await apiFetch('/api/notifications/register-token', {
+        method: 'POST',
+        body: JSON.stringify({
+          token: tokenData.data,
+          platform: Platform.OS,
+        }),
+      });
+    } catch {}
+  }
 
   if (!fontsLoaded || isCheckingAuth) {
     return (

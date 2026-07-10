@@ -56,6 +56,14 @@
       "expo-secure-store",
       "expo-font",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1a1c1a",
+          "sounds": []
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

@@ -12,6 +12,7 @@ interface ScheduleScreenProps {
   punchInTime: string | null;
   onPunchPress: () => void;
   onNavigateToMap: () => void;
+  onNavigateToDailySummary: () => void;
 }
 
 interface Task {
@@ -74,6 +75,7 @@ export default function ScheduleScreen({
   punchInTime,
   onPunchPress,
   onNavigateToMap,
+  onNavigateToDailySummary,
 }: ScheduleScreenProps) {
   const [userName, setUserName] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -284,6 +286,16 @@ export default function ScheduleScreen({
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Daily summary shortcut */}
+        <TouchableOpacity
+          onPress={onNavigateToDailySummary}
+          style={{ marginHorizontal: 20, marginBottom: 8, backgroundColor: '#fff', borderRadius: 8, padding: 12, borderWidth: 0.5, borderColor: '#e3e2e0', flexDirection: 'row', alignItems: 'center', gap: 10 }}
+        >
+          <Ionicons name="bar-chart-outline" size={18} color="#695d4a" />
+          <Text style={{ flex: 1, fontSize: 12, color: '#1a1c1a', fontFamily: 'DM-Sans' }}>View Daily Summary</Text>
+          <Ionicons name="chevron-forward" size={14} color="#c4c7c7" />
+        </TouchableOpacity>
 
         {/* Tasks section header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

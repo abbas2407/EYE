@@ -6,12 +6,48 @@ import {
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { apiFetch } from '../api/client';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyAJHF-B2ulEDrxStgKH4NS7szhFdjErnos';
+const GPS_QUEUE_KEY = 'gps_offline_queue';
+
+interface GPSPingItem {
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+  timestamp: string;
+}
+
+async function queueGPSPing(ping: GPSPingItem) {
+  try {
+    const raw = await AsyncStorage.getItem(GPS_QUEUE_KEY);
+    const queue: GPSPingItem[] = raw ? JSON.parse(raw) : [];
+    queue.push(ping);
+    if (queue.length > 500) queue.splice(0, queue.length - 500);
+    await AsyncStorage.setItem(GPS_QUEUE_KEY, JSON.stringify(queue));
+  } catch {}
+}
+
+async function flushGPSQueue() {
+  try {
+    const raw = await AsyncStorage.getItem(GPS_QUEUE_KEY);
+    if (!raw) return;
+    const queue: GPSPingItem[] = JSON.parse(raw);
+    if (queue.length === 0) return;
+    const res = await apiFetch('/api/gps/batch', {
+      method: 'POST',
+      body: JSON.stringify({ pings: queue }),
+    });
+    if (res.ok) await AsyncStorage.removeItem(GPS_QUEUE_KEY);
+  } catch {}
+}
 
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
+  const isOnlineRef = useRef(true);
 
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [destination, setDestination] = useState<{ lat: number; lng: number; name: string } | null>(null);
@@ -26,8 +62,16 @@ export default function MapScreen() {
 
   useEffect(() => {
     requestLocationPermission();
+    const unsubNet = NetInfo.addEventListener(state => {
+      const online = state.isConnected ?? true;
+      if (online && !isOnlineRef.current) {
+        flushGPSQueue();
+      }
+      isOnlineRef.current = online;
+    });
     return () => {
       locationSubscription.current?.remove();
+      unsubNet();
     };
   }, []);
 
@@ -55,6 +99,20 @@ export default function MapScreen() {
       (loc) => {
         const newLoc = { lat: loc.coords.latitude, lng: loc.coords.longitude };
         setCurrentLocation(newLoc);
+
+        const ping: GPSPingItem = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          accuracy: loc.coords.accuracy,
+          timestamp: new Date(loc.timestamp).toISOString(),
+        };
+        if (isOnlineRef.current) {
+          apiFetch('/api/gps/batch', { method: 'POST', body: JSON.stringify({ pings: [ping] }) }).catch(() => {
+            queueGPSPing(ping);
+          });
+        } else {
+          queueGPSPing(ping);
+        }
 
         if (destination) {
           const dist = haversineKm(newLoc.lat, newLoc.lng, destination.lat, destination.lng);

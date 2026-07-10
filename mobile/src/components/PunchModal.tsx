@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal,
-  ActivityIndicator, Alert, Platform, Image
+  View, Text, TouchableOpacity, Modal, TextInput,
+  ActivityIndicator, Alert, Platform, Image, ScrollView
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
@@ -33,6 +33,8 @@ export default function PunchModal({
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [successTime, setSuccessTime] = useState<string | null>(null);
   const [geofenceWarning, setGeofenceWarning] = useState<string | null>(null);
+  const [checkInNote, setCheckInNote] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -46,6 +48,8 @@ export default function PunchModal({
       setCapturedPhoto(null);
       setGeofenceWarning(null);
       setSuccessTime(null);
+      setCheckInNote('');
+      setShowNoteInput(false);
 
       if (!isPunchedIn) {
         runDeviceCheck();
@@ -190,6 +194,7 @@ export default function PunchModal({
             selfie_url: selfieUrl,
             latitude: loc?.coords.latitude,
             longitude: loc?.coords.longitude,
+            check_in_note: checkInNote.trim() || null,
           }),
         });
         if (!res.ok) {
@@ -312,6 +317,33 @@ export default function PunchModal({
           {/* Selfie step */}
           {step === 'selfie' && (
             <View style={{ flex: 1 }}>
+              {/* Check-in note (punch in only) */}
+              {!isPunchedIn && (
+                <View style={{ marginBottom: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setShowNoteInput(!showNoteInput)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: showNoteInput ? 8 : 0 }}
+                  >
+                    <Ionicons name={showNoteInput ? 'chevron-down' : 'chevron-forward'} size={14} color="#695d4a" />
+                    <Text style={{ fontSize: 11, color: '#695d4a', fontFamily: 'DM-Sans', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                      Add Check-in Note (optional)
+                    </Text>
+                  </TouchableOpacity>
+                  {showNoteInput && (
+                    <TextInput
+                      value={checkInNote}
+                      onChangeText={setCheckInNote}
+                      placeholder="e.g. Starting site inspection at Block A..."
+                      placeholderTextColor="#c4c7c7"
+                      multiline
+                      numberOfLines={2}
+                      maxLength={300}
+                      style={{ backgroundColor: '#fff', borderRadius: 8, padding: 10, fontSize: 12, fontFamily: 'DM-Sans', color: '#1a1c1a', borderWidth: 0.5, borderColor: '#e3e2e0', minHeight: 60, textAlignVertical: 'top' }}
+                    />
+                  )}
+                </View>
+              )}
+
               {geofenceWarning && (
                 <View style={{ backgroundColor: '#fef3c7', borderRadius: 8, padding: 10, marginBottom: 12, flexDirection: 'row', gap: 8 }}>
                   <Ionicons name="warning-outline" size={14} color="#92400e" />
