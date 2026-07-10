@@ -5,11 +5,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { apiFetch, getUserName, getUserRole, API_BASE_URL, getAccessToken } from '../api/client';
+import { apiFetch, getUserName, getUserRole } from '../api/client';
 
 interface ProfileScreenProps {
-  onSignOut: () => void;
+  onSignOut: () => Promise<void>;
   onNavigateToLeave: () => void;
 }
 
@@ -56,7 +55,7 @@ export default function ProfileScreen({ onSignOut, onNavigateToLeave }: ProfileS
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     getUserName().then(n => setUserName(n ?? 'Team Member'));
@@ -70,60 +69,27 @@ export default function ProfileScreen({ onSignOut, onNavigateToLeave }: ProfileS
         apiFetch('/api/attendance/logs?limit=10'),
         apiFetch('/api/profile/stats'),
       ]);
-      if (logsRes.status === 'fulfilled' && logsRes.value.ok) {
+      if (logsRes.status === 'fulfilled' && logsRes.value?.ok) {
         const data = await logsRes.value.json();
-        setLogs(Array.isArray(data) ? data : data.logs ?? []);
+        setLogs(Array.isArray(data) ? data : (data.logs ?? []));
       }
-      if (statsRes.status === 'fulfilled' && statsRes.value.ok) {
+      if (statsRes.status === 'fulfilled' && statsRes.value?.ok) {
         const data = await statsRes.value.json();
         setStats(data);
         if (data.photo_url) setPhotoUrl(data.photo_url);
       }
-    } catch {}
-    finally { setLoading(false); setRefreshing(false); }
+    } catch (e) {
+      console.warn('ProfileScreen fetchData error:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
-  async function pickAndUploadPhoto() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Allow access to your photos to update your profile picture.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.7,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
-
-    setUploadingPhoto(true);
-    try {
-      const asset = result.assets[0];
-      const formData = new FormData();
-      formData.append('file', { uri: asset.uri, type: 'image/jpeg', name: 'profile.jpg' } as any);
-
-      const token = await getAccessToken();
-      const uploadRes = await fetch(`${API_BASE_URL}/api/mock-s3/upload`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formData,
-      });
-      if (!uploadRes.ok) throw new Error('Upload failed');
-      const uploadData = await uploadRes.json();
-      const url = uploadData.url ?? uploadData.file_url;
-
-      const updateRes = await apiFetch('/api/profile/photo', {
-        method: 'PUT',
-        body: JSON.stringify({ photo_url: url }),
-      });
-      if (updateRes.ok) {
-        setPhotoUrl(url);
-        Alert.alert('Success', 'Profile photo updated!');
-      }
-    } catch {
-      Alert.alert('Error', 'Failed to upload photo. Please try again.');
-    } finally { setUploadingPhoto(false); }
+  function pickAndUploadPhoto() {
+    Alert.alert('Photo Upload', 'Photo upload will be available in the next update.');
   }
 
   function handleSignOut() {
@@ -160,22 +126,18 @@ export default function ProfileScreen({ onSignOut, onNavigateToLeave }: ProfileS
         <View style={{ marginHorizontal: 20, marginVertical: 12 }}>
           <View style={{ backgroundColor: '#1a1c1a', borderRadius: 12, padding: 20 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <TouchableOpacity onPress={pickAndUploadPhoto} disabled={uploadingPhoto} style={{ position: 'relative' }}>
+              <TouchableOpacity onPress={pickAndUploadPhoto} style={{ position: 'relative' }}>
                 {photoUrl ? (
                   <Image source={{ uri: photoUrl }} style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: '#695d4a' }} />
                 ) : (
                   <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#695d4a', justifyContent: 'center', alignItems: 'center' }}>
                     <Text style={{ fontSize: 22, fontWeight: '700', color: '#fff', fontFamily: 'DM-Sans' }}>
-                      {userName.charAt(0).toUpperCase()}
+                      {(userName || 'U').charAt(0).toUpperCase()}
                     </Text>
                   </View>
                 )}
                 <View style={{ position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-                  {uploadingPhoto ? (
-                    <ActivityIndicator size="small" color="#695d4a" />
-                  ) : (
-                    <Ionicons name="camera" size={11} color="#695d4a" />
-                  )}
+                  <Ionicons name="camera" size={11} color="#695d4a" />
                 </View>
               </TouchableOpacity>
               <View style={{ flex: 1 }}>

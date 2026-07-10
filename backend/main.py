@@ -27,6 +27,7 @@ seed()
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "/app/data/uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 BASE_URL = os.getenv("BASE_URL", "http://167.233.90.245:8000")
+GOOGLE_MAPS_API_KEY = "AIzaSyAJHF-B2ulEDrxStgKH4NS7szhFdjErnos"
 
 app = FastAPI(title="FieldPulse API", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
@@ -497,6 +498,38 @@ async def upload_file(file: UploadFile = File(...),
     db.add(UploadedFile(filename=filename, url=url))
     db.commit()
     return {"url": url, "file_url": url, "filename": filename}
+
+
+# ── Places Proxy (avoids API key mobile restrictions) ─────────────────────────
+@app.get("/api/places/autocomplete")
+async def places_autocomplete(input: str, current_user: User = Depends(get_current_user)):
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        res = await client.get(
+            "https://maps.googleapis.com/maps/api/place/autocomplete/json",
+            params={"input": input, "key": GOOGLE_MAPS_API_KEY,
+                    "language": "en", "components": "country:in"},
+        )
+    data = res.json()
+    return {"predictions": data.get("predictions", []), "status": data.get("status", "")}
+
+@app.get("/api/places/details")
+async def places_details(place_id: str, current_user: User = Depends(get_current_user)):
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        res = await client.get(
+            "https://maps.googleapis.com/maps/api/place/details/json",
+            params={"place_id": place_id, "fields": "geometry", "key": GOOGLE_MAPS_API_KEY},
+        )
+    return res.json()
+
+@app.get("/api/places/directions")
+async def places_directions(origin: str, destination: str, current_user: User = Depends(get_current_user)):
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        res = await client.get(
+            "https://maps.googleapis.com/maps/api/directions/json",
+            params={"origin": origin, "destination": destination,
+                    "key": GOOGLE_MAPS_API_KEY, "mode": "driving"},
+        )
+    return res.json()
 
 
 # ── Admin Routes ──────────────────────────────────────────────────────────────

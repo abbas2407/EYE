@@ -10,7 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { apiFetch } from '../api/client';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyAJHF-B2ulEDrxStgKH4NS7szhFdjErnos';
 const GPS_QUEUE_KEY = 'gps_offline_queue';
 
 interface GPSPingItem {
@@ -155,8 +154,7 @@ export default function MapScreen() {
     }
     setIsSearching(true);
     try {
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${GOOGLE_MAPS_API_KEY}&language=en&components=country:in`;
-      const res = await fetch(url);
+      const res = await apiFetch(`/api/places/autocomplete?input=${encodeURIComponent(text)}`);
       const data = await res.json();
       if (data.predictions) {
         setSearchResults(data.predictions.slice(0, 5));
@@ -173,8 +171,7 @@ export default function MapScreen() {
     setSearchText(placeName);
     setSearchResults([]);
     try {
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry&key=${GOOGLE_MAPS_API_KEY}`;
-      const res = await fetch(url);
+      const res = await apiFetch(`/api/places/details?place_id=${encodeURIComponent(placeId)}`);
       const data = await res.json();
       const loc = data.result?.geometry?.location;
       if (!loc) return;
@@ -205,8 +202,7 @@ export default function MapScreen() {
 
   async function fetchRoute(origin: { lat: number; lng: number }, dest: { lat: number; lng: number }) {
     try {
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}&key=${GOOGLE_MAPS_API_KEY}&mode=driving`;
-      const res = await fetch(url);
+      const res = await apiFetch(`/api/places/directions?origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}`);
       const data = await res.json();
       if (data.routes?.length > 0) {
         const points = decodePolyline(data.routes[0].overview_polyline.points);

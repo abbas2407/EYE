@@ -97,7 +97,11 @@ function MainApp() {
       case 'PROFILE':
         return (
           <ProfileScreen
-            onSignOut={async () => { await clearTokens(); }}
+            onSignOut={async () => {
+              await clearTokens();
+              setIsAuthenticated(false);
+              setUserRole(null);
+            }}
             onNavigateToLeave={() => setScreen('LEAVE')}
           />
         );
