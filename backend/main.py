@@ -500,36 +500,52 @@ async def upload_file(file: UploadFile = File(...),
     return {"url": url, "file_url": url, "filename": filename}
 
 
-# ── Places Proxy (avoids API key mobile restrictions) ─────────────────────────
+# ── Places Proxy (Nominatim/OSM — no key restrictions) ────────────────────────
+_OSM_HEADERS = {"User-Agent": "FieldPulse-App/2.0 (admin@fieldpulse.in)"}
+
 @app.get("/api/places/autocomplete")
 async def places_autocomplete(input: str, current_user: User = Depends(get_current_user)):
-    async with httpx.AsyncClient(timeout=8.0) as client:
+    async with httpx.AsyncClient(timeout=8.0, headers=_OSM_HEADERS) as client:
         res = await client.get(
-            "https://maps.googleapis.com/maps/api/place/autocomplete/json",
-            params={"input": input, "key": GOOGLE_MAPS_API_KEY,
-                    "language": "en", "components": "country:in"},
+            "https://nominatim.openstreetmap.org/search",
+            params={"q": input, "format": "json", "limit": 5,
+                    "countrycodes": "in", "addressdetails": 0},
         )
-    data = res.json()
-    return {"predictions": data.get("predictions", []), "status": data.get("status", "")}
-
-@app.get("/api/places/details")
-async def places_details(place_id: str, current_user: User = Depends(get_current_user)):
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        res = await client.get(
-            "https://maps.googleapis.com/maps/api/place/details/json",
-            params={"place_id": place_id, "fields": "geometry", "key": GOOGLE_MAPS_API_KEY},
-        )
-    return res.json()
+    results = res.json() if res.status_code == 200 else []
+    predictions = [
+        {"place_id": str(r["place_id"]),
+         "description": r["display_name"],
+         "lat": float(r["lat"]),
+         "lon": float(r["lon"])}
+        for r in results
+    ]
+    return {"predictions": predictions, "status": "OK"}
 
 @app.get("/api/places/directions")
 async def places_directions(origin: str, destination: str, current_user: User = Depends(get_current_user)):
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        res = await client.get(
-            "https://maps.googleapis.com/maps/api/directions/json",
-            params={"origin": origin, "destination": destination,
-                    "key": GOOGLE_MAPS_API_KEY, "mode": "driving"},
-        )
-    return res.json()
+    # OSRM public API for routing (open-source, no key)
+    # origin/destination are "lat,lon" strings
+    try:
+        olat, olon = origin.split(",")
+        dlat, dlon = destination.split(",")
+        async with httpx.AsyncClient(timeout=10.0, headers=_OSM_HEADERS) as client:
+            res = await client.get(
+                f"https://router.project-osrm.org/route/v1/driving/{olon},{olat};{dlon},{dlat}",
+                params={"overview": "full", "geometries": "polyline", "steps": "false"},
+            )
+        data = res.json()
+        if data.get("code") == "Ok" and data.get("routes"):
+            route = data["routes"][0]
+            return {
+                "routes": [{
+                    "overview_polyline": {"points": route["geometry"]},
+                    "legs": [{"distance": {"value": int(route["distance"])},
+                              "duration": {"value": int(route["duration"])}}],
+                }]
+            }
+    except Exception as e:
+        log.warning(f"OSRM routing failed: {e}")
+    return {"routes": []}
 
 
 # ── Admin Routes ──────────────────────────────────────────────────────────────

@@ -51,7 +51,7 @@ export default function MapScreen() {
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [destination, setDestination] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [searchText, setSearchText] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<{ place_id: string; description: string; lat: number; lon: number }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
@@ -166,37 +166,31 @@ export default function MapScreen() {
     }
   }
 
-  async function selectPlace(placeId: string, placeName: string) {
+  function selectPlace(result: { place_id: string; description: string; lat: number; lon: number }) {
     Keyboard.dismiss();
-    setSearchText(placeName);
+    setSearchText(result.description);
     setSearchResults([]);
-    try {
-      const res = await apiFetch(`/api/places/details?place_id=${encodeURIComponent(placeId)}`);
-      const data = await res.json();
-      const loc = data.result?.geometry?.location;
-      if (!loc) return;
 
-      const dest = { lat: loc.lat, lng: loc.lng, name: placeName };
-      setDestination(dest);
+    const dest = { lat: result.lat, lng: result.lon, name: result.description };
+    setDestination(dest);
 
-      if (currentLocation) {
-        const dist = haversineKm(currentLocation.lat, currentLocation.lng, dest.lat, dest.lng);
-        setDistanceKm(dist);
-        setEtaMinutes(Math.ceil((dist / 30) * 60));
-        fetchRoute(currentLocation, dest);
-      }
+    if (currentLocation) {
+      const dist = haversineKm(currentLocation.lat, currentLocation.lng, dest.lat, dest.lng);
+      setDistanceKm(dist);
+      setEtaMinutes(Math.ceil((dist / 30) * 60));
+      fetchRoute(currentLocation, dest);
+    }
 
-      if (mapRef.current && currentLocation) {
-        mapRef.current.fitToCoordinates(
-          [
+    if (mapRef.current) {
+      const coords = currentLocation
+        ? [
             { latitude: currentLocation.lat, longitude: currentLocation.lng },
             { latitude: dest.lat, longitude: dest.lng },
-          ],
-          { edgePadding: { top: 100, right: 50, bottom: 200, left: 50 }, animated: true }
-        );
-      }
-    } catch (err) {
-      console.warn('Place details error:', err);
+          ]
+        : [{ latitude: dest.lat, longitude: dest.lng }];
+      mapRef.current.fitToCoordinates(coords, {
+        edgePadding: { top: 120, right: 50, bottom: 220, left: 50 }, animated: true,
+      });
     }
   }
 
@@ -373,7 +367,7 @@ export default function MapScreen() {
                   borderBottomColor: '#efeeeb',
                   flexDirection: 'row', alignItems: 'center', gap: 10,
                 }}
-                onPress={() => selectPlace(result.place_id, result.description)}
+                onPress={() => selectPlace(result)}
               >
                 <Ionicons name="location-outline" size={15} color="#695d4a" />
                 <Text style={{ flex: 1, fontSize: 12, color: '#1a1c1a', fontFamily: 'DM-Sans' }} numberOfLines={2}>
