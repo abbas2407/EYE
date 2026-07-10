@@ -312,6 +312,120 @@ def profile_stats(current_user: User = Depends(get_current_user), db: Session = 
     }
 
 
+# ── Routes: Admin ───────────────────────────────────────────────────────────
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in ("admin", "manager"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+@app.get("/api/admin/users")
+def admin_list_users(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    users = db.query(User).order_by(User.created_at).all()
+    return [
+        {
+            "id": u.id, "name": u.name, "email": u.email,
+            "role": u.role, "is_active": u.is_active,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+        }
+        for u in users
+    ]
+
+@app.get("/api/admin/tasks")
+def admin_list_tasks(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    tasks = db.query(Task).order_by(Task.created_at.desc()).all()
+    result = []
+    for t in tasks:
+        assignee_name = t.assignee.name if t.assignee else None
+        result.append({
+            "id": t.id, "title": t.title, "location": t.location,
+            "status": t.status, "client_name": t.client_name,
+            "assignee_name": assignee_name,
+            "scheduled_time": t.scheduled_time.isoformat() if t.scheduled_time else None,
+        })
+    return result
+
+@app.get("/api/admin/attendance")
+def admin_list_attendance(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    logs = db.query(AttendanceLog).order_by(AttendanceLog.punch_in_time.desc()).limit(100).all()
+    result = []
+    for l in logs:
+        result.append({
+            "id": l.id,
+            "user_name": l.user.name if l.user else "Unknown",
+            "user_email": l.user.email if l.user else "",
+            "punch_in_time": l.punch_in_time.isoformat() + "Z",
+            "punch_out_time": l.punch_out_time.isoformat() + "Z" if l.punch_out_time else None,
+            "total_hours": l.total_hours,
+            "status": l.status,
+        })
+    return result
+
+@app.get("/api/admin/stats")
+def admin_stats(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    total_users = db.query(User).filter(User.role == "field_worker").count()
+    total_tasks = db.query(Task).count()
+    completed_tasks = db.query(Task).filter(Task.status == "completed").count()
+    active_shifts = db.query(AttendanceLog).filter(AttendanceLog.status == "active").count()
+    return {
+        "total_workers": total_users,
+        "total_tasks": total_tasks,
+        "completed_tasks": completed_tasks,
+        "active_shifts": active_shifts,
+    }
+
+class CreateUserRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str = "field_worker"
+
+@app.post("/api/admin/users")
+def admin_create_user(req: CreateUserRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    exists = db.query(User).filter(User.email == req.email.lower().strip()).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Email already exists")
+    user = User(
+        name=req.name,
+        email=req.email.lower().strip(),
+        password=hash_password(req.password),
+        role=req.role,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"id": user.id, "name": user.name, "email": user.email, "role": user.role}
+
+class CreateTaskRequest(BaseModel):
+    title: str
+    description: str = ""
+    location: str = ""
+    client_name: str = ""
+    assignee_email: str = ""
+    scheduled_time: Optional[str] = None
+
+@app.post("/api/admin/tasks")
+def admin_create_task(req: CreateTaskRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    assignee = None
+    if req.assignee_email:
+        assignee = db.query(User).filter(User.email == req.assignee_email.lower().strip()).first()
+    sched = None
+    if req.scheduled_time:
+        try:
+            sched = datetime.fromisoformat(req.scheduled_time.replace("Z", ""))
+        except Exception:
+            pass
+    task = Task(
+        title=req.title, description=req.description,
+        location=req.location, client_name=req.client_name,
+        assignee_id=assignee.id if assignee else None,
+        scheduled_time=sched, status="pending",
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return {"id": task.id, "title": task.title, "status": task.status}
+
+
 # ── Routes: File Upload ─────────────────────────────────────────────────────
 @app.post("/api/mock-s3/upload")
 async def upload_file(file: UploadFile = File(...),

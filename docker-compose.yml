@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   fieldpulse-api:
     build:
@@ -22,6 +20,17 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+
+  fieldpulse-admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    container_name: fieldpulse-admin
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - fieldpulse-api
 
 volumes:
   fieldpulse_data:
