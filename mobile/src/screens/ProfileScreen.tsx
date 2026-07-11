@@ -253,7 +253,7 @@ export default function ProfileScreen({ onSignOut, onNavigateToLeave }: ProfileS
                       </Text>
                     ) : null}
                   </View>
-                  {log.total_hours && (
+                  {log.total_hours != null && log.total_hours > 0 && (
                     <Text style={{ fontSize: 12, fontWeight: '600', color: '#695d4a', fontFamily: 'DM-Sans' }}>
                       {formatHours(log.total_hours)}
                     </Text>
