@@ -259,6 +259,10 @@ export default function MapScreen() {
   }
 
   async function fetchRoute(origin: { lat: number; lng: number }, dest: { lat: number; lng: number }) {
+    const straight = [
+      { latitude: origin.lat, longitude: origin.lng },
+      { latitude: dest.lat, longitude: dest.lng },
+    ];
     try {
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}&key=${GOOGLE_MAPS_API_KEY}&mode=driving`;
       const res = await fetch(url);
@@ -267,14 +271,12 @@ export default function MapScreen() {
         setRouteCoords(decodePolyline(data.routes[0].overview_polyline.points));
         const leg = data.routes[0].legs[0];
         if (leg) { setDistanceKm(leg.distance.value / 1000); setEtaMinutes(Math.ceil(leg.duration.value / 60)); }
+      } else {
+        // Directions API denied or no route — draw straight line so something is always visible
+        setRouteCoords(straight);
       }
     } catch {
-      if (currentLocation) {
-        setRouteCoords([
-          { latitude: currentLocation.lat, longitude: currentLocation.lng },
-          { latitude: dest.lat, longitude: dest.lng },
-        ]);
-      }
+      setRouteCoords(straight);
     }
   }
 
@@ -389,11 +391,20 @@ export default function MapScreen() {
           </Marker>
         )}
         {routeCoords.length > 0 && (
-          <Polyline
-            coordinates={routeCoords}
-            strokeColor={navActive ? '#1a6ef2' : '#1a1c1a'}
-            strokeWidth={navActive ? 5 : 3}
-          />
+          <>
+            {/* Thick white outline for contrast against any map tile */}
+            <Polyline
+              coordinates={routeCoords}
+              strokeColor="#ffffff"
+              strokeWidth={navActive ? 9 : 6}
+            />
+            {/* Bright orange line on top — clearly visible over blue roads */}
+            <Polyline
+              coordinates={routeCoords}
+              strokeColor="#FF6D00"
+              strokeWidth={navActive ? 5 : 3}
+            />
+          </>
         )}
       </MapView>
 
