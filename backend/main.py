@@ -429,10 +429,18 @@ def get_rooms(current_user: User = Depends(get_current_user), db: Session = Depe
         room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
         if not room:
             continue
+        # For DM rooms show the OTHER person's name, not the combined "A & B" string
+        if room.room_type == "direct":
+            other = (db.query(ChatMember)
+                     .filter(ChatMember.room_id == room.id, ChatMember.user_id != current_user.id)
+                     .first())
+            display_name = other.user.name if other else room.name
+        else:
+            display_name = room.name
         last_msg = (db.query(Message).filter(Message.room_id == room.id)
                     .order_by(Message.created_at.desc()).first())
         rooms.append({
-            "id": room.id, "name": room.name, "room_type": room.room_type,
+            "id": room.id, "name": display_name, "room_type": room.room_type,
             "last_message": last_msg.content[:60] if last_msg else None,
             "last_message_time": last_msg.created_at.isoformat() + "Z" if last_msg else None,
             "last_sender": last_msg.sender.name if last_msg else None,
