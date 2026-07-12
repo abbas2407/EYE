@@ -96,13 +96,10 @@ textarea{min-height:70px;resize:vertical}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .alert-dot{width:6px;height:6px;border-radius:3px;background:#ba1a1a;flex-shrink:0}
 #live-map{height:380px;width:100%;border-radius:0 0 8px 8px;}
-.map-marker-label{background:#1a1c1a;color:#fff;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.leaflet-container{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 </style>
-<script>
-(function(){const s=document.createElement('script');s.src='https://maps.googleapis.com/maps/api/js?key=AIzaSyAJHF-B2ulEDrxStgKH4NS7szhFdjErnos&callback=onGMapsReady&libraries=places';s.async=true;document.head.appendChild(s);})();
-let gMapsReady=false; let pendingMapInit=null;
-function onGMapsReady(){gMapsReady=true;if(pendingMapInit){pendingMapInit();pendingMapInit=null;}}
-</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -131,7 +128,7 @@ function onGMapsReady(){gMapsReady=true;if(pendingMapInit){pendingMapInit();pend
       <div class="nav-item" onclick="showTab('tasks')"><span class="nav-icon">📋</span> Tasks</div>
       <div class="nav-item" onclick="showTab('attendance')"><span class="nav-icon">🕐</span> Attendance</div>
       <div class="nav-item" onclick="showTab('leaves')"><span class="nav-icon">📅</span> Leaves</div>
-      <div class="nav-item" onclick="showTab('chat')"><span class="nav-icon">💬</span> Chat</div>
+      <div class="nav-item" onclick="showTab('chat')"><span class="nav-icon">💬</span> Chat <span id="chat-badge" style="display:none;background:#ba1a1a;color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 6px;margin-left:4px"></span></div>
       <div class="nav-item" onclick="showTab('geofence')"><span class="nav-icon">🔴</span> Geofence Alerts</div>
       <div class="nav-item" onclick="showTab('performance')"><span class="nav-icon">🏆</span> Performance</div>
       <div class="nav-item" onclick="showTab('reports')"><span class="nav-icon">📄</span> Reports</div>
@@ -302,6 +299,32 @@ let allLeaves = [];
 let currentRoomId = null;
 let chatPollInterval = null;
 let workerList = [];
+let lastChatVisit = new Date(0).toISOString();
+let unreadPollInterval = null;
+
+function updateChatBadge(count){
+  const el=document.getElementById('chat-badge');
+  if(!el)return;
+  if(count>0){el.textContent=count>9?'9+':String(count);el.style.display='inline';}
+  else el.style.display='none';
+}
+
+async function pollChatUnread(){
+  if(!token)return;
+  try{
+    const res=await apiFetch('/api/admin/chat/rooms');
+    if(!res)return;
+    const rooms=await res.json();
+    const count=rooms.filter(r=>r.last_message_time&&r.last_message_time>lastChatVisit).length;
+    updateChatBadge(count);
+  }catch{}
+}
+
+function startUnreadPoll(){
+  if(unreadPollInterval)clearInterval(unreadPollInterval);
+  pollChatUnread();
+  unreadPollInterval=setInterval(pollChatUnread,30000);
+}
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function doLogin() {
@@ -327,6 +350,7 @@ async function doLogin() {
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     showTab('dashboard');
+    startUnreadPoll();
   } catch {
     errEl.textContent='Unable to connect to server.'; errEl.style.display='block';
   }
@@ -358,13 +382,14 @@ function showTab(name) {
   if (el) el.style.display = 'block';
   document.getElementById('topbar-title').textContent = TAB_TITLES[name]||name;
   if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval=null; }
+  if (name==='chat') { lastChatVisit=new Date().toISOString(); updateChatBadge(0); }
   const loaders = {dashboard:loadDashboard, workers:loadWorkers, tasks:loadTasks,
     attendance:loadAttendance, leaves:loadLeaves, chat:loadChatRooms,
     geofence:loadGeofence, performance:loadPerformance, reports:()=>{}};
   if (loaders[name]) loaders[name]();
 }
 
-// ── Live Map ──────────────────────────────────────────────────────────────────
+// ── Live Map (Leaflet + OpenStreetMap — no API key required) ─────────────────
 let liveMap=null; let liveMarkers=[];
 async function loadLiveMap(){
   const mapEl=document.getElementById('live-map'); if(!mapEl)return;
@@ -374,29 +399,42 @@ async function loadLiveMap(){
   const countEl=document.getElementById('live-map-count');
   if(countEl)countEl.textContent=`${locs.length} worker${locs.length!==1?'s':''} active`;
   if(!locs.length){
+    if(liveMap){liveMap.remove();liveMap=null;}
     mapEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:380px;background:#f5f4f1;color:#c4c7c7;font-size:13px">No workers currently active</div>';
     return;
   }
-  const initMap=()=>{
-    const center={lat:locs[0].latitude,lng:locs[0].longitude};
-    if(!liveMap){
-      liveMap=new google.maps.Map(mapEl,{center,zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:true,zoomControl:true,styles:[]});
-    }
-    liveMarkers.forEach(m=>m.setMap(null)); liveMarkers=[];
-    const bounds=new google.maps.LatLngBounds();
-    locs.forEach(loc=>{
-      const pos={lat:loc.latitude,lng:loc.longitude};
-      bounds.extend(pos);
-      const marker=new google.maps.Marker({position:pos,map:liveMap,title:loc.user_name,
-        label:{text:loc.user_name.charAt(0).toUpperCase(),color:'#fff',fontWeight:'bold',fontSize:'13px'},
-        icon:{path:google.maps.SymbolPath.CIRCLE,scale:20,fillColor:'#1a1c1a',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
-      const info=new google.maps.InfoWindow({content:`<div style="font-family:-apple-system,sans-serif;padding:6px 2px"><div style="font-weight:700;font-size:13px">${esc(loc.user_name)}</div><div style="font-size:11px;color:#747878;margin-top:2px">${loc.user_email||''}</div><div style="font-size:10px;color:#695d4a;margin-top:4px">Last seen: ${fmtDT(loc.timestamp)}</div><div style="font-size:10px;color:#747878">${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}</div></div>`});
-      marker.addListener('click',()=>info.open(liveMap,marker));
-      liveMarkers.push(marker);
+  // Init Leaflet map once
+  if(!liveMap){
+    mapEl.innerHTML=''; // clear placeholder text
+    liveMap=L.map(mapEl,{zoomControl:true,attributionControl:true});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+      maxZoom:19
+    }).addTo(liveMap);
+  }
+  // Clear old markers
+  liveMarkers.forEach(m=>m.remove()); liveMarkers=[];
+  const bounds=[];
+  locs.forEach(loc=>{
+    bounds.push([loc.latitude,loc.longitude]);
+    const initial=loc.user_name.charAt(0).toUpperCase();
+    const icon=L.divIcon({
+      className:'',
+      html:`<div style="width:38px;height:38px;border-radius:19px;background:#1a1c1a;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.35);font-family:-apple-system,sans-serif">${initial}</div>`,
+      iconSize:[38,38],iconAnchor:[19,19],popupAnchor:[0,-22]
     });
-    if(locs.length>1)liveMap.fitBounds(bounds,{padding:60}); else liveMap.setCenter({lat:locs[0].latitude,lng:locs[0].longitude});
-  };
-  if(gMapsReady)initMap(); else pendingMapInit=initMap;
+    const popup=`<div style="font-family:-apple-system,sans-serif;min-width:160px">
+      <div style="font-weight:700;font-size:13px;color:#1a1c1a">${esc(loc.user_name)}</div>
+      <div style="font-size:11px;color:#747878;margin-top:2px">${esc(loc.user_email||'')}</div>
+      <div style="font-size:10px;color:#695d4a;margin-top:6px;font-weight:600">Last seen</div>
+      <div style="font-size:11px;color:#1a1c1a">${fmtDT(loc.timestamp)}</div>
+      <div style="font-size:10px;color:#c4c7c7;margin-top:4px">${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}</div>
+    </div>`;
+    const marker=L.marker([loc.latitude,loc.longitude],{icon}).addTo(liveMap).bindPopup(popup);
+    liveMarkers.push(marker);
+  });
+  if(locs.length===1) liveMap.setView(bounds[0],14);
+  else liveMap.fitBounds(bounds,{padding:[40,40]});
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -788,6 +826,7 @@ if(token){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   showTab('dashboard');
+  startUnreadPoll();
 }
 </script>
 </body>

@@ -264,15 +264,15 @@ export default function MapScreen() {
       { latitude: dest.lat, longitude: dest.lng },
     ];
     try {
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}&key=${GOOGLE_MAPS_API_KEY}&mode=driving`;
+      // OSRM: free, no API key, follows real roads (coords are lng,lat order)
+      const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${dest.lng},${dest.lat}?overview=full&geometries=polyline`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.routes?.length) {
-        setRouteCoords(decodePolyline(data.routes[0].overview_polyline.points));
-        const leg = data.routes[0].legs[0];
-        if (leg) { setDistanceKm(leg.distance.value / 1000); setEtaMinutes(Math.ceil(leg.duration.value / 60)); }
+      if (data.code === 'Ok' && data.routes?.length) {
+        setRouteCoords(decodePolyline(data.routes[0].geometry));
+        setDistanceKm(data.routes[0].distance / 1000);
+        setEtaMinutes(Math.ceil(data.routes[0].duration / 60));
       } else {
-        // Directions API denied or no route — draw straight line so something is always visible
         setRouteCoords(straight);
       }
     } catch {

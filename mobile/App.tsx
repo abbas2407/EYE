@@ -80,12 +80,32 @@ function MainApp() {
   const [punchInTime, setPunchInTime] = useState<string | null>(null);
   const [attendanceLogId, setAttendanceLogId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [chatUnread, setChatUnread] = useState(0);
+  const lastChatVisitRef = useRef(new Date(0).toISOString());
 
   useEffect(() => {
     const unsub = NetInfo.addEventListener(state => {
       setIsOnline(state.isConnected ?? true);
     });
     return () => unsub();
+  }, []);
+
+  // Poll for unread messages every 30 s
+  useEffect(() => {
+    async function pollUnread() {
+      try {
+        const res = await apiFetch('/api/chat/rooms');
+        if (!res?.ok) return;
+        const rooms: any[] = await res.json();
+        const count = rooms.filter(r =>
+          r.last_message_time && r.last_message_time > lastChatVisitRef.current
+        ).length;
+        setChatUnread(count);
+      } catch {}
+    }
+    pollUnread();
+    const t = setInterval(pollUnread, 30000);
+    return () => clearInterval(t);
   }, []);
 
   const tabs: { key: Tab; label: string; icon: string; activeIcon: string }[] = [
@@ -176,17 +196,40 @@ function MainApp() {
       }}>
         {tabs.map(tab => {
           const isActive = activeTab === tab.key;
+          const showBadge = tab.key === 'CHAT' && chatUnread > 0 && !isActive;
           return (
             <TouchableOpacity
               key={tab.key}
               style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}
-              onPress={() => setActiveTab(tab.key)}
+              onPress={() => {
+                if (tab.key === 'CHAT') {
+                  lastChatVisitRef.current = new Date().toISOString();
+                  setChatUnread(0);
+                }
+                setActiveTab(tab.key);
+              }}
             >
-              <Ionicons
-                name={(isActive ? tab.activeIcon : tab.icon) as any}
-                size={22}
-                color={isActive ? '#1a1c1a' : '#747878'}
-              />
+              <View style={{ position: 'relative' }}>
+                <Ionicons
+                  name={(isActive ? tab.activeIcon : tab.icon) as any}
+                  size={22}
+                  color={isActive ? '#1a1c1a' : '#747878'}
+                />
+                {showBadge && (
+                  <View style={{
+                    position: 'absolute', top: -5, right: -8,
+                    backgroundColor: '#ba1a1a', borderRadius: 9,
+                    minWidth: 16, height: 16,
+                    justifyContent: 'center', alignItems: 'center',
+                    paddingHorizontal: 3,
+                    borderWidth: 1.5, borderColor: '#fff',
+                  }}>
+                    <Text style={{ color: '#fff', fontSize: 8, fontWeight: '800', lineHeight: 11 }}>
+                      {chatUnread > 9 ? '9+' : String(chatUnread)}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={{
                 fontSize: 9, marginTop: 2,
                 color: isActive ? '#1a1c1a' : '#747878',
