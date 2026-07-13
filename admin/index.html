@@ -697,25 +697,25 @@ textarea{min-height:70px;resize:vertical}
       </div>
 
       <!-- ── CLIENTS ──────────────────────────────────────────────────────── -->
-      <div id="csub-clients" style="flex:1;overflow-y:auto;padding:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-          <div class="card-title" style="color:#695d4a">Clients (<span id="cs-client-count">0</span>)</div>
+      <div id="csub-clients" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:#1a1c1a">Clients (<span id="cs-client-count">0</span>)</div>
           <div style="display:flex;gap:8px;align-items:center">
             <input id="cs-client-search" placeholder="Search clients..." oninput="renderClientsTable()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
             <button class="btn btn-primary btn-sm">+ Create Client</button>
           </div>
         </div>
-        <div class="card"><div style="overflow-x:auto">
-          <table>
+        <div style="flex:1;overflow:auto">
+          <table style="width:100%">
             <thead><tr><th>Name</th><th>Contact Name</th><th>Contact Number</th><th>Address</th><th>City</th><th>Pincode</th><th>Email</th><th>Category</th></tr></thead>
             <tbody id="cs-clients-body"><tr><td colspan="8" class="loading">Loading...</td></tr></tbody>
           </table>
-        </div></div>
+        </div>
       </div>
 
       <!-- ── SITES ────────────────────────────────────────────────────────── -->
-      <div id="csub-sites" style="display:none;flex:1;overflow-y:auto;padding:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div id="csub-sites" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
           <div style="display:flex;gap:8px">
             <button class="filt-btn active" id="sites-tab-site" onclick="switchSitesTab(this,'site')">Site (0)</button>
             <button class="filt-btn" id="sites-tab-pool" onclick="switchSitesTab(this,'pool')">Site Pools (0)</button>
@@ -725,30 +725,30 @@ textarea{min-height:70px;resize:vertical}
             <button class="btn btn-primary btn-sm">+ Add Site</button>
           </div>
         </div>
-        <div class="card"><div style="overflow-x:auto">
-          <table>
+        <div style="flex:1;overflow:auto">
+          <table style="width:100%">
             <thead><tr><th>Site</th><th>Site Type</th><th>Address</th><th>Email</th><th>Contact Person</th><th>Contact Number</th><th>Latitude</th><th>Longitude</th><th>Radius (m)</th><th>City</th><th>Actions</th></tr></thead>
             <tbody id="cs-sites-body"><tr><td colspan="11" class="empty">No sites added yet</td></tr></tbody>
           </table>
-        </div></div>
+        </div>
       </div>
 
       <!-- ── GEOFENCES ──────────────────────────────────────────────────────── -->
-      <div id="csub-geofence" style="display:none;flex:1;overflow-y:auto;padding:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-          <div class="card-title" style="color:#695d4a">Geofence Zones</div>
+      <div id="csub-geofence" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:#1a1c1a">Geofence Alerts</div>
           <div style="display:flex;gap:6px;align-items:center">
-            <button class="filt-btn active" id="gf-filt-all"   onclick="setGeofFilt(this,'all')">All</button>
-            <button class="filt-btn"        id="gf-filt-breach" onclick="setGeofFilt(this,'breach')">Breach Alerts</button>
-            <button class="filt-btn"        id="gf-filt-clean"  onclick="setGeofFilt(this,'clean')">Clean</button>
+            <button class="filt-btn active" id="gf-filt-all"    onclick="setGeofFilt(this,'all')">All</button>
+            <button class="filt-btn"        id="gf-filt-breach"  onclick="setGeofFilt(this,'breach')">Breach Alerts</button>
+            <button class="filt-btn"        id="gf-filt-clean"   onclick="setGeofFilt(this,'clean')">Clean</button>
           </div>
         </div>
-        <div class="card"><div style="overflow-x:auto">
-          <table>
+        <div style="flex:1;overflow:auto">
+          <table style="width:100%">
             <thead><tr><th>Worker</th><th>Latitude</th><th>Longitude</th><th>Time</th><th>Task</th><th>Status</th></tr></thead>
             <tbody id="cs-geofence-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
           </table>
-        </div></div>
+        </div>
       </div>
 
     </div><!-- /tab-clients -->
@@ -2094,7 +2094,7 @@ function showClientsSub(name){
     if(btn)btn.classList.toggle('active',s===name);
   });
   const el=document.getElementById(`csub-${name}`);
-  if(el)el.style.display='flex';
+  if(el){el.style.display='flex';el.style.flexDirection='column';}
   if(!clientsSubLoaded[name]){
     clientsSubLoaded[name]=true;
     if(name==='clients')loadClientsList();
