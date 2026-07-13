@@ -803,7 +803,7 @@ textarea{min-height:70px;resize:vertical}
           <div style="font-size:13px;font-weight:600;color:#1a1c1a">Clients (<span id="cs-client-count">0</span>)</div>
           <div style="display:flex;gap:8px;align-items:center">
             <input id="cs-client-search" placeholder="Search clients..." oninput="renderClientsTable()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
-            <button class="btn btn-primary btn-sm">+ Create Client</button>
+            <button class="btn btn-primary btn-sm" onclick="openCreateClientModal()">+ Create Client</button>
           </div>
         </div>
         <div style="flex:1;overflow:auto">
@@ -823,7 +823,7 @@ textarea{min-height:70px;resize:vertical}
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <input id="cs-sites-search" placeholder="Search sites..." style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
-            <button class="btn btn-primary btn-sm">+ Add Site</button>
+            <button class="btn btn-primary btn-sm" onclick="openCreateSiteModal()">+ Add Site</button>
           </div>
         </div>
         <div style="flex:1;overflow:auto">
@@ -1130,6 +1130,258 @@ textarea{min-height:70px;resize:vertical}
         <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Billing" style="width:auto;margin:0;accent-color:#1e40af"> Billing</label>
       </div>
       <div id="role-err" style="color:#ba1a1a;font-size:12px;margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ CREATE CLIENT MODAL ═══════════════════════ -->
+<div id="client-modal-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.4);z-index:200;overflow-y:auto;padding:24px 16px">
+  <div style="background:#fff;border-radius:12px;max-width:560px;margin:0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e3e2e0;background:#faf9f6">
+      <span style="font-size:16px;font-weight:700;color:#1a1c1a">New Client</span>
+      <button onclick="closeCreateClientModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#747878;line-height:1">&times;</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+
+      <!-- Profile picture placeholder -->
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px dashed #ccc;border-radius:8px;background:#faf9f6">
+        <div style="width:40px;height:40px;border-radius:50%;background:#e3e2e0;display:flex;align-items:center;justify-content:center;color:#747878;font-size:18px">👤</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#1a1c1a">Profile Picture</div>
+          <div style="font-size:11px;color:#747878">Max 5MB · JPEG, PNG</div>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Name <span style="color:#ba1a1a">*</span></label>
+        <input id="cf-name" placeholder="Enter Name" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Client ID</label>
+        <input id="cf-clientid" placeholder="Enter client ID (optional)" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Visibility</label>
+        <select id="cf-visibility" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff">
+          <option>Everyone</option><option>Admins Only</option>
+        </select>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:#747878;text-transform:uppercase;letter-spacing:.5px;padding-top:4px">Contact</div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Contact Name <span style="color:#ba1a1a">*</span></label>
+        <input id="cf-contact-name" placeholder="Enter contact name" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="width:120px;flex-shrink:0">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Code</label>
+          <select id="cf-code" style="width:100%;padding:8px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff">
+            <option value="+91">India +91</option><option value="+1">USA +1</option><option value="+44">UK +44</option><option value="+971">UAE +971</option><option value="+92">PK +92</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Contact Number</label>
+          <input id="cf-phone" placeholder="Enter contact number" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:#747878;text-transform:uppercase;letter-spacing:.5px;padding-top:4px">Address</div>
+      <!-- Map -->
+      <div style="border:1px solid #e3e2e0;border-radius:8px;overflow:hidden">
+        <div id="client-map" style="height:180px;width:100%;background:#e8f4e8;position:relative">
+          <div id="client-map-placeholder" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:5">
+            <div style="font-size:28px">📍</div>
+            <div style="font-size:12px;color:#333;font-weight:500;margin-top:4px">Click to select location</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Search Location</label>
+        <input id="cf-search" placeholder="🔍 Search address..." oninput="debounceClientSearch(this.value)" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        <div id="cf-search-results" style="border:1px solid #e3e2e0;border-radius:6px;background:#fff;max-height:150px;overflow-y:auto;display:none;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Latitude</label>
+          <input id="cf-lat" placeholder="Auto-filled from map" readonly style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#faf9f6;box-sizing:border-box">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Longitude</label>
+          <input id="cf-lng" placeholder="Auto-filled from map" readonly style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#faf9f6;box-sizing:border-box">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Address Line 1</label>
+        <input id="cf-addr1" placeholder="Enter address line 1" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Address Line 2</label>
+        <input id="cf-addr2" placeholder="Enter address line 2" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">City</label>
+          <input id="cf-city" placeholder="Auto-filled from map" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">District</label>
+          <input id="cf-district" placeholder="Auto-filled from map" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">State</label>
+          <input id="cf-state" placeholder="Auto-filled from map" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Country</label>
+          <input id="cf-country" placeholder="Auto-filled from map" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Pin Code</label>
+        <input id="cf-pincode" placeholder="Auto-filled from map" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Radius (meters)</label>
+        <input id="cf-radius" type="number" value="200" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #c7d7ff;border-radius:8px;background:#f0f4ff;cursor:pointer">
+        <span style="font-size:13px;color:#1e40af;font-weight:500">Employee can override the address</span>
+        <input type="checkbox" id="cf-override" style="width:auto;margin:0;accent-color:#1e40af">
+      </label>
+
+      <div style="font-size:12px;font-weight:700;color:#747878;text-transform:uppercase;letter-spacing:.5px;padding-top:4px">Other Details</div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Description</label>
+        <input id="cf-desc" placeholder="Enter Description" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Email</label>
+        <input id="cf-email" type="email" placeholder="Enter Email" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Category</label>
+        <select id="cf-category" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff">
+          <option value="">Select Category</option>
+          <option>Retail</option><option>Manufacturing</option><option>Healthcare</option>
+          <option>Education</option><option>Construction</option><option>Logistics</option><option>Other</option>
+        </select>
+      </div>
+
+      <div id="cf-err" style="color:#ba1a1a;font-size:12px;display:none"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid #e3e2e0">
+        <button onclick="closeCreateClientModal()" class="btn btn-secondary btn-sm" style="padding:8px 20px;font-size:13px">Cancel</button>
+        <button onclick="saveClient()" class="btn btn-primary btn-sm" style="padding:8px 20px;font-size:13px">Create Client</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ CREATE SITE MODAL ═══════════════════════ -->
+<div id="site-modal-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.4);z-index:200;overflow-y:auto;padding:24px 16px">
+  <div style="background:#fff;border-radius:12px;max-width:560px;margin:0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e3e2e0;background:#faf9f6">
+      <span style="font-size:16px;font-weight:700;color:#1a1c1a">New Site</span>
+      <button onclick="closeCreateSiteModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#747878;line-height:1">&times;</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Site Name <span style="color:#ba1a1a">*</span></label>
+        <input id="sf-name" placeholder="Site Name" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Email</label>
+        <input id="sf-email" type="email" placeholder="Email" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Site ID</label>
+        <input id="sf-siteid" placeholder="Site ID" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Contact Person Name</label>
+        <input id="sf-contact" placeholder="Contact Person Name" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="width:120px;flex-shrink:0">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Code</label>
+          <select id="sf-code" style="width:100%;padding:8px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff">
+            <option value="+91">🇮🇳 +91</option><option value="+1">🇺🇸 +1</option><option value="+44">🇬🇧 +44</option><option value="+971">🇦🇪 +971</option><option value="+92">🇵🇰 +92</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Contact Number</label>
+          <input id="sf-phone" placeholder="Contact number" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Description</label>
+        <input id="sf-desc" placeholder="Description" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Site Type</label>
+        <select id="sf-type" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff">
+          <option value="">Site Type</option>
+          <option>Office</option><option>Warehouse</option><option>Factory</option>
+          <option>Retail Store</option><option>Hospital</option><option>School</option><option>Other</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">City Name</label>
+          <input id="sf-city" placeholder="Enter City Name" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Pincode</label>
+          <input id="sf-pin" placeholder="Pincode" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:#747878;text-transform:uppercase;letter-spacing:.5px;padding-top:4px">Address &amp; Location</div>
+      <div style="border:1px solid #e3e2e0;border-radius:8px;overflow:hidden">
+        <div id="site-map" style="height:180px;width:100%;background:#e8f4e8;position:relative">
+          <div id="site-map-placeholder" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:5">
+            <div style="font-size:28px">📍</div>
+            <div style="font-size:12px;color:#333;font-weight:500;margin-top:4px">Click to select location</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Search Location</label>
+        <input id="sf-search" placeholder="🔍 Search address..." oninput="debounceSiteSearch(this.value)" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        <div id="sf-search-results" style="border:1px solid #e3e2e0;border-radius:6px;background:#fff;max-height:150px;overflow-y:auto;display:none;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Latitude</label>
+          <input id="sf-lat" placeholder="Latitude" readonly style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#faf9f6;box-sizing:border-box">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Longitude</label>
+          <input id="sf-lng" placeholder="Longitude" readonly style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#faf9f6;box-sizing:border-box">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Address</label>
+        <input id="sf-addr" placeholder="Enter Address" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Radius (meters)</label>
+        <input id="sf-radius" type="number" value="200" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#1a1c1a;display:block;margin-bottom:4px">Link to Client (optional)</label>
+        <select id="sf-client" style="width:100%;padding:8px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff">
+          <option value="">None</option>
+        </select>
+      </div>
+
+      <div id="sf-err" style="color:#ba1a1a;font-size:12px;display:none"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid #e3e2e0">
+        <button onclick="closeCreateSiteModal()" class="btn btn-secondary btn-sm" style="padding:8px 20px;font-size:13px">Cancel</button>
+        <button onclick="saveSite()" class="btn btn-primary btn-sm" style="padding:8px 20px;font-size:13px">Save Site</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2711,7 +2963,7 @@ function showClientsSub(name){
   if(!clientsSubLoaded[name]){
     clientsSubLoaded[name]=true;
     if(name==='clients')loadClientsList();
-    if(name==='sites')renderSitesEmpty();
+    if(name==='sites')loadSitesList();
     if(name==='geofence')loadClientGeofences();
   }
 }
@@ -2721,40 +2973,290 @@ function loadClients(){
   showClientsSub('clients');
 }
 
+let allSitesData=[];
+
 async function loadClientsList(){
-  const res=await apiFetch('/api/admin/workers'); if(!res)return;
-  const workers=await res.json();
-  allClientsData=workers;
-  document.getElementById('cs-client-count').textContent=workers.length;
+  const res=await apiFetch('/api/admin/clients'); if(!res)return;
+  allClientsData=await res.json();
+  document.getElementById('cs-client-count').textContent=allClientsData.length;
   renderClientsTable();
 }
 
 function renderClientsTable(){
   const q=(document.getElementById('cs-client-search')?.value||'').toLowerCase();
-  const rows=(allClientsData||[]).filter(w=>!q||w.name.toLowerCase().includes(q)||w.email.toLowerCase().includes(q));
+  const rows=(allClientsData||[]).filter(c=>!q||c.name.toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q));
   document.getElementById('cs-clients-body').innerHTML=rows.length===0?
     `<tr><td colspan="8" class="empty">No clients found</td></tr>`:
-    rows.map(w=>`<tr>
+    rows.map(c=>`<tr>
       <td><div style="display:flex;align-items:center;gap:8px">
-        <div style="width:30px;height:30px;border-radius:15px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#695d4a;flex-shrink:0">${w.name.charAt(0).toUpperCase()}</div>
-        <strong>${esc(w.name)}</strong></div></td>
-      <td>${esc(w.name)}</td>
-      <td style="font-size:11px">${esc(w.phone||'—')}</td>
-      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.address||'—')}</td>
-      <td style="font-size:11px">${esc(w.city||'—')}</td>
-      <td style="font-size:11px">${esc(w.pincode||'—')}</td>
-      <td style="font-size:11px">${esc(w.email)}</td>
-      <td><span class="badge badge-gray">End customer</span></td>
+        <div style="width:30px;height:30px;border-radius:15px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#695d4a;flex-shrink:0">${c.name.charAt(0).toUpperCase()}</div>
+        <strong>${esc(c.name)}</strong></div></td>
+      <td style="font-size:11px">${esc(c.contact_name||'—')}</td>
+      <td style="font-size:11px">${c.contact_code||''} ${esc(c.contact_number||'—')}</td>
+      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.address_line1||'—')}</td>
+      <td style="font-size:11px">${esc(c.city||'—')}</td>
+      <td style="font-size:11px">${esc(c.pin_code||'—')}</td>
+      <td style="font-size:11px">${esc(c.email||'—')}</td>
+      <td style="font-size:11px">${esc(c.category||'—')}</td>
     </tr>`).join('');
 }
 
-function renderSitesEmpty(){
-  document.getElementById('cs-sites-body').innerHTML='<tr><td colspan="11" class="empty">No sites added yet</td></tr>';
+async function loadSitesList(){
+  const res=await apiFetch('/api/admin/sites'); if(!res)return;
+  allSitesData=await res.json();
+  document.getElementById('sites-tab-site').textContent=`Site (${allSitesData.length})`;
+  renderSitesTable();
+}
+
+function renderSitesTable(){
+  document.getElementById('cs-sites-body').innerHTML=allSitesData.length===0?
+    '<tr><td colspan="11" class="empty">No sites added yet</td></tr>':
+    allSitesData.map(s=>`<tr>
+      <td><strong>${esc(s.name)}</strong></td>
+      <td style="font-size:11px">${esc(s.site_type||'—')}</td>
+      <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.address||'—')}</td>
+      <td style="font-size:11px">${esc(s.email||'—')}</td>
+      <td style="font-size:11px">${esc(s.contact_name||'—')}</td>
+      <td style="font-size:11px">${s.contact_code||''} ${esc(s.contact_number||'—')}</td>
+      <td style="font-size:11px">${s.latitude!=null?s.latitude.toFixed(5):'—'}</td>
+      <td style="font-size:11px">${s.longitude!=null?s.longitude.toFixed(5):'—'}</td>
+      <td style="font-size:11px">${s.radius||200}</td>
+      <td style="font-size:11px">${esc(s.city||'—')}</td>
+      <td><button onclick="deleteSite('${s.id}')" class="btn btn-danger btn-sm" style="padding:3px 8px;font-size:11px">Delete</button></td>
+    </tr>`).join('');
 }
 
 function switchSitesTab(btn,type){
   document.querySelectorAll('#csub-sites .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+}
+
+// ── Create Client Modal ───────────────────────────────────────────────────────
+let clientModalMap=null, clientModalMarker=null;
+
+function openCreateClientModal(){
+  document.getElementById('cf-err').style.display='none';
+  ['cf-name','cf-clientid','cf-contact-name','cf-phone','cf-addr1','cf-addr2',
+   'cf-city','cf-district','cf-state','cf-country','cf-pincode','cf-desc','cf-email'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('cf-radius').value='200';
+  document.getElementById('cf-lat').value='';
+  document.getElementById('cf-lng').value='';
+  document.getElementById('cf-override').checked=false;
+  document.getElementById('cf-visibility').value='Everyone';
+  document.getElementById('cf-category').value='';
+  document.getElementById('client-map-placeholder').style.display='block';
+  document.getElementById('client-modal-overlay').style.display='block';
+  document.body.style.overflow='hidden';
+  setTimeout(()=>{
+    if(!clientModalMap){
+      clientModalMap=L.map('client-map',{zoomControl:true}).setView([20.5937,78.9629],5);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        {attribution:'©OpenStreetMap ©CartoDB',maxZoom:19}).addTo(clientModalMap);
+      clientModalMap.on('click',function(e){setClientMapPin(e.latlng.lat,e.latlng.lng);});
+    }
+    clientModalMap.invalidateSize();
+  },150);
+}
+
+function closeCreateClientModal(){
+  document.getElementById('client-modal-overlay').style.display='none';
+  document.body.style.overflow='';
+}
+
+function setClientMapPin(lat,lng){
+  document.getElementById('cf-lat').value=lat.toFixed(6);
+  document.getElementById('cf-lng').value=lng.toFixed(6);
+  document.getElementById('client-map-placeholder').style.display='none';
+  if(clientModalMarker)clientModalMap.removeLayer(clientModalMarker);
+  clientModalMarker=L.marker([lat,lng]).addTo(clientModalMap);
+  clientModalMap.setView([lat,lng],15);
+  // Reverse geocode
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+    .then(r=>r.json()).then(d=>{
+      const a=d.address||{};
+      const set=(id,v)=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v||'';};
+      set('cf-city',a.city||a.town||a.village||a.suburb||'');
+      set('cf-district',a.county||a.district||'');
+      set('cf-state',a.state||'');
+      set('cf-country',a.country||'');
+      set('cf-pincode',a.postcode||'');
+      set('cf-addr1',d.display_name?d.display_name.split(',')[0]:'');
+    }).catch(()=>{});
+}
+
+let clientSearchTimer=null;
+function debounceClientSearch(val){
+  clearTimeout(clientSearchTimer);
+  if(!val||val.length<3){document.getElementById('cf-search-results').style.display='none';return;}
+  clientSearchTimer=setTimeout(()=>runClientSearch(val),500);
+}
+async function runClientSearch(val){
+  const res=document.getElementById('cf-search-results');
+  res.style.display='block';res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">Searching…</div>';
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=5`);
+    const data=await r.json();
+    if(!data.length){res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">No results</div>';return;}
+    res.innerHTML=data.map((d,i)=>`<div onclick="selectClientSearchResult(${d.lat},${d.lon},'${esc(d.display_name).replace(/'/g,"\\'")}')"
+      style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f0f0f0"
+      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${esc(d.display_name)}</div>`).join('');
+  }catch(e){res.innerHTML='<div style="padding:8px 12px;color:#ba1a1a;font-size:12px">Search failed</div>';}
+}
+function selectClientSearchResult(lat,lng,label){
+  document.getElementById('cf-search').value=label;
+  document.getElementById('cf-search-results').style.display='none';
+  setClientMapPin(parseFloat(lat),parseFloat(lng));
+}
+
+async function saveClient(){
+  const name=document.getElementById('cf-name').value.trim();
+  const errEl=document.getElementById('cf-err');
+  if(!name){errEl.textContent='Client name is required.';errEl.style.display='block';return;}
+  const payload={
+    name,
+    client_id:document.getElementById('cf-clientid').value.trim()||null,
+    visibility:document.getElementById('cf-visibility').value,
+    contact_name:document.getElementById('cf-contact-name').value.trim()||null,
+    contact_code:document.getElementById('cf-code').value,
+    contact_number:document.getElementById('cf-phone').value.trim()||null,
+    latitude:parseFloat(document.getElementById('cf-lat').value)||null,
+    longitude:parseFloat(document.getElementById('cf-lng').value)||null,
+    address_line1:document.getElementById('cf-addr1').value.trim()||null,
+    address_line2:document.getElementById('cf-addr2').value.trim()||null,
+    city:document.getElementById('cf-city').value.trim()||null,
+    district:document.getElementById('cf-district').value.trim()||null,
+    state:document.getElementById('cf-state').value.trim()||null,
+    country:document.getElementById('cf-country').value.trim()||null,
+    pin_code:document.getElementById('cf-pincode').value.trim()||null,
+    radius:parseFloat(document.getElementById('cf-radius').value)||200,
+    employee_override:document.getElementById('cf-override').checked,
+    description:document.getElementById('cf-desc').value.trim()||null,
+    email:document.getElementById('cf-email').value.trim()||null,
+    category:document.getElementById('cf-category').value||null,
+  };
+  const res=await apiFetch('/api/admin/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!res){errEl.textContent='Network error. Try again.';errEl.style.display='block';return;}
+  if(!res.ok){const e=await res.json();errEl.textContent=e.detail||'Error saving client.';errEl.style.display='block';return;}
+  closeCreateClientModal();
+  clientsSubLoaded={};
+  loadClientsList();
+}
+
+// ── Create Site Modal ─────────────────────────────────────────────────────────
+let siteModalMap=null, siteModalMarker=null;
+
+async function openCreateSiteModal(){
+  document.getElementById('sf-err').style.display='none';
+  ['sf-name','sf-email','sf-siteid','sf-contact','sf-phone','sf-desc','sf-city','sf-pin','sf-addr'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('sf-radius').value='200';
+  document.getElementById('sf-lat').value='';
+  document.getElementById('sf-lng').value='';
+  document.getElementById('sf-type').value='';
+  document.getElementById('site-map-placeholder').style.display='block';
+  // Populate client dropdown
+  const sel=document.getElementById('sf-client');
+  sel.innerHTML='<option value="">None</option>';
+  try{
+    const r=await apiFetch('/api/admin/clients');
+    if(r){const cs=await r.json();cs.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});}
+  }catch(e){}
+  document.getElementById('site-modal-overlay').style.display='block';
+  document.body.style.overflow='hidden';
+  setTimeout(()=>{
+    if(!siteModalMap){
+      siteModalMap=L.map('site-map',{zoomControl:true}).setView([20.5937,78.9629],5);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        {attribution:'©OpenStreetMap ©CartoDB',maxZoom:19}).addTo(siteModalMap);
+      siteModalMap.on('click',function(e){setSiteMapPin(e.latlng.lat,e.latlng.lng);});
+    }
+    siteModalMap.invalidateSize();
+  },150);
+}
+
+function closeCreateSiteModal(){
+  document.getElementById('site-modal-overlay').style.display='none';
+  document.body.style.overflow='';
+}
+
+function setSiteMapPin(lat,lng){
+  document.getElementById('sf-lat').value=lat.toFixed(6);
+  document.getElementById('sf-lng').value=lng.toFixed(6);
+  document.getElementById('site-map-placeholder').style.display='none';
+  if(siteModalMarker)siteModalMap.removeLayer(siteModalMarker);
+  siteModalMarker=L.marker([lat,lng]).addTo(siteModalMap);
+  siteModalMap.setView([lat,lng],15);
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+    .then(r=>r.json()).then(d=>{
+      const a=d.address||{};
+      const set=(id,v)=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v||'';};
+      set('sf-city',a.city||a.town||a.village||a.suburb||'');
+      set('sf-pin',a.postcode||'');
+      if(!document.getElementById('sf-addr').value&&d.display_name)
+        document.getElementById('sf-addr').value=d.display_name.split(',').slice(0,3).join(', ');
+    }).catch(()=>{});
+}
+
+let siteSearchTimer=null;
+function debounceSiteSearch(val){
+  clearTimeout(siteSearchTimer);
+  if(!val||val.length<3){document.getElementById('sf-search-results').style.display='none';return;}
+  siteSearchTimer=setTimeout(()=>runSiteSearch(val),500);
+}
+async function runSiteSearch(val){
+  const res=document.getElementById('sf-search-results');
+  res.style.display='block';res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">Searching…</div>';
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=5`);
+    const data=await r.json();
+    if(!data.length){res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">No results</div>';return;}
+    res.innerHTML=data.map(d=>`<div onclick="selectSiteSearchResult(${d.lat},${d.lon},'${esc(d.display_name).replace(/'/g,"\\'")}')"
+      style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f0f0f0"
+      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${esc(d.display_name)}</div>`).join('');
+  }catch(e){res.innerHTML='<div style="padding:8px 12px;color:#ba1a1a;font-size:12px">Search failed</div>';}
+}
+function selectSiteSearchResult(lat,lng,label){
+  document.getElementById('sf-search').value=label;
+  document.getElementById('sf-search-results').style.display='none';
+  setSiteMapPin(parseFloat(lat),parseFloat(lng));
+}
+
+async function saveSite(){
+  const name=document.getElementById('sf-name').value.trim();
+  const errEl=document.getElementById('sf-err');
+  if(!name){errEl.textContent='Site name is required.';errEl.style.display='block';return;}
+  const payload={
+    name,
+    email:document.getElementById('sf-email').value.trim()||null,
+    site_id:document.getElementById('sf-siteid').value.trim()||null,
+    contact_name:document.getElementById('sf-contact').value.trim()||null,
+    contact_code:document.getElementById('sf-code').value,
+    contact_number:document.getElementById('sf-phone').value.trim()||null,
+    description:document.getElementById('sf-desc').value.trim()||null,
+    site_type:document.getElementById('sf-type').value||null,
+    latitude:parseFloat(document.getElementById('sf-lat').value)||null,
+    longitude:parseFloat(document.getElementById('sf-lng').value)||null,
+    address:document.getElementById('sf-addr').value.trim()||null,
+    radius:parseFloat(document.getElementById('sf-radius').value)||200,
+    city:document.getElementById('sf-city').value.trim()||null,
+    pin_code:document.getElementById('sf-pin').value.trim()||null,
+    client_id:document.getElementById('sf-client').value||null,
+  };
+  const res=await apiFetch('/api/admin/sites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!res){errEl.textContent='Network error. Try again.';errEl.style.display='block';return;}
+  if(!res.ok){const e=await res.json();errEl.textContent=e.detail||'Error saving site.';errEl.style.display='block';return;}
+  closeCreateSiteModal();
+  clientsSubLoaded={};
+  loadSitesList();
+}
+
+async function deleteSite(id){
+  if(!confirm('Delete this site?'))return;
+  const res=await apiFetch(`/api/admin/sites/${id}`,{method:'DELETE'});
+  if(res&&res.ok){clientsSubLoaded={};loadSitesList();}
 }
 
 async function loadClientGeofences(){

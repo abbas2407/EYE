@@ -14,7 +14,8 @@ import httpx, io
 
 from database import get_db, engine, Base
 from models import (User, RefreshToken, AttendanceLog, Task, UploadedFile,
-                    LeaveBalance, Leave, ChatRoom, ChatMember, Message, GPSPing, PushToken)
+                    LeaveBalance, Leave, ChatRoom, ChatMember, Message, GPSPing, PushToken,
+                    Client, Site)
 from auth import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from seed import seed
 
@@ -158,6 +159,45 @@ class BulkTaskRequest(BaseModel):
 
 class LeaveActionRequest(BaseModel):
     status: str  # approved | rejected
+
+class CreateClientRequest(BaseModel):
+    name: str
+    client_id: Optional[str] = None
+    visibility: Optional[str] = "Everyone"
+    contact_name: Optional[str] = None
+    contact_code: Optional[str] = "+91"
+    contact_number: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    pin_code: Optional[str] = None
+    radius: Optional[float] = 200.0
+    employee_override: Optional[bool] = False
+    description: Optional[str] = None
+    email: Optional[str] = None
+    category: Optional[str] = None
+
+class CreateSiteRequest(BaseModel):
+    name: str
+    email: Optional[str] = None
+    site_id: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_code: Optional[str] = "+91"
+    contact_number: Optional[str] = None
+    description: Optional[str] = None
+    site_type: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
+    radius: Optional[float] = 200.0
+    city: Optional[str] = None
+    pin_code: Optional[str] = None
+    client_id: Optional[str] = None
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -940,3 +980,62 @@ async def admin_send_message(room_id: str, req: SendMessageRequest, background: 
                         {"type": "chat", "room_id": room_id})
     return {"id": msg.id, "content": msg.content, "sender_name": admin.name,
             "created_at": msg.created_at.isoformat() + "Z"}
+
+
+# ── Clients ───────────────────────────────────────────────────────────────────
+def _client_dict(c: Client):
+    return {"id": c.id, "name": c.name, "client_id": c.client_id, "visibility": c.visibility,
+            "contact_name": c.contact_name, "contact_code": c.contact_code,
+            "contact_number": c.contact_number, "latitude": c.latitude, "longitude": c.longitude,
+            "address_line1": c.address_line1, "address_line2": c.address_line2,
+            "city": c.city, "district": c.district, "state": c.state, "country": c.country,
+            "pin_code": c.pin_code, "radius": c.radius, "employee_override": c.employee_override,
+            "description": c.description, "email": c.email, "category": c.category,
+            "created_at": c.created_at.isoformat() if c.created_at else None}
+
+@app.get("/api/admin/clients")
+def admin_list_clients(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    return [_client_dict(c) for c in db.query(Client).order_by(Client.created_at).all()]
+
+@app.post("/api/admin/clients")
+def admin_create_client(req: CreateClientRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    c = Client(**req.dict())
+    db.add(c); db.commit(); db.refresh(c)
+    return _client_dict(c)
+
+@app.delete("/api/admin/clients/{client_id}")
+def admin_delete_client(client_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    c = db.query(Client).filter(Client.id == client_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Client not found")
+    db.delete(c); db.commit()
+    return {"ok": True}
+
+
+# ── Sites ─────────────────────────────────────────────────────────────────────
+def _site_dict(s: Site):
+    return {"id": s.id, "name": s.name, "email": s.email, "site_id": s.site_id,
+            "contact_name": s.contact_name, "contact_code": s.contact_code,
+            "contact_number": s.contact_number, "description": s.description,
+            "site_type": s.site_type, "latitude": s.latitude, "longitude": s.longitude,
+            "address": s.address, "radius": s.radius, "city": s.city, "pin_code": s.pin_code,
+            "client_id": s.client_id,
+            "created_at": s.created_at.isoformat() if s.created_at else None}
+
+@app.get("/api/admin/sites")
+def admin_list_sites(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    return [_site_dict(s) for s in db.query(Site).order_by(Site.created_at).all()]
+
+@app.post("/api/admin/sites")
+def admin_create_site(req: CreateSiteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    s = Site(**req.dict())
+    db.add(s); db.commit(); db.refresh(s)
+    return _site_dict(s)
+
+@app.delete("/api/admin/sites/{site_id}")
+def admin_delete_site(site_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    s = db.query(Site).filter(Site.id == site_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Site not found")
+    db.delete(s); db.commit()
+    return {"ok": True}
