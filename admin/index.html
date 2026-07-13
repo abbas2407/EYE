@@ -359,7 +359,7 @@ textarea{min-height:70px;resize:vertical}
             <button class="filt-btn" id="loc-filt-out" onclick="setLocFilter(this,'out')">Punched Out</button>
           </div>
           <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-            <button class="btn btn-secondary btn-sm" onclick="loadLiveLocView()">↻ Refresh</button>
+            <button class="btn btn-secondary btn-sm" id="loc-refresh-btn" onclick="refreshLiveLocView()">↻ Refresh</button>
           </div>
         </div>
         <!-- Split layout -->
@@ -706,7 +706,7 @@ textarea{min-height:70px;resize:vertical}
             <input id="org-emp-search" placeholder="Search here..." oninput="renderOrgEmployees()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
             <button class="btn btn-secondary btn-sm">⬆ Upload</button>
             <button class="btn btn-secondary btn-sm">⬇ Download</button>
-            <button class="btn btn-primary btn-sm">+ Add</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddEmployeeModal()">+ Add</button>
           </div>
         </div>
         <div style="flex:1;overflow:auto">
@@ -725,7 +725,7 @@ textarea{min-height:70px;resize:vertical}
             <input placeholder="Search here..." style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
             <button class="btn btn-secondary btn-sm">Org Hierarchy</button>
             <button class="btn btn-primary btn-sm" style="background:#fff;color:#1a1c1a;border:1px solid #e3e2e0">List</button>
-            <button class="btn btn-primary btn-sm">+ Add</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddAdminDrawer()">+ Add</button>
           </div>
         </div>
         <div style="flex:1;overflow:auto">
@@ -742,7 +742,7 @@ textarea{min-height:70px;resize:vertical}
           <div style="font-size:13px;font-weight:600;color:#1a1c1a">Roles (<span id="org-roles-count">0</span>)</div>
           <div style="display:flex;gap:8px;align-items:center">
             <input placeholder="Search here..." style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
-            <button class="btn btn-primary btn-sm">+ Add</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddRoleModal()">+ Add</button>
           </div>
         </div>
         <div style="flex:1;overflow:auto">
@@ -912,6 +912,178 @@ textarea{min-height:70px;resize:vertical}
 
 <div id="modal-backdrop" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- ═══════════════════════ ADD EMPLOYEE MODAL ═══════════════════════ -->
+<div id="emp-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;overflow-y:auto;padding:24px 16px">
+  <div style="background:#fff;border-radius:12px;max-width:900px;margin:0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e3e2e0;background:#faf9f6">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button onclick="closeAddEmployeeModal()" style="border:none;background:none;cursor:pointer;font-size:18px;color:#695d4a;padding:4px">← Back</button>
+        <span style="font-size:15px;font-weight:700;color:#1a1c1a">Create Employee</span>
+      </div>
+      <button class="btn btn-primary" onclick="saveEmployee()">Save</button>
+    </div>
+    <div style="padding:28px 32px;display:grid;grid-template-columns:160px 1fr;gap:32px;align-items:start">
+      <!-- Photo -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:4px">
+        <div style="width:110px;height:110px;border-radius:55px;border:2px dashed #c4c7c7;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#c4c7c7;gap:6px;background:#faf9f6">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span style="font-size:9px;text-align:center;line-height:1.3">Click to upload<br>or drag and drop</span>
+        </div>
+        <div style="font-size:9px;color:#c4c7c7;text-align:center">SVG, PNG, JPG, JPEG<br>(Max. size 250×250px)</div>
+      </div>
+      <!-- Fields grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div><label>First Name *</label><input id="ef-first" placeholder="First Name" maxlength="45"><div style="font-size:9px;color:#c4c7c7;margin-top:2px">0/45</div></div>
+        <div><label>Last Name *</label><input id="ef-last" placeholder="Last Name" maxlength="45"><div style="font-size:9px;color:#c4c7c7;margin-top:2px">0/45</div></div>
+        <div><label>Phone</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="padding:9px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;white-space:nowrap">🇮🇳 +91</div>
+            <input id="ef-phone" placeholder="Phone number" style="flex:1">
+          </div>
+        </div>
+        <div><label>Email address *</label><input id="ef-email" type="email" placeholder="Email"><div style="font-size:9px;color:#c4c7c7;margin-top:2px">0/60</div></div>
+        <div><label>Select Reporting Manager</label>
+          <select id="ef-manager" style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;color:#1a1c1a;background:#fff;margin:0">
+            <option value="">Select manager...</option>
+          </select>
+        </div>
+        <div><label>Internal Employee ID</label><input id="ef-empid" placeholder="Internal Employee ID"><div style="font-size:9px;color:#c4c7c7;margin-top:2px">0/45</div></div>
+        <div><label>User ID</label><input id="ef-userid" placeholder="User ID"></div>
+        <div><label>Joining Date *</label><input id="ef-joining" type="date"></div>
+        <div><label>Select Leave Policy</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;color:#1a1c1a;background:#fff;margin:0"><option>Select Leave Policy</option></select>
+        </div>
+        <div><label>Select Holiday Plan</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;color:#1a1c1a;background:#fff;margin:0"><option>Select Holiday Plan</option></select>
+        </div>
+      </div>
+    </div>
+    <!-- Additional Info -->
+    <div style="padding:0 32px 28px">
+      <div style="border-top:1px solid #e3e2e0;padding-top:20px;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        <div style="width:22px;height:22px;border-radius:11px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:12px">➕</div>
+        <span style="font-size:12px;font-weight:600;color:#1e40af;text-transform:uppercase;letter-spacing:.5px">Additional Information</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <label>Select Team</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0"><option>Default</option></select>
+          <div style="font-size:10px;color:#747878;margin-top:4px">Group people who work together into teams.</div>
+          <label style="margin-top:14px">Select Designation</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0"><option>Select Designation</option></select>
+          <div style="font-size:10px;color:#747878;margin-top:4px">Choose their designation.</div>
+          <label style="margin-top:14px">Enter City Name</label>
+          <input id="ef-city" placeholder="Enter City Name">
+          <label style="margin-top:14px">Select Base Site</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0"><option>None</option></select>
+          <div style="font-size:10px;color:#747878;margin-top:4px">If your Employee normally works out of one location, create a site for them.</div>
+          <label style="margin-top:14px">Select Site Pool</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0"><option>None</option></select>
+        </div>
+        <div>
+          <label>Punch Restriction IN (Site or Sitepool or Client)</label>
+          <label style="text-transform:none;letter-spacing:0;font-size:11px;color:#1a1c1a;font-weight:400;margin-top:8px">Select Site</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0"><option>None</option></select>
+          <div style="font-size:10px;color:#747878;margin-top:4px">Restrict punching in location to this site.</div>
+          <div style="text-align:center;color:#c4c7c7;font-size:11px;padding:6px 0">OR</div>
+          <label style="text-transform:none;letter-spacing:0;font-size:11px;color:#1a1c1a;font-weight:400">Select Sitepool</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0"><option>None</option></select>
+          <div style="font-size:10px;color:#747878;margin-top:4px">Restrict punching in location to this sitepool.</div>
+          <div style="text-align:center;color:#c4c7c7;font-size:11px;padding:6px 0">OR</div>
+          <label style="text-transform:none;letter-spacing:0;font-size:11px;color:#1a1c1a;font-weight:400">Client Location</label>
+          <select style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0"><option>None</option></select>
+        </div>
+      </div>
+      <div id="emp-err" style="color:#ba1a1a;font-size:12px;margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ ADD ADMIN DRAWER ═══════════════════════ -->
+<div id="admin-drawer-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:200" onclick="closeAddAdminDrawer()"></div>
+<div id="admin-drawer" style="position:fixed;top:0;right:0;height:100%;width:420px;background:#fff;z-index:201;box-shadow:-4px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e3e2e0;flex-shrink:0">
+    <div>
+      <div style="font-size:15px;font-weight:700;color:#1a1c1a">Add Admin</div>
+      <div style="font-size:11px;color:#747878;margin-top:2px">Invite a new admin to your organization.</div>
+    </div>
+    <button onclick="closeAddAdminDrawer()" style="width:32px;height:32px;border-radius:6px;border:1px solid #e3e2e0;background:#fff;cursor:pointer;font-size:16px;color:#747878;display:flex;align-items:center;justify-content:center">✕</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:20px">
+    <div style="display:flex;gap:12px">
+      <div style="flex:1"><label>Enter First Name *</label><input id="af-first" placeholder="Enter First Name"></div>
+      <div style="flex:1"><label>Enter Last Name *</label><input id="af-last" placeholder="Enter Last Name"></div>
+    </div>
+    <label style="margin-top:14px">Enter Email *</label>
+    <div style="position:relative"><svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    <input id="af-email" type="email" placeholder="Enter Email" style="padding-left:30px"></div>
+    <label style="margin-top:14px">Internal Admin ID</label>
+    <input id="af-adminid" placeholder="Internal Admin ID">
+    <label style="margin-top:14px">Phone</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="padding:9px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;white-space:nowrap">🇮🇳 +91</div>
+      <input id="af-phone" placeholder="Phone number" style="flex:1">
+    </div>
+    <label style="margin-top:14px">Select/Create Role</label>
+    <select id="af-role" style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0">
+      <option value="">Select/Create Role</option>
+      <option value="Company Admin">Company Admin</option>
+      <option value="Manager">Manager</option>
+    </select>
+    <label style="margin-top:14px">Select Designation</label>
+    <select id="af-desig" style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0">
+      <option value="None">None</option>
+    </select>
+    <label style="margin-top:14px">Reporting Manager</label>
+    <select id="af-manager" style="width:100%;padding:9px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:13px;background:#fff;margin:0">
+      <option value="">Select manager...</option>
+    </select>
+    <div id="admin-err" style="color:#ba1a1a;font-size:12px;margin-top:12px;display:none"></div>
+  </div>
+  <div style="padding:16px 20px;border-top:1px solid #e3e2e0;display:flex;gap:10px;flex-shrink:0">
+    <button class="btn btn-secondary" style="flex:1" onclick="closeAddAdminDrawer()">Cancel</button>
+    <button class="btn btn-primary" style="flex:1" onclick="saveAdmin()">Add Admin</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ ADD ROLE MODAL ═══════════════════════ -->
+<div id="role-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;overflow-y:auto;padding:24px 16px">
+  <div style="background:#fff;border-radius:12px;max-width:860px;margin:0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e3e2e0;background:#faf9f6">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button onclick="closeAddRoleModal()" style="border:none;background:none;cursor:pointer;font-size:18px;color:#695d4a;padding:4px">← Back</button>
+        <span style="font-size:15px;font-weight:700;color:#1a1c1a">Create Role</span>
+      </div>
+      <button class="btn btn-primary" onclick="saveRole()">SAVE</button>
+    </div>
+    <div style="padding:28px 32px">
+      <label>Role Name *</label>
+      <input id="rf-name" placeholder="Role Name *" maxlength="45">
+      <div style="font-size:10px;color:#c4c7c7;margin-top:3px">This must be between 5 and 45 characters &nbsp;&nbsp; 0/45</div>
+      <label style="margin-top:16px">Role Description</label>
+      <input id="rf-desc" placeholder="Role Description" maxlength="100">
+      <div style="font-size:10px;color:#c4c7c7;margin-top:3px">This must be between 5 and 100 characters &nbsp;&nbsp; 0/100</div>
+      <div style="font-size:12px;font-weight:600;color:#1a1c1a;margin-top:24px;margin-bottom:14px">Assign Permissions</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="role-perms-grid">
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Dashboard" style="width:auto;margin:0;accent-color:#1e40af"> Dashboard</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Orders" style="width:auto;margin:0;accent-color:#1e40af"> Orders</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Attendance" style="width:auto;margin:0;accent-color:#1e40af"> Attendance</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Expenses" style="width:auto;margin:0;accent-color:#1e40af"> Expenses</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Leaves" style="width:auto;margin:0;accent-color:#1e40af"> Leaves</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Clients & Sites" style="width:auto;margin:0;accent-color:#1e40af"> Clients &amp; Sites</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Organization" style="width:auto;margin:0;accent-color:#1e40af"> Organization</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Reports" style="width:auto;margin:0;accent-color:#1e40af"> Reports</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Tasks" style="width:auto;margin:0;accent-color:#1e40af"> Tasks</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Custom Reports" style="width:auto;margin:0;accent-color:#1e40af"> Custom Reports</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Forms" style="width:auto;margin:0;accent-color:#1e40af"> Forms</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Settings" style="width:auto;margin:0;accent-color:#1e40af"> Settings</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #e8ecff;border-radius:6px;cursor:pointer;background:#f5f7ff;font-size:13px;font-weight:500;color:#1e40af;margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" name="perm" value="Billing" style="width:auto;margin:0;accent-color:#1e40af"> Billing</label>
+      </div>
+      <div id="role-err" style="color:#ba1a1a;font-size:12px;margin-top:12px;display:none"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -2288,6 +2460,121 @@ function loadOrgTeams(){
     <td style="font-weight:500">${esc(t)}</td>
     <td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:12px">⊘</button></td>
   </tr>`).join('');
+}
+
+// ── Live Location Refresh ────────────────────────────────────────────────────
+async function refreshLiveLocView(){
+  const btn=document.getElementById('loc-refresh-btn');
+  if(btn){btn.textContent='↻ Refreshing…';btn.disabled=true;}
+  await loadLiveLocView();
+  if(locMap)setTimeout(()=>locMap.invalidateSize(),100);
+  if(btn){btn.textContent='↻ Refresh';btn.disabled=false;}
+}
+
+// ── Add Employee ─────────────────────────────────────────────────────────────
+async function openAddEmployeeModal(){
+  // Populate manager dropdown
+  const sel=document.getElementById('ef-manager');
+  if(sel&&sel.options.length===1){
+    const res=await apiFetch('/api/admin/workers');
+    if(res){const ws=await res.json();ws.forEach(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.name;sel.appendChild(o);});}
+  }
+  // Set today's date
+  const d=document.getElementById('ef-joining');
+  if(d&&!d.value)d.value=new Date().toISOString().split('T')[0];
+  document.getElementById('emp-err').style.display='none';
+  document.getElementById('emp-modal-overlay').style.display='block';
+  document.body.style.overflow='hidden';
+}
+function closeAddEmployeeModal(){
+  document.getElementById('emp-modal-overlay').style.display='none';
+  document.body.style.overflow='';
+}
+async function saveEmployee(){
+  const first=document.getElementById('ef-first').value.trim();
+  const last=document.getElementById('ef-last').value.trim();
+  const email=document.getElementById('ef-email').value.trim();
+  const errEl=document.getElementById('emp-err');
+  if(!first||!email){errEl.textContent='First name and email are required.';errEl.style.display='block';return;}
+  const name=`${first} ${last}`.trim();
+  const pwd='FieldPulse@'+Math.floor(1000+Math.random()*9000);
+  const res=await apiFetch('/api/admin/users',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,email,password:pwd,role:'field_worker'})});
+  if(!res){errEl.textContent='Network error. Try again.';errEl.style.display='block';return;}
+  if(!res.ok){const e=await res.json();errEl.textContent=e.detail||'Error creating employee.';errEl.style.display='block';return;}
+  closeAddEmployeeModal();
+  orgSubLoaded={};
+  loadOrgEmployees();
+  ['ef-first','ef-last','ef-phone','ef-email','ef-empid','ef-userid','ef-city'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+// ── Add Admin Drawer ─────────────────────────────────────────────────────────
+async function openAddAdminDrawer(){
+  const sel=document.getElementById('af-manager');
+  if(sel&&sel.options.length===1){
+    const res=await apiFetch('/api/admin/workers');
+    if(res){const ws=await res.json();ws.forEach(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.name;sel.appendChild(o);});}
+  }
+  document.getElementById('admin-err').style.display='none';
+  document.getElementById('admin-drawer-overlay').style.display='block';
+  setTimeout(()=>document.getElementById('admin-drawer').style.transform='translateX(0)',10);
+}
+function closeAddAdminDrawer(){
+  document.getElementById('admin-drawer').style.transform='translateX(100%)';
+  setTimeout(()=>document.getElementById('admin-drawer-overlay').style.display='none',260);
+}
+async function saveAdmin(){
+  const first=document.getElementById('af-first').value.trim();
+  const last=document.getElementById('af-last').value.trim();
+  const email=document.getElementById('af-email').value.trim();
+  const errEl=document.getElementById('admin-err');
+  if(!first||!email){errEl.textContent='First name and email are required.';errEl.style.display='block';return;}
+  const name=`${first} ${last}`.trim();
+  const pwd='Admin@'+Math.floor(1000+Math.random()*9000);
+  const res=await apiFetch('/api/admin/users',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,email,password:pwd,role:'admin'})});
+  if(!res){errEl.textContent='Network error. Try again.';errEl.style.display='block';return;}
+  if(!res.ok){const e=await res.json();errEl.textContent=e.detail||'Error creating admin.';errEl.style.display='block';return;}
+  closeAddAdminDrawer();
+  orgSubLoaded={};
+  loadOrgAdmins();
+  ['af-first','af-last','af-email','af-adminid','af-phone'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+// ── Add Role ─────────────────────────────────────────────────────────────────
+function openAddRoleModal(){
+  document.getElementById('rf-name').value='';
+  document.getElementById('rf-desc').value='';
+  document.querySelectorAll('#role-perms-grid input[type=checkbox]').forEach(c=>c.checked=false);
+  document.getElementById('role-err').style.display='none';
+  document.getElementById('role-modal-overlay').style.display='block';
+  document.body.style.overflow='hidden';
+}
+function closeAddRoleModal(){
+  document.getElementById('role-modal-overlay').style.display='none';
+  document.body.style.overflow='';
+}
+function saveRole(){
+  const name=document.getElementById('rf-name').value.trim();
+  const desc=document.getElementById('rf-desc').value.trim();
+  const errEl=document.getElementById('role-err');
+  if(name.length<5){errEl.textContent='Role name must be at least 5 characters.';errEl.style.display='block';return;}
+  const perms=[...document.querySelectorAll('#role-perms-grid input:checked')].map(c=>c.value);
+  // Add to roles table (local only — no backend endpoint for roles yet)
+  const tbody=document.getElementById('org-roles-body');
+  const existing=tbody.querySelector('.empty');if(existing)existing.parentElement.remove();
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input type="checkbox" style="width:auto;margin:0"></td>
+    <td style="font-weight:500">${esc(name)}</td>
+    <td style="font-size:12px;color:#747878">${esc(desc)}</td>
+    <td><div style="display:flex;gap:6px">
+      <button class="btn btn-secondary btn-sm" style="padding:3px 8px">✏</button>
+      <button class="btn btn-danger btn-sm" style="padding:3px 8px" onclick="this.closest('tr').remove()">🗑</button>
+    </div></td>`;
+  tbody.appendChild(tr);
+  const cnt=document.getElementById('org-roles-count');
+  if(cnt)cnt.textContent=tbody.querySelectorAll('tr').length;
+  closeAddRoleModal();
 }
 
 // ═══════════════════════════════════════════════════ CLIENTS & SITES ═════════
