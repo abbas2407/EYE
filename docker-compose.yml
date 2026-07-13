@@ -5,8 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: fieldpulse-api
     restart: unless-stopped
-    expose:
-      - "8000"
+    ports:
+      - "127.0.0.1:8001:8000"
     environment:
       - DB_PATH=/app/data/fieldpulse.db
       - UPLOAD_DIR=/app/data/uploads
@@ -27,31 +27,11 @@ services:
       dockerfile: Dockerfile
     container_name: fieldpulse-admin
     restart: unless-stopped
-    expose:
-      - "80"
-    depends_on:
-      - fieldpulse-api
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: fieldpulse-caddy
-    restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - "127.0.0.1:8080:80"
     depends_on:
       - fieldpulse-api
-      - fieldpulse-admin
 
 volumes:
   fieldpulse_data:
-    driver: local
-  caddy_data:
-    driver: local
-  caddy_config:
     driver: local
