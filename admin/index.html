@@ -181,6 +181,7 @@ textarea{min-height:70px;resize:vertical}
     <nav>
       <div class="nav-item active" onclick="showTab('dashboard')"><i data-feather="bar-chart-2" class="nav-icon"></i> Dashboard</div>
       <div class="nav-item" onclick="showTab('workers')"><i data-feather="users" class="nav-icon"></i> Workers</div>
+      <div class="nav-item" onclick="showTab('organization')"><i data-feather="git-branch" class="nav-icon"></i> Organization</div>
       <div class="nav-item" onclick="showTab('tasks')"><i data-feather="clipboard" class="nav-icon"></i> Tasks</div>
       <div class="nav-item" onclick="showTab('attendance')"><i data-feather="clock" class="nav-icon"></i> Attendance</div>
       <div class="nav-item" onclick="showTab('leaves')"><i data-feather="calendar" class="nav-icon"></i> Leaves</div>
@@ -686,6 +687,106 @@ textarea{min-height:70px;resize:vertical}
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════ ORGANIZATION ══ -->
+    <div id="tab-organization" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+
+      <div class="dash-subnav">
+        <button class="dsn-btn active" id="osn-employees"   onclick="showOrgSub('employees')">Employees</button>
+        <button class="dsn-btn"        id="osn-admins"      onclick="showOrgSub('admins')">Admins</button>
+        <button class="dsn-btn"        id="osn-roles"       onclick="showOrgSub('roles')">Roles</button>
+        <button class="dsn-btn"        id="osn-designation" onclick="showOrgSub('designation')">Designation</button>
+        <button class="dsn-btn"        id="osn-teams"       onclick="showOrgSub('teams')">Teams</button>
+      </div>
+
+      <!-- ── EMPLOYEES ── -->
+      <div id="osub-employees" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:#1a1c1a">Employees (<span id="org-emp-count">0</span>)</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="org-emp-search" placeholder="Search here..." oninput="renderOrgEmployees()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
+            <button class="btn btn-secondary btn-sm">⬆ Upload</button>
+            <button class="btn btn-secondary btn-sm">⬇ Download</button>
+            <button class="btn btn-primary btn-sm">+ Add</button>
+          </div>
+        </div>
+        <div style="flex:1;overflow:auto">
+          <table style="width:100%">
+            <thead><tr><th style="width:32px"><input type="checkbox" style="width:auto;margin:0"></th><th>Employee</th><th>User ID</th><th>Employee ID</th><th>Phone Number</th><th>Joining Date</th><th>Reporting Manager</th><th>Team</th><th>Designation</th><th>Leave Policy</th><th>Holiday Plan</th></tr></thead>
+            <tbody id="org-emp-body"><tr><td colspan="11" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── ADMINS ── -->
+      <div id="osub-admins" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:#1a1c1a">Admins (<span id="org-admin-count">0</span>)</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input placeholder="Search here..." style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
+            <button class="btn btn-secondary btn-sm">Org Hierarchy</button>
+            <button class="btn btn-primary btn-sm" style="background:#fff;color:#1a1c1a;border:1px solid #e3e2e0">List</button>
+            <button class="btn btn-primary btn-sm">+ Add</button>
+          </div>
+        </div>
+        <div style="flex:1;overflow:auto">
+          <table style="width:100%">
+            <thead><tr><th style="width:32px"><input type="checkbox" style="width:auto;margin:0"></th><th>Admin Name</th><th>Admin ID</th><th>Role</th><th>Designation</th><th>Employee Visibility</th><th>Admin Visibility</th><th>Reports To</th><th>Action</th></tr></thead>
+            <tbody id="org-admin-body"><tr><td colspan="9" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── ROLES ── -->
+      <div id="osub-roles" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:#1a1c1a">Roles (<span id="org-roles-count">0</span>)</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input placeholder="Search here..." style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
+            <button class="btn btn-primary btn-sm">+ Add</button>
+          </div>
+        </div>
+        <div style="flex:1;overflow:auto">
+          <table style="width:100%">
+            <thead><tr><th style="width:32px"><input type="checkbox" style="width:auto;margin:0"></th><th>Role Name</th><th>Description</th><th>Action</th></tr></thead>
+            <tbody id="org-roles-body"><tr><td colspan="4" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── DESIGNATION ── -->
+      <div id="osub-designation" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:#1a1c1a">Designations (<span id="org-desig-count">0</span>)</div>
+          <button class="btn btn-primary btn-sm">+ Add</button>
+        </div>
+        <div style="flex:1;overflow:auto">
+          <table style="width:100%">
+            <thead><tr><th>Categories</th><th>Action</th></tr></thead>
+            <tbody id="org-desig-body"><tr><td colspan="2" class="empty">No designations added yet</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── TEAMS ── -->
+      <div id="osub-teams" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:#1a1c1a">Total Teams (<span id="org-teams-count">0</span>)</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-secondary btn-sm" style="background:#fff;color:#1a1c1a;border:1px solid #1a1c1a">Team List</button>
+            <button class="btn btn-secondary btn-sm">Team Hierarchy</button>
+            <button class="btn btn-primary btn-sm">+ Add</button>
+          </div>
+        </div>
+        <div style="flex:1;overflow:auto">
+          <table style="width:100%">
+            <thead><tr><th>Team Name</th><th>Action</th></tr></thead>
+            <tbody id="org-teams-body"><tr><td colspan="2" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tab-organization -->
+
     <!-- ══════════════════════════════════════════ CLIENTS & SITES ══ -->
     <div id="tab-clients" style="display:none;flex-direction:column;flex:1;overflow:hidden">
 
@@ -873,21 +974,21 @@ async function apiFetch(path,opts={}){
 }
 
 // ── Tab routing ─────────────────────────────────────────────────────────────
-const TABS=['dashboard','workers','tasks','attendance','leaves','chat','clients','performance','reports'];
-const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',tasks:'Tasks',attendance:'Attendance',
+const TABS=['dashboard','workers','organization','tasks','attendance','leaves','chat','clients','performance','reports'];
+const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',organization:'Organization',tasks:'Tasks',attendance:'Attendance',
   leaves:'Leave Requests',chat:'Chat',clients:'Clients & Sites',performance:'Performance',reports:'Reports'};
 
 function showTab(name){
   document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',TABS[i]===name));
   document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
   const el=document.getElementById(`tab-${name}`);
-  if(el) el.style.display=(name==='dashboard'||name==='attendance'||name==='clients')?'flex':'block';
+  if(el) el.style.display=(name==='dashboard'||name==='attendance'||name==='clients'||name==='organization')?'flex':'block';
   document.getElementById('topbar-title').textContent=TAB_TITLES[name]||name;
   if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;}
   if(name==='chat'){lastChatVisit=new Date().toISOString();updateChatBadge(0);}
   const loaders={dashboard:()=>showDashSub('overview'),workers:loadWorkers,tasks:loadTasks,
     attendance:loadAttendance,leaves:loadLeaves,chat:loadChatRooms,
-    clients:loadClients,performance:loadPerformance,reports:()=>{}};
+    clients:loadClients,organization:loadOrganization,performance:loadPerformance,reports:()=>{}};
   if(loaders[name])loaders[name]();
 }
 
@@ -2081,6 +2182,114 @@ async function sendAdminMessage(){
 }
 
 // ═══════════════════════════════════════════════════ GEOFENCE ════════════════
+// ═══════════════════════════════════════════════════ ORGANIZATION ════════════
+const ORG_SUBS=['employees','admins','roles','designation','teams'];
+let orgSubLoaded={}, orgEmpData=[];
+
+function showOrgSub(name){
+  ORG_SUBS.forEach(s=>{
+    const el=document.getElementById(`osub-${s}`);
+    if(el)el.style.display='none';
+    const btn=document.getElementById(`osn-${s}`);
+    if(btn)btn.classList.toggle('active',s===name);
+  });
+  const el=document.getElementById(`osub-${name}`);
+  if(el){el.style.display='flex';el.style.flexDirection='column';}
+  if(!orgSubLoaded[name]){
+    orgSubLoaded[name]=true;
+    if(name==='employees')loadOrgEmployees();
+    if(name==='admins')loadOrgAdmins();
+    if(name==='roles')loadOrgRoles();
+    if(name==='teams')loadOrgTeams();
+  }
+}
+
+function loadOrganization(){
+  orgSubLoaded={};
+  showOrgSub('employees');
+}
+
+async function loadOrgEmployees(){
+  const res=await apiFetch('/api/admin/workers'); if(!res)return;
+  orgEmpData=await res.json();
+  document.getElementById('org-emp-count').textContent=orgEmpData.length;
+  renderOrgEmployees();
+}
+
+function renderOrgEmployees(){
+  const q=(document.getElementById('org-emp-search')?.value||'').toLowerCase();
+  const rows=orgEmpData.filter(w=>!q||w.name.toLowerCase().includes(q)||w.email.toLowerCase().includes(q));
+  document.getElementById('org-emp-body').innerHTML=rows.length===0?
+    '<tr><td colspan="11" class="empty">No employees found</td></tr>':
+    rows.map(w=>`<tr>
+      <td><input type="checkbox" style="width:auto;margin:0"></td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div style="width:32px;height:32px;border-radius:16px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#695d4a;flex-shrink:0">${w.name.charAt(0).toUpperCase()}</div>
+        <div><div style="font-weight:600;font-size:13px">${esc(w.name)}</div><div style="font-size:10px;color:#747878">${esc(w.email)}</div></div>
+      </div></td>
+      <td style="font-size:11px;color:#747878">${w.id?w.id.toString().slice(0,8):'—'}</td>
+      <td style="font-size:11px;color:#747878">—</td>
+      <td style="font-size:11px">${esc(w.phone||'—')}</td>
+      <td style="font-size:11px">${w.created_at?w.created_at.split('T')[0]:'—'}</td>
+      <td style="font-size:11px">Admin</td>
+      <td style="font-size:11px">Default</td>
+      <td style="font-size:11px">None</td>
+      <td style="font-size:11px">Default</td>
+      <td style="font-size:11px">—</td>
+    </tr>`).join('');
+}
+
+async function loadOrgAdmins(){
+  const res=await apiFetch('/api/admin/workers'); if(!res)return;
+  const admins=await res.json();
+  document.getElementById('org-admin-count').textContent=admins.length;
+  document.getElementById('org-admin-body').innerHTML=admins.length===0?
+    '<tr><td colspan="9" class="empty">No admins found</td></tr>':
+    admins.map(a=>`<tr>
+      <td><input type="checkbox" style="width:auto;margin:0"></td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div style="width:32px;height:32px;border-radius:16px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#1e40af;flex-shrink:0">${a.name.slice(0,2).toUpperCase()}</div>
+        <div><div style="font-weight:600;font-size:13px">${esc(a.name)}</div><div style="font-size:10px;color:#747878">${esc(a.email)}</div></div>
+      </div></td>
+      <td style="font-size:11px;color:#747878">—</td>
+      <td style="font-size:11px">Company Admin</td>
+      <td style="font-size:11px">None</td>
+      <td style="font-size:11px">All</td>
+      <td style="font-size:11px">All</td>
+      <td style="font-size:11px">${esc(a.name)}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" style="padding:3px 8px">✏</button>
+        <button class="btn btn-danger btn-sm" style="padding:3px 8px">🗑</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function loadOrgRoles(){
+  const roles=[
+    {name:'Company Admin',desc:'Super user who has access to all modules'},
+    {name:'Manager',desc:'All access except shift/roster template and access control'}
+  ];
+  document.getElementById('org-roles-count').textContent=roles.length;
+  document.getElementById('org-roles-body').innerHTML=roles.map(r=>`<tr>
+    <td><input type="checkbox" style="width:auto;margin:0"></td>
+    <td style="font-weight:500">${esc(r.name)}</td>
+    <td style="font-size:12px;color:#747878">${esc(r.desc)}</td>
+    <td><div style="display:flex;gap:6px">
+      <button class="btn btn-secondary btn-sm" style="padding:3px 8px">✏</button>
+      <button class="btn btn-danger btn-sm" style="padding:3px 8px">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function loadOrgTeams(){
+  const teams=['Default'];
+  document.getElementById('org-teams-count').textContent=teams.length;
+  document.getElementById('org-teams-body').innerHTML=teams.map(t=>`<tr>
+    <td style="font-weight:500">${esc(t)}</td>
+    <td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:12px">⊘</button></td>
+  </tr>`).join('');
+}
+
 // ═══════════════════════════════════════════════════ CLIENTS & SITES ═════════
 const CLIENTS_SUBS=['clients','sites','geofence'];
 let clientsSubLoaded={};
