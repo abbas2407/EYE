@@ -117,12 +117,17 @@ textarea{min-height:70px;resize:vertical}
 .comp-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 1px}
 .comp-dot-green{background:#22c55e}
 .comp-dot-grey{background:#e3e2e0}
-/* Leaflet map base */
-.leaflet-container{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+/* Google Maps container */
+#loc-map,#tl-map{background:#e8f0e8}
 </style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
+<script>
+/* Google Maps async loader */
+let _gmReady=false, _gmQueue=[];
+function _gmCallback(){_gmReady=true;_gmQueue.forEach(fn=>fn());_gmQueue=[];}
+function onGMReady(fn){if(_gmReady)fn();else _gmQueue.push(fn);}
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAJHF-B2ulEDrxStgKH4NS7szhFdjErnos&callback=_gmCallback"></script>
 </head>
 <body>
 
@@ -771,14 +776,14 @@ async function loadHoursChart(){
 }
 
 // ═══════════════════════════════════════════════════════ LIVE LOCATION ═══════
-let locMap=null, locMarkers=[], locAllData=[], locFilterMode='all';
+let gLocMap=null, locInfoWin=null, locGMarkers=[], locAllData=[], locFilterMode='all';
 
 async function loadLiveLocView(){
   const res=await apiFetch('/api/admin/live-locations');
   if(!res)return;
   locAllData=await res.json();
   renderLocList();
-  renderLocMap();
+  onGMReady(renderLocMap);
 }
 
 function setLocFilter(btn,mode){
@@ -793,7 +798,6 @@ function renderLocList(){
     :locFilterMode==='in'?locAllData.filter(l=>l.is_punched_in)
     :locAllData.filter(l=>!l.is_punched_in);
 
-  // Update counts on buttons
   document.getElementById('loc-filt-all').textContent=`${locAllData.length} All Employees`;
   document.getElementById('loc-filt-in').textContent=`${locAllData.filter(l=>l.is_punched_in).length} Punched In`;
   document.getElementById('loc-filt-out').textContent=`${locAllData.filter(l=>!l.is_punched_in).length} Punched Out`;
@@ -825,37 +829,58 @@ function renderLocList(){
 function renderLocMap(){
   const mapEl=document.getElementById('loc-map'); if(!mapEl)return;
   const valid=locAllData.filter(l=>l.latitude&&l.longitude);
-  if(!locMap){
-    locMap=L.map(mapEl,{zoomControl:true});
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(locMap);
+  if(!gLocMap){
+    gLocMap=new google.maps.Map(mapEl,{
+      center:{lat:20.5937,lng:78.9629},zoom:5,
+      mapTypeId:'roadmap',
+      styles:[{featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}]}]
+    });
+    locInfoWin=new google.maps.InfoWindow();
   }
-  locMarkers.forEach(m=>m.remove()); locMarkers=[];
-  if(!valid.length){locMap.setView([20.5937,78.9629],5);return;}
-  const bounds=[];
+  locGMarkers.forEach(m=>m.setMap(null)); locGMarkers=[];
+  if(!valid.length)return;
+  const bounds=new google.maps.LatLngBounds();
   valid.forEach(loc=>{
-    bounds.push([loc.latitude,loc.longitude]);
-    const icon=L.divIcon({className:'',
-      html:`<div style="width:40px;height:40px;border-radius:20px;background:${loc.is_punched_in?'#1a1c1a':'#9ca3af'};border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.3)">${loc.user_name.charAt(0)}</div>`,
-      iconSize:[40,40],iconAnchor:[20,20],popupAnchor:[0,-24]});
-    const m=L.marker([loc.latitude,loc.longitude],{icon}).addTo(locMap).bindPopup(
-      `<div style="min-width:160px;font-family:sans-serif">
-        <div style="font-weight:700;font-size:13px;color:#1a1c1a">${esc(loc.user_name)}</div>
-        <div style="font-size:11px;color:#747878">${esc(loc.user_email)}</div>
-        <div style="margin-top:8px;font-size:11px;color:${loc.is_punched_in?'#166534':'#747878'};font-weight:600">${loc.is_punched_in?'● Punched In':'○ Punched Out'}</div>
-        <div style="font-size:10px;color:#c4c7c7;margin-top:4px">Last: ${fmtDT(loc.last_seen)}</div>
-      </div>`);
-    m._wid=loc.user_id;
-    locMarkers.push(m);
+    const pos={lat:loc.latitude,lng:loc.longitude};
+    bounds.extend(pos);
+    const pin=loc.is_punched_in?'#1a1c1a':'#9ca3af';
+    const marker=new google.maps.Marker({
+      position:pos, map:gLocMap,
+      title:loc.user_name,
+      icon:{
+        url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="19" fill="${pin}" stroke="#fff" stroke-width="3"/>
+            <text x="22" y="27" font-family="Arial" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">${loc.user_name.charAt(0).toUpperCase()}</text>
+          </svg>`),
+        scaledSize:new google.maps.Size(44,44),
+        anchor:new google.maps.Point(22,22)
+      }
+    });
+    marker._wid=loc.user_id;
+    marker.addListener('click',()=>{
+      locInfoWin.setContent(
+        `<div style="font-family:sans-serif;min-width:170px;padding:4px 0">
+          <div style="font-weight:700;font-size:13px;color:#1a1c1a">${esc(loc.user_name)}</div>
+          <div style="font-size:11px;color:#747878;margin-top:2px">${esc(loc.user_email)}</div>
+          <div style="margin-top:8px;font-size:11px;color:${loc.is_punched_in?'#166534':'#9ca3af'};font-weight:600">${loc.is_punched_in?'● Punched In':'○ Punched Out'}</div>
+          <div style="font-size:10px;color:#c4c7c7;margin-top:4px">Last: ${fmtDT(loc.last_seen)}</div>
+        </div>`);
+      locInfoWin.open(gLocMap,marker);
+    });
+    locGMarkers.push(marker);
   });
-  if(valid.length===1)locMap.setView(bounds[0],14);
-  else locMap.fitBounds(bounds,{padding:[40,40]});
+  if(valid.length===1)gLocMap.setCenter({lat:valid[0].latitude,lng:valid[0].longitude});
+  else gLocMap.fitBounds(bounds,{top:40,right:40,bottom:40,left:40});
 }
 
 function focusLocWorker(uid){
   const loc=locAllData.find(l=>l.user_id===uid);
-  if(!loc||!locMap)return;
-  locMap.setView([loc.latitude,loc.longitude],16);
-  const m=locMarkers.find(x=>x._wid===uid); if(m)m.openPopup();
+  if(!loc||!gLocMap)return;
+  gLocMap.panTo({lat:loc.latitude,lng:loc.longitude});
+  gLocMap.setZoom(16);
+  const m=locGMarkers.find(x=>x._wid===uid);
+  if(m)google.maps.event.trigger(m,'click');
 }
 
 function openTimelineFor(uid){
@@ -867,7 +892,7 @@ function openTimelineFor(uid){
 }
 
 // ═══════════════════════════════════════════════════════ TIMELINE ═══════════
-let tlMap=null, tlMarkers=[], tlPolyline=null, tlWorkers=[];
+let gTlMap=null, tlGMarkers=[], tlPolyline=null, tlWorkers=[];
 
 async function initTimeline(){
   const today=new Date();
@@ -886,12 +911,16 @@ async function initTimeline(){
     sel.innerHTML=workers.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
   }
 
-  const mapEl=document.getElementById('tl-map');
-  if(mapEl&&!tlMap){
-    tlMap=L.map(mapEl,{zoomControl:true});
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(tlMap);
-    tlMap.setView([20.5937,78.9629],5);
-  }
+  onGMReady(()=>{
+    const mapEl=document.getElementById('tl-map');
+    if(mapEl&&!gTlMap){
+      gTlMap=new google.maps.Map(mapEl,{
+        center:{lat:20.5937,lng:78.9629},zoom:5,
+        mapTypeId:'roadmap',
+        styles:[{featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}]}]
+      });
+    }
+  });
 }
 
 async function loadTimeline(){
@@ -948,24 +977,48 @@ async function loadTimeline(){
     }).join('');
   }
 
-  // Draw route on map
-  tlMarkers.forEach(m=>m.remove()); tlMarkers=[];
-  if(tlPolyline){tlPolyline.remove();tlPolyline=null;}
-  if(data.pings.length>0&&tlMap){
-    const coords=data.pings.map(p=>[p.lat,p.lng]);
-    tlPolyline=L.polyline(coords,{color:'#695d4a',weight:3,opacity:.75}).addTo(tlMap);
-    const mkIcon=(clr)=>L.divIcon({className:'',
-      html:`<div style="width:12px;height:12px;border-radius:6px;background:${clr};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`,
-      iconSize:[12,12],iconAnchor:[6,6]});
-    tlMarkers.push(L.marker(coords[0],{icon:mkIcon('#166534')}).addTo(tlMap));
-    if(coords.length>1)tlMarkers.push(L.marker(coords[coords.length-1],{icon:mkIcon('#991b1b')}).addTo(tlMap));
-    tlMap.fitBounds(coords,{padding:[30,30]});
-  }else if(tlMap){
-    tlMap.setView([20.5937,78.9629],5);
-  }
+  // Draw route on Google Maps (orange line like navigation)
+  tlGMarkers.forEach(m=>m.setMap(null)); tlGMarkers=[];
+  if(tlPolyline){tlPolyline.setMap(null);tlPolyline=null;}
+  onGMReady(()=>{
+    if(!gTlMap){
+      const mapEl=document.getElementById('tl-map');
+      if(mapEl)gTlMap=new google.maps.Map(mapEl,{center:{lat:20.5937,lng:78.9629},zoom:5,mapTypeId:'roadmap'});
+    }
+    if(!gTlMap)return;
+    if(data.pings.length>0){
+      const coords=data.pings.map(p=>({lat:p.lat,lng:p.lng}));
+      // Orange polyline — matches Google Maps navigation style
+      tlPolyline=new google.maps.Polyline({
+        path:coords,geodesic:true,
+        strokeColor:'#FF9500',strokeOpacity:0.92,strokeWeight:5,
+        map:gTlMap
+      });
+      const mkDot=(lat,lng,clr)=>{
+        const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
+          <circle cx="9" cy="9" r="7" fill="${clr}" stroke="#fff" stroke-width="2.5"/>
+        </svg>`;
+        return new google.maps.Marker({
+          position:{lat,lng},map:gTlMap,
+          icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),
+            scaledSize:new google.maps.Size(18,18),anchor:new google.maps.Point(9,9)}
+        });
+      };
+      tlGMarkers.push(mkDot(coords[0].lat,coords[0].lng,'#22c55e'));
+      if(coords.length>1)tlGMarkers.push(mkDot(coords[coords.length-1].lat,coords[coords.length-1].lng,'#ef4444'));
+      const bounds=new google.maps.LatLngBounds();
+      coords.forEach(c=>bounds.extend(c));
+      gTlMap.fitBounds(bounds,{top:30,right:30,bottom:30,left:30});
+    }else{
+      gTlMap.setCenter({lat:20.5937,lng:78.9629}); gTlMap.setZoom(5);
+    }
+  });
 }
 
-function tlFocus(lat,lng){if(!lat||!lng||!tlMap)return;tlMap.setView([lat,lng],16);}
+function tlFocus(lat,lng){
+  if(!lat||!lng)return;
+  onGMReady(()=>{if(gTlMap){gTlMap.panTo({lat,lng});gTlMap.setZoom(17);}});
+}
 function tl_prevDay(){
   const d=document.getElementById('tl-date'); if(!d||!d.value)return;
   const nd=new Date(d.value); nd.setDate(nd.getDate()-1);
