@@ -1,0 +1,12 @@
+fp.cyberlink.co.in {
+    # Backend API + file uploads
+    @backend path /api/* /uploads/*
+    reverse_proxy @backend fieldpulse-api:8000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Admin panel (everything else)
+    reverse_proxy fieldpulse-admin:80
+}

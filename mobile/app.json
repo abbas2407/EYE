@@ -82,7 +82,7 @@
       ]
     ],
     "extra": {
-      "apiUrl": "http://167.233.90.245:8000",
+      "apiUrl": "https://fp.cyberlink.co.in",
       "eas": {
         "projectId": "b127576c-b0cd-419b-81d9-95180fc33ba0"
       }
