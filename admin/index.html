@@ -487,18 +487,174 @@ function onGMReady(fn){if(_gmReady)fn();else _gmQueue.push(fn);}
       </div></div>
     </div>
 
-    <div id="tab-attendance" class="section" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div class="card-title" style="color:#695d4a">Attendance Log</div>
-        <button class="btn btn-secondary" onclick="downloadCSV('attendance')">⬇ Export CSV</button>
+    <!-- ══════════════════════════════════════════ ATTENDANCE ══ -->
+    <div id="tab-attendance" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+
+      <!-- Sub-nav -->
+      <div class="dash-subnav">
+        <button class="dsn-btn active" id="asn-overview"  onclick="showAttSub('overview')">Overview</button>
+        <button class="dsn-btn"        id="asn-muster"    onclick="showAttSub('muster')">Attendance Muster</button>
+        <button class="dsn-btn"        id="asn-punches"   onclick="showAttSub('punches')">Attendance Punches</button>
       </div>
-      <div class="card"><div style="overflow-x:auto">
-        <table>
-          <thead><tr><th>Worker</th><th>Punch In</th><th>Punch Out</th><th>Hours</th><th>Note</th><th>Status</th></tr></thead>
-          <tbody id="attendance-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
-        </table>
-      </div></div>
-    </div>
+
+      <!-- ── OVERVIEW ──────────────────────────────────────────────────── -->
+      <div id="asub-overview" style="flex:1;overflow-y:auto">
+        <div style="padding:20px">
+
+          <!-- Row 1: Semi-circle + Off Duty -->
+          <div style="display:grid;grid-template-columns:340px 1fr;gap:14px;margin-bottom:20px;align-items:start">
+
+            <!-- Real Time Status semi-circle -->
+            <div class="card" style="padding:20px">
+              <div class="card-title" style="margin-bottom:16px">Real Time Status (<span id="att-total-count">0</span>)</div>
+              <div style="display:flex;align-items:center;justify-content:space-around;margin-bottom:10px">
+                <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#22c55e">
+                  <div style="width:10px;height:10px;border-radius:50%;background:#22c55e"></div>
+                  <span id="att-in-count">0</span>
+                  <span style="font-size:11px;font-weight:400;color:#747878">Punched In</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#ef4444">
+                  <div style="width:10px;height:10px;border-radius:50%;background:#ef4444"></div>
+                  <span id="att-out-count">0</span>
+                  <span style="font-size:11px;font-weight:400;color:#747878">Punched Out</span>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:center">
+                <svg id="att-semi-svg" viewBox="0 0 220 130" width="220" height="130">
+                  <!-- track -->
+                  <path d="M 20 115 A 90 90 0 0 1 200 115" fill="none" stroke="#e3e2e0" stroke-width="22" stroke-linecap="round"/>
+                  <!-- punched in arc (green) -->
+                  <path id="att-arc-green" d="M 20 115 A 90 90 0 0 1 200 115" fill="none" stroke="#22c55e" stroke-width="22" stroke-linecap="round" stroke-dasharray="0 283" pathLength="283"/>
+                  <!-- punched out arc (red) -->
+                  <path id="att-arc-red"   d="M 20 115 A 90 90 0 0 1 200 115" fill="none" stroke="#ef4444" stroke-width="22" stroke-linecap="round" stroke-dasharray="0 283" pathLength="283" stroke-dashoffset="0"/>
+                  <text id="att-semi-total" x="110" y="100" text-anchor="middle" font-size="28" font-weight="700" fill="#1a1c1a">0</text>
+                  <text x="110" y="118" text-anchor="middle" font-size="11" fill="#747878">All Employees</text>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Off Duty Employees -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Off Duty Employees</div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <select id="att-offduty-filter" onchange="renderAttOffDuty()" style="font-size:11px;padding:4px 8px;border:1px solid #e3e2e0;border-radius:4px;width:auto;margin:0">
+                    <option value="all">All</option>
+                    <option value="out">Punched Out</option>
+                    <option value="absent">Absent</option>
+                  </select>
+                  <input id="att-offduty-search" placeholder="Search Here..." oninput="renderAttOffDuty()" style="font-size:11px;padding:5px 10px;border:1px solid #e3e2e0;border-radius:4px;width:140px;margin:0">
+                </div>
+              </div>
+              <div style="overflow-x:auto;max-height:200px;overflow-y:auto">
+                <table>
+                  <thead><tr><th>Employee</th><th>Team Name</th><th>Status</th></tr></thead>
+                  <tbody id="att-offduty-tbody"><tr><td colspan="3" class="loading">Loading...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: Two bar charts -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+
+            <!-- Attendance Overview % chart -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Attendance Overview</div>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <select id="att-ov-filter" onchange="loadAttOverviewCharts()" style="font-size:11px;padding:4px 8px;border:1px solid #e3e2e0;border-radius:4px;width:auto;margin:0">
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                  </select>
+                  <select id="att-ov-days" onchange="loadAttOverviewCharts()" style="font-size:11px;padding:4px 8px;border:1px solid #e3e2e0;border-radius:4px;width:auto;margin:0">
+                    <option value="7">This Week</option>
+                    <option value="30">This Month</option>
+                  </select>
+                </div>
+              </div>
+              <div id="att-pct-chart" style="padding:16px;min-height:160px"><div class="loading">Loading...</div></div>
+            </div>
+
+            <!-- Average Working Hours -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Average Working Hours</div>
+                <select id="att-hrs-days" onchange="loadAttHoursChart()" style="font-size:11px;padding:4px 8px;border:1px solid #e3e2e0;border-radius:4px;width:auto;margin:0">
+                  <option value="7">This Week</option>
+                  <option value="30">This Month</option>
+                </select>
+              </div>
+              <div id="att-hrs-chart" style="padding:16px;min-height:160px"><div class="loading">Loading...</div></div>
+            </div>
+          </div>
+
+          <!-- Row 3: Employee List -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Employee List (<span id="att-emp-count">0</span>)</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <div id="att-emp-filter-btns" style="display:flex;gap:6px">
+                  <button class="filt-btn active" onclick="setAttEmpFilter(this,'all')">All</button>
+                  <button class="filt-btn" onclick="setAttEmpFilter(this,'present')">Present</button>
+                  <button class="filt-btn" onclick="setAttEmpFilter(this,'absent')">Absent</button>
+                </div>
+                <input id="att-emp-search" placeholder="Search Employee..." oninput="renderAttEmpList()" style="font-size:11px;padding:5px 10px;border:1px solid #e3e2e0;border-radius:4px;width:150px;margin:0">
+              </div>
+            </div>
+            <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+              <table>
+                <thead><tr><th>Employee</th><th>Status</th><th>Punch In</th><th>Punch Out</th><th>Hours</th><th>Note</th></tr></thead>
+                <tbody id="att-emp-tbody"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /asub-overview -->
+
+      <!-- ── ATTENDANCE MUSTER ──────────────────────────────────────────── -->
+      <div id="asub-muster" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <!-- Toolbar -->
+        <div style="padding:10px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap">
+          <label style="margin:0;font-size:11px;color:#747878;text-transform:none;letter-spacing:0">From</label>
+          <input type="date" id="muster-from" style="padding:6px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:auto;margin:0"/>
+          <label style="margin:0;font-size:11px;color:#747878;text-transform:none;letter-spacing:0">To</label>
+          <input type="date" id="muster-to"   style="padding:6px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:auto;margin:0"/>
+          <button class="btn btn-primary" onclick="loadAttMuster()">Apply</button>
+          <input id="muster-search" placeholder="Search Employee..." oninput="renderMusterTable()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:180px;margin:0">
+          <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="downloadCSV('attendance')">⬇ Export</button>
+          <!-- Legend -->
+          <div style="display:flex;gap:10px;align-items:center;font-size:10px;color:#747878">
+            <span><span style="display:inline-block;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:3px;font-weight:600;font-size:10px">P</span> Present</span>
+            <span><span style="display:inline-block;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:3px;font-weight:600;font-size:10px">A</span> Absent</span>
+            <span><span style="display:inline-block;background:#f0efec;color:#747878;padding:1px 6px;border-radius:3px;font-weight:600;font-size:10px">WO</span> Weekly Off</span>
+          </div>
+        </div>
+        <div style="flex:1;overflow:auto;padding:0">
+          <div id="muster-table-wrap"><div class="loading" style="padding:40px">Loading muster...</div></div>
+        </div>
+      </div><!-- /asub-muster -->
+
+      <!-- ── ATTENDANCE PUNCHES ─────────────────────────────────────────── -->
+      <div id="asub-punches" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <!-- Toolbar -->
+        <div style="padding:10px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap">
+          <label style="margin:0;font-size:11px;color:#747878;text-transform:none;letter-spacing:0">From</label>
+          <input type="date" id="punches-from" style="padding:6px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:auto;margin:0"/>
+          <label style="margin:0;font-size:11px;color:#747878;text-transform:none;letter-spacing:0">To</label>
+          <input type="date" id="punches-to"   style="padding:6px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:auto;margin:0"/>
+          <button class="btn btn-primary" onclick="loadAttPunches()">Apply</button>
+          <input id="punches-search" placeholder="Search Employee..." oninput="renderPunchesTable()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:180px;margin:0">
+          <span id="punches-count" style="font-size:12px;font-weight:600;color:#695d4a;margin-left:4px"></span>
+          <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="downloadCSV('attendance')">⬇ Export</button>
+        </div>
+        <div style="flex:1;overflow:auto">
+          <div id="punches-table-wrap"><div class="loading" style="padding:40px">Loading...</div></div>
+        </div>
+      </div><!-- /asub-punches -->
+
+    </div><!-- /tab-attendance -->
 
     <div id="tab-leaves" class="section" style="display:none">
       <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -675,7 +831,7 @@ function showTab(name){
   document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',TABS[i]===name));
   document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
   const el=document.getElementById(`tab-${name}`);
-  if(el) el.style.display=name==='dashboard'?'flex':'block';
+  if(el) el.style.display=(name==='dashboard'||name==='attendance')?'flex':'block';
   document.getElementById('topbar-title').textContent=TAB_TITLES[name]||name;
   if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;}
   if(name==='chat'){lastChatVisit=new Date().toISOString();updateChatBadge(0);}
@@ -1366,18 +1522,443 @@ async function submitBulkTask(){
 }
 
 // ═══════════════════════════════════════════════════ ATTENDANCE ═════════════
-async function loadAttendance(){
-  const res=await apiFetch('/api/admin/attendance'); if(!res)return;
-  const logs=await res.json();
-  document.getElementById('attendance-body').innerHTML=logs.length===0?'<tr><td colspan="6" class="empty">No records</td></tr>':
-    logs.map(l=>`<tr>
-      <td><strong>${esc(l.user_name)}</strong><br><span style="font-size:10px;color:#747878">${esc(l.user_email)}</span></td>
-      <td>${fmtDT(l.punch_in_time)}</td>
-      <td>${l.punch_out_time?fmtDT(l.punch_out_time):'<span style="color:#c4c7c7">Active</span>'}</td>
-      <td>${l.total_hours?l.total_hours.toFixed(1)+'h':'--'}</td>
-      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.check_in_note||'')}">${esc(l.check_in_note||'--')}</td>
-      <td><span class="badge ${l.status==='active'?'badge-green':'badge-gray'}">${l.status}</span></td>
-    </tr>`).join('');
+// ─── Entry point wired to showTab('attendance') ───────────────────────────
+function loadAttendance(){ showAttSub('overview'); }
+
+// ─── Sub-tab switcher ─────────────────────────────────────────────────────
+const ATT_SUBS=['overview','muster','punches'];
+function showAttSub(name){
+  ATT_SUBS.forEach(s=>{
+    const el=document.getElementById(`asub-${s}`);
+    if(el) el.style.display='none';
+    const btn=document.getElementById(`asn-${s}`);
+    if(btn) btn.classList.remove('active');
+  });
+  const el=document.getElementById(`asub-${name}`);
+  const btn=document.getElementById(`asn-${name}`);
+  if(el) el.style.display=(name==='overview')?'block':'flex';
+  if(btn) btn.classList.add('active');
+  if(name==='overview') loadAttOverview();
+  if(name==='muster')   initAttMuster();
+  if(name==='punches')  initAttPunches();
+}
+
+// ─── Shared attendance data cache ────────────────────────────────────────
+let attAllLogs=[], attAllUsers=[], attLiveLocs=[], attEmpFilter='all';
+
+async function fetchAttData(){
+  if(attAllLogs.length && attAllUsers.length) return; // cached
+  const[lRes,uRes,locRes]=await Promise.all([
+    apiFetch('/api/admin/attendance'),
+    apiFetch('/api/admin/users'),
+    apiFetch('/api/admin/live-locations'),
+  ]);
+  if(lRes) attAllLogs=await lRes.json();
+  if(uRes) attAllUsers=await uRes.json();
+  if(locRes) attLiveLocs=await locRes.json();
+}
+
+// ═══════════════════ ATTENDANCE OVERVIEW ═════════════════════════════════
+async function loadAttOverview(){
+  await fetchAttData();
+  const workers=attAllUsers.filter(u=>u.role==='field_worker');
+  const punchedIn=attLiveLocs.filter(l=>l.is_punched_in).length;
+  const punchedOut=attLiveLocs.length - punchedIn;
+  const total=attLiveLocs.length;
+
+  // Counts
+  setSel('att-total-count', total);
+  setSel('att-in-count',  punchedIn);
+  setSel('att-out-count', punchedOut);
+  setSel('att-semi-total', total);
+
+  // Semi-circle SVG (half donut 180°)
+  // Arc path: M 20 115 A 90 90 0 0 1 200 115  — full 180° = pathLength 283
+  const P=283;
+  const inFrac = total>0 ? punchedIn/total : 0;
+  const inLen  = (inFrac * P).toFixed(1);
+  const outLen = ((1-inFrac)*P).toFixed(1);
+  const gArc=document.getElementById('att-arc-green');
+  const rArc=document.getElementById('att-arc-red');
+  if(gArc){
+    gArc.setAttribute('stroke-dasharray', `${inLen} ${P}`);
+    gArc.setAttribute('stroke-dashoffset','0');
+  }
+  if(rArc){
+    rArc.setAttribute('stroke-dasharray', `${outLen} ${P}`);
+    // offset so red starts right after green
+    rArc.setAttribute('stroke-dashoffset', `-${inLen}`);
+  }
+
+  // Employee list
+  setSel('att-emp-count', workers.length);
+  renderAttOffDuty();
+  renderAttEmpList();
+  loadAttOverviewCharts();
+  loadAttHoursChart();
+}
+
+function renderAttOffDuty(){
+  const workers=attAllUsers.filter(u=>u.role==='field_worker');
+  const filter=document.getElementById('att-offduty-filter')?.value||'all';
+  const q=(document.getElementById('att-offduty-search')?.value||'').toLowerCase();
+  const today=new Date().toISOString().slice(0,10);
+  const hasPunchToday=(w)=>attAllLogs.some(l=>l.user_email===w.email && l.punch_in_time?.slice(0,10)===today);
+  const isLive=(w)=>attLiveLocs.some(l=>l.user_id===w.id && l.is_punched_in);
+
+  let data=workers;
+  if(filter==='out')   data=data.filter(w=>!isLive(w) && hasPunchToday(w));
+  if(filter==='absent') data=data.filter(w=>!hasPunchToday(w));
+  if(q) data=data.filter(w=>w.name.toLowerCase().includes(q)||w.email.toLowerCase().includes(q));
+
+  const tbody=document.getElementById('att-offduty-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=data.length===0
+    ?'<tr><td colspan="3" class="empty">No data found</td></tr>'
+    :data.map(w=>{
+      const live=isLive(w);
+      const punched=hasPunchToday(w);
+      const status=live?'Punched In':punched?'Punched Out':'Absent';
+      const bc=live?'badge-green':punched?'badge-gray':'badge-red';
+      return `<tr>
+        <td><div style="display:flex;align-items:center;gap:8px">
+          <div style="width:32px;height:32px;border-radius:16px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:12px;flex-shrink:0">${w.name.charAt(0)}</div>
+          <div><div style="font-weight:600">${esc(w.name)}</div><div style="font-size:10px;color:#747878">${esc(w.email)}</div></div>
+        </div></td>
+        <td style="font-size:11px;color:#747878">—</td>
+        <td><span class="badge ${bc}">${status}</span></td>
+      </tr>`;
+    }).join('');
+}
+
+function setAttEmpFilter(btn,mode){
+  document.querySelectorAll('#att-emp-filter-btns .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  attEmpFilter=mode;
+  renderAttEmpList();
+}
+
+function renderAttEmpList(){
+  const workers=attAllUsers.filter(u=>u.role==='field_worker');
+  const q=(document.getElementById('att-emp-search')?.value||'').toLowerCase();
+  const today=new Date().toISOString().slice(0,10);
+  const getLog=(w)=>attAllLogs.filter(l=>l.user_email===w.email&&l.punch_in_time?.slice(0,10)===today)
+                              .sort((a,b)=>new Date(b.punch_in_time)-new Date(a.punch_in_time))[0];
+  const isLive=(w)=>attLiveLocs.some(l=>l.user_id===w.id&&l.is_punched_in);
+
+  let data=workers;
+  if(attEmpFilter==='present') data=data.filter(w=>getLog(w)||isLive(w));
+  if(attEmpFilter==='absent')  data=data.filter(w=>!getLog(w)&&!isLive(w));
+  if(q) data=data.filter(w=>w.name.toLowerCase().includes(q)||w.email.toLowerCase().includes(q));
+
+  const tbody=document.getElementById('att-emp-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=data.length===0
+    ?'<tr><td colspan="6" class="empty">No employees found</td></tr>'
+    :data.map(w=>{
+      const log=getLog(w);
+      const live=isLive(w);
+      const status=live?'active':log?log.status:'absent';
+      const bc=status==='active'?'badge-green':status==='absent'?'badge-red':'badge-gray';
+      return `<tr>
+        <td><div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:17px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:13px;flex-shrink:0">${w.name.charAt(0)}</div>
+          <div><div style="font-weight:600">${esc(w.name)}</div><div style="font-size:10px;color:#747878">${esc(w.email)}</div></div>
+        </div></td>
+        <td><span class="badge ${bc}">${status}</span></td>
+        <td style="font-size:11px">${log?fmtDT(log.punch_in_time):'<span style="color:#c4c7c7">—</span>'}</td>
+        <td style="font-size:11px">${log?.punch_out_time?fmtDT(log.punch_out_time):'<span style="color:#c4c7c7">Active</span>'}</td>
+        <td style="font-size:11px">${log?.total_hours?log.total_hours.toFixed(1)+'h':'—'}</td>
+        <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(log?.check_in_note||'—')}</td>
+      </tr>`;
+    }).join('');
+}
+
+async function loadAttOverviewCharts(){
+  await fetchAttData();
+  const days=parseInt(document.getElementById('att-ov-days')?.value||'7');
+  const mode=document.getElementById('att-ov-filter')?.value||'present';
+  const workers=attAllUsers.filter(u=>u.role==='field_worker').length || 1;
+  const today=new Date();
+  const dates=Array.from({length:days},(_,i)=>{
+    const d=new Date(today); d.setDate(d.getDate()-(days-1-i));
+    return d.toISOString().slice(0,10);
+  });
+  const byDate={};
+  dates.forEach(d=>byDate[d]=new Set());
+  attAllLogs.forEach(l=>{
+    const d=l.punch_in_time?.slice(0,10);
+    if(d && byDate[d]) byDate[d].add(l.user_email);
+  });
+  const vals=dates.map(d=>{
+    const present=byDate[d].size;
+    const pct=Math.round((mode==='present'?present:(workers-present))/workers*100);
+    return{date:d,pct:Math.max(0,Math.min(100,pct))};
+  });
+  const wrap=document.getElementById('att-pct-chart');
+  if(!wrap)return;
+  const W=Math.max(wrap.clientWidth-32,200), H=150;
+  const PL=36,PR=8,PT=10,PB=28;
+  const cW=W-PL-PR, cH=H-PT-PB;
+  const bW=Math.max(4,Math.floor(cW/vals.length)-2);
+  const gap=cW/vals.length;
+  let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">`;
+  [0,25,50,75,100].forEach(v=>{
+    const y=PT+cH-(v/100)*cH;
+    svg+=`<line x1="${PL}" y1="${y}" x2="${PL+cW}" y2="${y}" stroke="#e3e2e0" stroke-width="1"/>`;
+    svg+=`<text x="${PL-4}" y="${y+4}" text-anchor="end" font-size="9" fill="#747878">${v}%</text>`;
+  });
+  vals.forEach((d,i)=>{
+    const x=PL+i*gap+(gap-bW)/2;
+    const bh=d.pct>0?Math.max(2,(d.pct/100)*cH):0;
+    const y=PT+cH-bh;
+    const clr=mode==='present'?'#1a1c1a':'#ef4444';
+    if(bh>0) svg+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${bh.toFixed(1)}" fill="${clr}" rx="2" opacity="0.82"/>`;
+    const showLbl=vals.length<=14||(i%2===0);
+    if(showLbl) svg+=`<text x="${(x+bW/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="8" fill="#747878">${d.date.slice(5)}</text>`;
+  });
+  svg+='</svg>';
+  wrap.innerHTML=svg;
+}
+
+async function loadAttHoursChart(){
+  const days=parseInt(document.getElementById('att-hrs-days')?.value||'7');
+  const res=await apiFetch(`/api/admin/daily-hours?days=${days}`);
+  if(!res)return;
+  const data=await res.json();
+  const wrap=document.getElementById('att-hrs-chart');
+  if(!wrap)return;
+  const W=Math.max(wrap.clientWidth-32,200), H=150;
+  const PL=30,PR=8,PT=10,PB=28;
+  const cW=W-PL-PR, cH=H-PT-PB;
+  const maxH=Math.max(...data.map(d=>d.avg_hours),1);
+  const bW=Math.max(4,Math.floor(cW/data.length)-2);
+  const gap=cW/data.length;
+  let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">`;
+  [0,1,2,3,4].forEach(i=>{
+    const y=PT+cH-(i/4)*cH;
+    svg+=`<line x1="${PL}" y1="${y}" x2="${PL+cW}" y2="${y}" stroke="#e3e2e0" stroke-width="1"/>`;
+    svg+=`<text x="${PL-4}" y="${y+4}" text-anchor="end" font-size="9" fill="#747878">${((maxH*i)/4).toFixed(0)}</text>`;
+  });
+  data.forEach((d,i)=>{
+    const x=PL+i*gap+(gap-bW)/2;
+    const bh=d.avg_hours>0?Math.max(2,(d.avg_hours/maxH)*cH):0;
+    const y=PT+cH-bh;
+    if(bh>0) svg+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${bh.toFixed(1)}" fill="#695d4a" rx="2" opacity="0.85"/>`;
+    const showLbl=data.length<=14||(i%2===0);
+    if(showLbl) svg+=`<text x="${(x+bW/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="8" fill="#747878">${d.date.slice(5)}</text>`;
+  });
+  svg+='</svg>';
+  wrap.innerHTML=svg;
+}
+
+// ═══════════════════ ATTENDANCE MUSTER ═══════════════════════════════════
+let musterAllLogs=[], musterWorkers=[];
+
+function initAttMuster(){
+  const today=new Date();
+  const firstOfMonth=new Date(today.getFullYear(),today.getMonth(),1).toISOString().slice(0,10);
+  const todayStr=today.toISOString().slice(0,10);
+  const fromEl=document.getElementById('muster-from');
+  const toEl=document.getElementById('muster-to');
+  if(fromEl && !fromEl.value) fromEl.value=firstOfMonth;
+  if(toEl   && !toEl.value)   toEl.value=todayStr;
+  loadAttMuster();
+}
+
+async function loadAttMuster(){
+  await fetchAttData();
+  musterAllLogs=attAllLogs;
+  musterWorkers=attAllUsers.filter(u=>u.role==='field_worker');
+  renderMusterTable();
+}
+
+function renderMusterTable(){
+  const fromVal=document.getElementById('muster-from')?.value;
+  const toVal=document.getElementById('muster-to')?.value;
+  const q=(document.getElementById('muster-search')?.value||'').toLowerCase();
+  if(!fromVal||!toVal)return;
+
+  const from=new Date(fromVal), to=new Date(toVal);
+  const dates=[];
+  for(let d=new Date(from);d<=to;d.setDate(d.getDate()+1)){
+    dates.push(new Date(d).toISOString().slice(0,10));
+  }
+
+  let workers=musterWorkers;
+  if(q) workers=workers.filter(w=>w.name.toLowerCase().includes(q)||w.email.toLowerCase().includes(q));
+
+  // Build lookup: email → Set of punch dates
+  const punchMap={};
+  musterAllLogs.forEach(l=>{
+    if(!punchMap[l.user_email]) punchMap[l.user_email]=new Set();
+    if(l.punch_in_time) punchMap[l.user_email].add(l.punch_in_time.slice(0,10));
+  });
+
+  const cellBadge=(dateStr,workerEmail)=>{
+    const d=new Date(dateStr);
+    const isWO=d.getDay()===0; // Sunday = Weekly Off
+    if(isWO) return`<span style="background:#f0efec;color:#747878;padding:2px 5px;border-radius:3px;font-size:10px;font-weight:600">WO</span>`;
+    const present=punchMap[workerEmail]?.has(dateStr);
+    if(present) return`<span style="background:#dcfce7;color:#166534;padding:2px 5px;border-radius:3px;font-size:10px;font-weight:600">P</span>`;
+    // future dates show dash
+    if(new Date(dateStr)>new Date()) return`<span style="color:#e3e2e0">—</span>`;
+    return`<span style="background:#fee2e2;color:#991b1b;padding:2px 5px;border-radius:3px;font-size:10px;font-weight:600">A</span>`;
+  };
+
+  const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const wrap=document.getElementById('muster-table-wrap');
+  if(!wrap)return;
+
+  if(!workers.length){wrap.innerHTML='<div class="empty">No employees found</div>';return;}
+
+  let html=`<table style="border-collapse:collapse;font-size:12px;white-space:nowrap;min-width:max-content">
+    <thead style="position:sticky;top:0;z-index:2">
+      <tr style="background:#faf9f6">
+        <th style="padding:10px 16px;border-bottom:1px solid #e3e2e0;border-right:1px solid #e3e2e0;text-align:left;min-width:180px;position:sticky;left:0;background:#faf9f6;z-index:3;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px">Employee Name</th>
+        ${dates.map(d=>{
+          const dt=new Date(d);
+          const isWO=dt.getDay()===0;
+          return`<th style="padding:8px 6px;border-bottom:1px solid #e3e2e0;border-right:1px solid #f0efec;text-align:center;min-width:52px;font-size:9px;color:${isWO?'#747878':'#1a1c1a'};background:${isWO?'#faf9f6':'#fff'}">
+            <div style="font-weight:600">${String(dt.getDate()).padStart(2,'0')} ${MONTH_NAMES[dt.getMonth()]}</div>
+            <div style="font-weight:400;color:#c4c7c7">${DAY_NAMES[dt.getDay()]}</div>
+          </th>`;
+        }).join('')}
+        <th style="padding:10px 12px;border-bottom:1px solid #e3e2e0;border-left:2px solid #e3e2e0;text-align:center;min-width:60px;font-size:9px;color:#166534;text-transform:uppercase;letter-spacing:1px;background:#faf9f6">Present</th>
+        <th style="padding:10px 12px;border-bottom:1px solid #e3e2e0;text-align:center;min-width:60px;font-size:9px;color:#991b1b;text-transform:uppercase;letter-spacing:1px;background:#faf9f6">Absent</th>
+        <th style="padding:10px 12px;border-bottom:1px solid #e3e2e0;text-align:center;min-width:60px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6">Weekly Off</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  workers.forEach(w=>{
+    const punched=punchMap[w.email]||new Set();
+    let present=0,absent=0,wo=0;
+    const today=new Date(); today.setHours(23,59,59,999);
+    dates.forEach(d=>{
+      const dt=new Date(d);
+      if(dt.getDay()===0){wo++;}
+      else if(dt<=today){punched.has(d)?present++:absent++;}
+    });
+    html+=`<tr style="border-bottom:1px solid #f0efec">
+      <td style="padding:10px 16px;border-right:1px solid #e3e2e0;position:sticky;left:0;background:#fff;z-index:1">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:30px;height:30px;border-radius:15px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:12px;flex-shrink:0">${w.name.charAt(0)}</div>
+          <div><div style="font-weight:600;font-size:12px">${esc(w.name)}</div></div>
+        </div>
+      </td>
+      ${dates.map(d=>{
+        const isWO=new Date(d).getDay()===0;
+        return`<td style="padding:8px 6px;text-align:center;border-right:1px solid #f0efec;background:${isWO?'#fafafa':'#fff'}">${cellBadge(d,w.email)}</td>`;
+      }).join('')}
+      <td style="padding:10px 12px;text-align:center;border-left:2px solid #e3e2e0;font-weight:700;color:#166534">${present}</td>
+      <td style="padding:10px 12px;text-align:center;font-weight:700;color:#991b1b">${absent}</td>
+      <td style="padding:10px 12px;text-align:center;font-weight:700;color:#747878">${wo}</td>
+    </tr>`;
+  });
+
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
+// ═══════════════════ ATTENDANCE PUNCHES ══════════════════════════════════
+let punchesAllData=[];
+
+function initAttPunches(){
+  const today=new Date();
+  const firstOfMonth=new Date(today.getFullYear(),today.getMonth(),1).toISOString().slice(0,10);
+  const todayStr=today.toISOString().slice(0,10);
+  const fromEl=document.getElementById('punches-from');
+  const toEl=document.getElementById('punches-to');
+  if(fromEl && !fromEl.value) fromEl.value=firstOfMonth;
+  if(toEl   && !toEl.value)   toEl.value=todayStr;
+  loadAttPunches();
+}
+
+async function loadAttPunches(){
+  await fetchAttData();
+  const fromVal=document.getElementById('punches-from')?.value;
+  const toVal=document.getElementById('punches-to')?.value;
+  if(!fromVal||!toVal)return;
+  const from=new Date(fromVal);
+  const to=new Date(toVal); to.setHours(23,59,59,999);
+
+  // Each attendance log gives us 1 or 2 punch records (punch-in + punch-out)
+  punchesAllData=[];
+  attAllLogs.forEach(l=>{
+    if(!l.punch_in_time) return;
+    const d=new Date(l.punch_in_time);
+    if(d<from || d>to) return;
+    punchesAllData.push({
+      user_name:l.user_name, user_email:l.user_email,
+      event:'Punched In', time:l.punch_in_time,
+      lat:null, lng:null, note:l.check_in_note, selfie:l.selfie_url,
+    });
+    if(l.punch_out_time){
+      const do2=new Date(l.punch_out_time);
+      if(do2>=from && do2<=to){
+        punchesAllData.push({
+          user_name:l.user_name, user_email:l.user_email,
+          event:'Punched Out', time:l.punch_out_time,
+          lat:null, lng:null, note:'', selfie:null,
+        });
+      }
+    }
+  });
+  punchesAllData.sort((a,b)=>new Date(b.time)-new Date(a.time));
+  renderPunchesTable();
+}
+
+function renderPunchesTable(){
+  const q=(document.getElementById('punches-search')?.value||'').toLowerCase();
+  let data=punchesAllData;
+  if(q) data=data.filter(r=>r.user_name.toLowerCase().includes(q)||r.user_email.toLowerCase().includes(q));
+  const countEl=document.getElementById('punches-count');
+  if(countEl) countEl.textContent=`${data.length} record${data.length!==1?'s':''}`;
+  const wrap=document.getElementById('punches-table-wrap');
+  if(!wrap)return;
+  if(!data.length){
+    wrap.innerHTML='<div class="empty">No punch records for selected range</div>';
+    return;
+  }
+  wrap.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead style="position:sticky;top:0;z-index:2">
+      <tr>
+        <th style="padding:10px 14px;text-align:left;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">Employee Name</th>
+        <th style="padding:10px 14px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">Event Type</th>
+        <th style="padding:10px 14px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">Punch Type</th>
+        <th style="padding:10px 14px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">Note</th>
+        <th style="padding:10px 14px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">Event Occurred At</th>
+        <th style="padding:10px 14px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">Date</th>
+        <th style="padding:10px 14px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">Photo</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${data.map(r=>{
+        const isIn=r.event==='Punched In';
+        return`<tr style="border-bottom:1px solid #f0efec">
+          <td style="padding:12px 14px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:18px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:14px;flex-shrink:0">${r.user_name.charAt(0)}</div>
+              <div><div style="font-weight:600">${esc(r.user_name)}</div><div style="font-size:10px;color:#747878">${esc(r.user_email)}</div></div>
+            </div>
+          </td>
+          <td style="padding:12px 14px"><span class="badge ${isIn?'badge-green':'badge-red'}">${r.event}</span></td>
+          <td style="padding:12px 14px"><span class="badge badge-gray">Manual</span></td>
+          <td style="padding:12px 14px;font-size:11px;color:#747878;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.note||'—')}</td>
+          <td style="padding:12px 14px;font-size:11px;color:#1a1c1a;white-space:nowrap">${fmtDT(r.time)}</td>
+          <td style="padding:12px 14px;font-size:11px;color:#747878;white-space:nowrap">${r.time?r.time.slice(0,10):'—'}</td>
+          <td style="padding:12px 14px">
+            ${r.selfie
+              ?`<img src="${r.selfie}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid #e3e2e0;cursor:pointer" onclick="window.open('${r.selfie}','_blank')">`
+              :'<span style="color:#c4c7c7;font-size:11px">—</span>'}
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
 }
 
 // ═══════════════════════════════════════════════════════ LEAVES ═════════════
