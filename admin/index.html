@@ -185,7 +185,7 @@ textarea{min-height:70px;resize:vertical}
       <div class="nav-item" onclick="showTab('attendance')"><i data-feather="clock" class="nav-icon"></i> Attendance</div>
       <div class="nav-item" onclick="showTab('leaves')"><i data-feather="calendar" class="nav-icon"></i> Leaves</div>
       <div class="nav-item" onclick="showTab('chat')" style="position:relative"><i data-feather="message-square" class="nav-icon"></i> Chat <span id="chat-badge" style="display:none;background:#ba1a1a;color:#fff;border-radius:10px;font-size:9px;font-weight:800;padding:2px 7px;margin-left:6px;letter-spacing:0;vertical-align:middle"></span></div>
-      <div class="nav-item" onclick="showTab('geofence')"><i data-feather="alert-circle" class="nav-icon"></i> Geofence Alerts</div>
+      <div class="nav-item" onclick="showTab('clients')"><i data-feather="briefcase" class="nav-icon"></i> Clients &amp; Sites</div>
       <div class="nav-item" onclick="showTab('performance')"><i data-feather="award" class="nav-icon"></i> Performance</div>
       <div class="nav-item" onclick="showTab('reports')"><i data-feather="file-text" class="nav-icon"></i> Reports</div>
     </nav>
@@ -686,18 +686,72 @@ textarea{min-height:70px;resize:vertical}
       </div>
     </div>
 
-    <div id="tab-geofence" class="section" style="display:none">
-      <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
-        <div class="alert-dot"></div>
-        <div class="card-title" style="color:#991b1b">Geofence Breach Alerts</div>
+    <!-- ══════════════════════════════════════════ CLIENTS & SITES ══ -->
+    <div id="tab-clients" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+
+      <!-- Sub-nav -->
+      <div class="dash-subnav">
+        <button class="dsn-btn active" id="csn-clients"   onclick="showClientsSub('clients')">Clients</button>
+        <button class="dsn-btn"        id="csn-sites"     onclick="showClientsSub('sites')">Sites</button>
+        <button class="dsn-btn"        id="csn-geofence"  onclick="showClientsSub('geofence')">Geofences</button>
       </div>
-      <div class="card"><div style="overflow-x:auto">
-        <table>
-          <thead><tr><th>Worker</th><th>Latitude</th><th>Longitude</th><th>Time</th><th>Task</th></tr></thead>
-          <tbody id="geofence-body"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
-        </table>
-      </div></div>
-    </div>
+
+      <!-- ── CLIENTS ──────────────────────────────────────────────────────── -->
+      <div id="csub-clients" style="flex:1;overflow-y:auto;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div class="card-title" style="color:#695d4a">Clients (<span id="cs-client-count">0</span>)</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="cs-client-search" placeholder="Search clients..." oninput="renderClientsTable()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
+            <button class="btn btn-primary btn-sm">+ Create Client</button>
+          </div>
+        </div>
+        <div class="card"><div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Name</th><th>Contact Name</th><th>Contact Number</th><th>Address</th><th>City</th><th>Pincode</th><th>Email</th><th>Category</th></tr></thead>
+            <tbody id="cs-clients-body"><tr><td colspan="8" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div></div>
+      </div>
+
+      <!-- ── SITES ────────────────────────────────────────────────────────── -->
+      <div id="csub-sites" style="display:none;flex:1;overflow-y:auto;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;gap:8px">
+            <button class="filt-btn active" id="sites-tab-site" onclick="switchSitesTab(this,'site')">Site (0)</button>
+            <button class="filt-btn" id="sites-tab-pool" onclick="switchSitesTab(this,'pool')">Site Pools (0)</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="cs-sites-search" placeholder="Search sites..." style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
+            <button class="btn btn-primary btn-sm">+ Add Site</button>
+          </div>
+        </div>
+        <div class="card"><div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Site</th><th>Site Type</th><th>Address</th><th>Email</th><th>Contact Person</th><th>Contact Number</th><th>Latitude</th><th>Longitude</th><th>Radius (m)</th><th>City</th><th>Actions</th></tr></thead>
+            <tbody id="cs-sites-body"><tr><td colspan="11" class="empty">No sites added yet</td></tr></tbody>
+          </table>
+        </div></div>
+      </div>
+
+      <!-- ── GEOFENCES ──────────────────────────────────────────────────────── -->
+      <div id="csub-geofence" style="display:none;flex:1;overflow-y:auto;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div class="card-title" style="color:#695d4a">Geofence Zones</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="filt-btn active" id="gf-filt-all"   onclick="setGeofFilt(this,'all')">All</button>
+            <button class="filt-btn"        id="gf-filt-breach" onclick="setGeofFilt(this,'breach')">Breach Alerts</button>
+            <button class="filt-btn"        id="gf-filt-clean"  onclick="setGeofFilt(this,'clean')">Clean</button>
+          </div>
+        </div>
+        <div class="card"><div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Worker</th><th>Latitude</th><th>Longitude</th><th>Time</th><th>Task</th><th>Status</th></tr></thead>
+            <tbody id="cs-geofence-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div></div>
+      </div>
+
+    </div><!-- /tab-clients -->
 
     <div id="tab-performance" class="section" style="display:none">
       <div style="margin-bottom:16px;font-size:11px;color:#747878">Worker performance based on attendance &amp; task completion.</div>
@@ -819,21 +873,21 @@ async function apiFetch(path,opts={}){
 }
 
 // ── Tab routing ─────────────────────────────────────────────────────────────
-const TABS=['dashboard','workers','tasks','attendance','leaves','chat','geofence','performance','reports'];
+const TABS=['dashboard','workers','tasks','attendance','leaves','chat','clients','performance','reports'];
 const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',tasks:'Tasks',attendance:'Attendance',
-  leaves:'Leave Requests',chat:'Chat',geofence:'Geofence Alerts',performance:'Performance',reports:'Reports'};
+  leaves:'Leave Requests',chat:'Chat',clients:'Clients & Sites',performance:'Performance',reports:'Reports'};
 
 function showTab(name){
   document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',TABS[i]===name));
   document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
   const el=document.getElementById(`tab-${name}`);
-  if(el) el.style.display=(name==='dashboard'||name==='attendance')?'flex':'block';
+  if(el) el.style.display=(name==='dashboard'||name==='attendance'||name==='clients')?'flex':'block';
   document.getElementById('topbar-title').textContent=TAB_TITLES[name]||name;
   if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;}
   if(name==='chat'){lastChatVisit=new Date().toISOString();updateChatBadge(0);}
   const loaders={dashboard:()=>showDashSub('overview'),workers:loadWorkers,tasks:loadTasks,
     attendance:loadAttendance,leaves:loadLeaves,chat:loadChatRooms,
-    geofence:loadGeofence,performance:loadPerformance,reports:()=>{}};
+    clients:loadClients,performance:loadPerformance,reports:()=>{}};
   if(loaders[name])loaders[name]();
 }
 
@@ -2027,16 +2081,96 @@ async function sendAdminMessage(){
 }
 
 // ═══════════════════════════════════════════════════ GEOFENCE ════════════════
-async function loadGeofence(){
+// ═══════════════════════════════════════════════════ CLIENTS & SITES ═════════
+const CLIENTS_SUBS=['clients','sites','geofence'];
+let clientsSubLoaded={};
+let allClientsData=[], geofAllData=[], geofFilt='all';
+
+function showClientsSub(name){
+  CLIENTS_SUBS.forEach(s=>{
+    const el=document.getElementById(`csub-${s}`);
+    if(el)el.style.display='none';
+    const btn=document.getElementById(`csn-${s}`);
+    if(btn)btn.classList.toggle('active',s===name);
+  });
+  const el=document.getElementById(`csub-${name}`);
+  if(el)el.style.display='flex';
+  if(!clientsSubLoaded[name]){
+    clientsSubLoaded[name]=true;
+    if(name==='clients')loadClientsList();
+    if(name==='sites')renderSitesEmpty();
+    if(name==='geofence')loadClientGeofences();
+  }
+}
+
+function loadClients(){
+  clientsSubLoaded={};
+  showClientsSub('clients');
+}
+
+async function loadClientsList(){
+  const res=await apiFetch('/api/admin/workers'); if(!res)return;
+  const workers=await res.json();
+  allClientsData=workers;
+  document.getElementById('cs-client-count').textContent=workers.length;
+  renderClientsTable();
+}
+
+function renderClientsTable(){
+  const q=(document.getElementById('cs-client-search')?.value||'').toLowerCase();
+  const rows=(allClientsData||[]).filter(w=>!q||w.name.toLowerCase().includes(q)||w.email.toLowerCase().includes(q));
+  document.getElementById('cs-clients-body').innerHTML=rows.length===0?
+    `<tr><td colspan="8" class="empty">No clients found</td></tr>`:
+    rows.map(w=>`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div style="width:30px;height:30px;border-radius:15px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#695d4a;flex-shrink:0">${w.name.charAt(0).toUpperCase()}</div>
+        <strong>${esc(w.name)}</strong></div></td>
+      <td>${esc(w.name)}</td>
+      <td style="font-size:11px">${esc(w.phone||'—')}</td>
+      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.address||'—')}</td>
+      <td style="font-size:11px">${esc(w.city||'—')}</td>
+      <td style="font-size:11px">${esc(w.pincode||'—')}</td>
+      <td style="font-size:11px">${esc(w.email)}</td>
+      <td><span class="badge badge-gray">End customer</span></td>
+    </tr>`).join('');
+}
+
+function renderSitesEmpty(){
+  document.getElementById('cs-sites-body').innerHTML='<tr><td colspan="11" class="empty">No sites added yet</td></tr>';
+}
+
+function switchSitesTab(btn,type){
+  document.querySelectorAll('#csub-sites .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function loadClientGeofences(){
   const res=await apiFetch('/api/admin/geofence-alerts'); if(!res)return;
   const alerts=await res.json();
-  document.getElementById('geofence-body').innerHTML=alerts.length===0?'<tr><td colspan="5" class="empty">No breaches detected</td></tr>':
-    alerts.map(a=>`<tr>
+  geofAllData=alerts;
+  renderGeofenceTable();
+}
+
+function setGeofFilt(btn,filt){
+  geofFilt=filt;
+  document.querySelectorAll('#csub-geofence .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGeofenceTable();
+}
+
+function renderGeofenceTable(){
+  let rows=geofAllData||[];
+  if(geofFilt==='breach')rows=rows.filter(a=>a.latitude);
+  if(geofFilt==='clean')rows=[];
+  document.getElementById('cs-geofence-body').innerHTML=rows.length===0?
+    '<tr><td colspan="6" class="empty">No geofence breaches detected</td></tr>':
+    rows.map(a=>`<tr>
       <td><div style="display:flex;align-items:center;gap:6px"><div class="alert-dot"></div><strong>${esc(a.user_name)}</strong></div></td>
       <td style="font-size:11px">${a.latitude.toFixed(5)}</td>
       <td style="font-size:11px">${a.longitude.toFixed(5)}</td>
       <td style="font-size:11px">${fmtDT(a.timestamp)}</td>
-      <td style="font-size:11px">${a.task_id?a.task_id.substring(0,8)+'…':'--'}</td>
+      <td style="font-size:11px">${a.task_id?a.task_id.substring(0,8)+'…':'—'}</td>
+      <td><span class="badge badge-red">Breach</span></td>
     </tr>`).join('');
 }
 
