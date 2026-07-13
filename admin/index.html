@@ -757,7 +757,7 @@ textarea{min-height:70px;resize:vertical}
       <div id="osub-designation" style="display:none;flex:1;flex-direction:column;overflow:hidden">
         <div style="padding:12px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
           <div style="font-size:13px;font-weight:600;color:#1a1c1a">Designations (<span id="org-desig-count">0</span>)</div>
-          <button class="btn btn-primary btn-sm">+ Add</button>
+          <button class="btn btn-primary btn-sm" onclick="openAddDesignationModal()">+ Add</button>
         </div>
         <div style="flex:1;overflow:auto">
           <table style="width:100%">
@@ -774,7 +774,7 @@ textarea{min-height:70px;resize:vertical}
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn btn-secondary btn-sm" style="background:#fff;color:#1a1c1a;border:1px solid #1a1c1a">Team List</button>
             <button class="btn btn-secondary btn-sm">Team Hierarchy</button>
-            <button class="btn btn-primary btn-sm">+ Add</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddTeamModal()">+ Add</button>
           </div>
         </div>
         <div style="flex:1;overflow:auto">
@@ -1045,6 +1045,54 @@ textarea{min-height:70px;resize:vertical}
   <div style="padding:16px 20px;border-top:1px solid #e3e2e0;display:flex;gap:10px;flex-shrink:0">
     <button class="btn btn-secondary" style="flex:1" onclick="closeAddAdminDrawer()">Cancel</button>
     <button class="btn btn-primary" style="flex:1" onclick="saveAdmin()">Add Admin</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ ADD DESIGNATION MODAL ═══════════════════════ -->
+<div id="desig-modal-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center" onclick="if(event.target===this)closeAddDesignationModal()">
+  <div style="background:#fff;border-radius:8px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e3e2e0">
+      <div style="font-size:15px;font-weight:700;color:#1a1c1a">Add Designation</div>
+      <button onclick="closeAddDesignationModal()" style="border:none;background:none;cursor:pointer;font-size:18px;color:#747878;line-height:1">&#x2715;</button>
+    </div>
+    <div style="padding:24px 20px">
+      <div style="position:relative;border:1px solid #1976d2;border-radius:4px;padding:14px 12px 10px">
+        <span style="position:absolute;top:-8px;left:10px;background:#fff;padding:0 4px;font-size:11px;color:#1976d2;font-weight:500">Enter Designation *</span>
+        <input id="df-name" maxlength="100" oninput="document.getElementById('df-count').textContent=this.value.length+' / 100'" style="border:none;outline:none;width:100%;font-size:14px;color:#1a1c1a;padding:0;margin:0">
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#747878;margin-top:4px">
+        <span>This must be between 3 and 100 characters</span>
+        <span id="df-count">0 / 100</span>
+      </div>
+      <div id="desig-err" style="color:#ba1a1a;font-size:12px;margin-top:8px;display:none"></div>
+    </div>
+    <div style="padding:0 20px 20px;display:flex;justify-content:flex-end">
+      <button class="btn btn-primary" onclick="saveDesignation()" style="background:#1976d2;min-width:80px">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ ADD TEAM MODAL ═══════════════════════ -->
+<div id="team-modal-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center" onclick="if(event.target===this)closeAddTeamModal()">
+  <div style="background:#fff;border-radius:8px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e3e2e0">
+      <div style="font-size:15px;font-weight:700;color:#1a1c1a">Add Team</div>
+      <button onclick="closeAddTeamModal()" style="border:none;background:none;cursor:pointer;font-size:18px;color:#747878;line-height:1">&#x2715;</button>
+    </div>
+    <div style="padding:24px 20px">
+      <div style="position:relative;border:1px solid #1976d2;border-radius:4px;padding:14px 12px 10px">
+        <span style="position:absolute;top:-8px;left:10px;background:#fff;padding:0 4px;font-size:11px;color:#1976d2;font-weight:500">Enter Team Name *</span>
+        <input id="tf-name" maxlength="45" oninput="document.getElementById('tf-count').textContent=this.value.length+' / 45'" style="border:none;outline:none;width:100%;font-size:14px;color:#1a1c1a;padding:0;margin:0">
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#747878;margin-top:4px">
+        <span>This must be between 3 and 45 characters</span>
+        <span id="tf-count">0 / 45</span>
+      </div>
+      <div id="team-err" style="color:#ba1a1a;font-size:12px;margin-top:8px;display:none"></div>
+    </div>
+    <div style="padding:0 20px 20px;display:flex;justify-content:flex-end">
+      <button class="btn btn-primary" onclick="saveTeam()" style="background:#1976d2;min-width:80px">Save</button>
+    </div>
   </div>
 </div>
 
@@ -2575,6 +2623,69 @@ function saveRole(){
   const cnt=document.getElementById('org-roles-count');
   if(cnt)cnt.textContent=tbody.querySelectorAll('tr').length;
   closeAddRoleModal();
+}
+
+// ── Add Designation ───────────────────────────────────────────────────────────
+function openAddDesignationModal(){
+  const el=document.getElementById('desig-modal-overlay');
+  el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center';
+  document.getElementById('df-name').value='';
+  document.getElementById('df-count').textContent='0 / 100';
+  document.getElementById('desig-err').style.display='none';
+  document.getElementById('df-name').focus();
+}
+function closeAddDesignationModal(){
+  document.getElementById('desig-modal-overlay').style.display='none';
+}
+function saveDesignation(){
+  const val=document.getElementById('df-name').value.trim();
+  const errEl=document.getElementById('desig-err');
+  if(val.length<3){errEl.textContent='Designation must be at least 3 characters.';errEl.style.display='block';return;}
+  const tbody=document.getElementById('org-desig-body');
+  const empty=tbody.querySelector('td.empty');if(empty)empty.closest('tr').remove();
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td style="font-weight:500">${esc(val)}</td>
+    <td><div style="display:flex;gap:6px">
+      <button class="btn btn-secondary btn-sm" style="padding:3px 8px">✏</button>
+      <button class="btn btn-danger btn-sm" style="padding:3px 8px" onclick="this.closest('tr').remove();updateDesigCount()">🗑</button>
+    </div></td>`;
+  tbody.appendChild(tr);
+  updateDesigCount();
+  closeAddDesignationModal();
+}
+function updateDesigCount(){
+  const cnt=document.getElementById('org-desig-count');
+  if(cnt)cnt.textContent=document.getElementById('org-desig-body').querySelectorAll('tr').length;
+}
+
+// ── Add Team ─────────────────────────────────────────────────────────────────
+function openAddTeamModal(){
+  const el=document.getElementById('team-modal-overlay');
+  el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='center';
+  document.getElementById('tf-name').value='';
+  document.getElementById('tf-count').textContent='0 / 45';
+  document.getElementById('team-err').style.display='none';
+  document.getElementById('tf-name').focus();
+}
+function closeAddTeamModal(){
+  document.getElementById('team-modal-overlay').style.display='none';
+}
+function saveTeam(){
+  const val=document.getElementById('tf-name').value.trim();
+  const errEl=document.getElementById('team-err');
+  if(val.length<3){errEl.textContent='Team name must be at least 3 characters.';errEl.style.display='block';return;}
+  const tbody=document.getElementById('org-teams-body');
+  const empty=tbody.querySelector('td.empty');if(empty)empty.closest('tr').remove();
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td style="font-weight:500">${esc(val)}</td>
+    <td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:12px" onclick="this.closest('tr').remove();updateTeamsCount()">&#x2715;</button></td>`;
+  tbody.appendChild(tr);
+  updateTeamsCount();
+  closeAddTeamModal();
+}
+function updateTeamsCount(){
+  const cnt=document.getElementById('org-teams-count');
+  if(cnt)cnt.textContent=document.getElementById('org-teams-body').querySelectorAll('tr').length;
 }
 
 // ═══════════════════════════════════════════════════ CLIENTS & SITES ═════════
