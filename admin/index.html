@@ -9,7 +9,7 @@
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f1;color:#1a1c1a;height:100vh;display:flex;flex-direction:column}
 #app{display:flex;flex:1;overflow:hidden}
 #sidebar{width:220px;background:#1a1c1a;display:flex;flex-direction:column;flex-shrink:0}
-#content{flex:1;overflow:auto;display:flex;flex-direction:column}
+#content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .brand{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
 .brand-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.5px}
 .brand-sub{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
@@ -21,13 +21,13 @@ nav{padding:12px 8px;flex:1}
 #topbar{background:#fff;border-bottom:1px solid #e3e2e0;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .topbar-title{font-size:16px;font-weight:700;color:#1a1c1a}
 .user-badge{background:#f5f4f1;border:1px solid #e3e2e0;border-radius:6px;padding:6px 12px;font-size:12px;color:#695d4a;font-weight:500;cursor:pointer}
-.section{padding:24px;flex:1}
+.section{padding:24px;flex:1;overflow-y:auto}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
 .stat-card{background:#fff;border-radius:8px;padding:18px;border:1px solid #e3e2e0}
 .stat-value{font-size:28px;font-weight:700;color:#1a1c1a;margin-bottom:4px}
 .stat-label{font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px}
 .stat-sub{font-size:10px;color:#695d4a;margin-top:6px}
-.card{background:#fff;border-radius:8px;border:1px solid #e3e2e0;overflow:hidden;margin-bottom:20px}
+.card{background:#fff;border-radius:8px;border:1px solid #e3e2e0;overflow:hidden;margin-bottom:0}
 .card-header{padding:14px 18px;border-bottom:1px solid #e3e2e0;display:flex;align-items:center;justify-content:space-between}
 .card-title{font-size:11px;color:#695d4a;text-transform:uppercase;letter-spacing:1.2px;font-weight:600}
 table{width:100%;border-collapse:collapse;font-size:12px}
@@ -95,7 +95,29 @@ textarea{min-height:70px;resize:vertical}
 .progress-fill{height:100%;background:#166534;border-radius:4px}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .alert-dot{width:6px;height:6px;border-radius:3px;background:#ba1a1a;flex-shrink:0}
-#live-map{height:380px;width:100%;border-radius:0 0 8px 8px;}
+/* Dashboard sub-navigation */
+.dash-subnav{display:flex;border-bottom:1px solid #e3e2e0;background:#fff;padding:0 20px;flex-shrink:0;overflow-x:auto}
+.dsn-btn{padding:14px 18px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;border:none;background:none;color:#747878;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s}
+.dsn-btn:hover{color:#1a1c1a}
+.dsn-btn.active{color:#1a1c1a;border-bottom-color:#1a1c1a;font-weight:600}
+/* Mini stat cards for overview */
+.mini-stat{background:#fff;border:1px solid #e3e2e0;border-radius:8px;padding:18px}
+/* Live location list items */
+.loc-item{padding:14px 16px;border-bottom:1px solid #f0efec;cursor:pointer;transition:background .12s}
+.loc-item:hover{background:#faf9f6}
+/* Timeline events */
+.tl-event{padding:12px 16px;border-bottom:1px solid #f0efec;display:flex;gap:10px;cursor:pointer;transition:background .1s}
+.tl-event:hover{background:#faf9f6}
+.tl-dot{width:10px;height:10px;border-radius:5px;flex-shrink:0;margin-top:3px}
+/* Filter pill buttons */
+.filt-btn{padding:7px 14px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid #e3e2e0;background:#fff;color:#747878;font-weight:500;white-space:nowrap}
+.filt-btn:hover{border-color:#695d4a;color:#695d4a}
+.filt-btn.active{background:#1a1c1a;color:#fff;border-color:#1a1c1a}
+/* Compliance dots */
+.comp-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 1px}
+.comp-dot-green{background:#22c55e}
+.comp-dot-grey{background:#e3e2e0}
+/* Leaflet map base */
 .leaflet-container{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -148,32 +170,251 @@ textarea{min-height:70px;resize:vertical}
       </div>
     </div>
 
-    <div id="tab-dashboard" class="section" style="display:none">
-      <div class="stat-grid" id="stat-cards"></div>
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-header">
-          <div class="card-title">Live Worker Map</div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span id="live-map-count" style="font-size:11px;color:#695d4a"></span>
-            <button class="btn btn-secondary btn-sm" onclick="loadLiveMap()">↻ Refresh</button>
+    <!-- ═══════════════════════════════════════════════════ DASHBOARD ═══ -->
+    <div id="tab-dashboard" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+
+      <!-- Sub-navigation -->
+      <div class="dash-subnav">
+        <button class="dsn-btn active" id="dsn-overview" onclick="showDashSub('overview')">Overview</button>
+        <button class="dsn-btn" id="dsn-liveloc" onclick="showDashSub('liveloc')">Live Location</button>
+        <button class="dsn-btn" id="dsn-timeline" onclick="showDashSub('timeline')">Timeline</button>
+        <button class="dsn-btn" id="dsn-cardview" onclick="showDashSub('cardview')">Card View</button>
+        <button class="dsn-btn" id="dsn-compliance" onclick="showDashSub('compliance')">Compliance Status</button>
+      </div>
+
+      <!-- ── OVERVIEW ─────────────────────────────────────────────────── -->
+      <div id="dsub-overview" style="flex:1;overflow-y:auto">
+        <div style="padding:20px">
+
+          <!-- Top row: Donut + 3 stat tiles -->
+          <div style="display:grid;grid-template-columns:230px 1fr 1fr 1fr;gap:14px;margin-bottom:20px;align-items:start">
+            <!-- Real Time Status donut -->
+            <div class="card" style="padding:18px">
+              <div class="card-title" style="margin-bottom:12px">Real Time Status</div>
+              <div style="display:flex;justify-content:center">
+                <div style="position:relative;width:120px;height:120px">
+                  <svg viewBox="0 0 120 120" width="120" height="120">
+                    <circle cx="60" cy="60" r="45" fill="none" stroke="#e3e2e0" stroke-width="18"/>
+                    <circle id="rts-arc-in" cx="60" cy="60" r="45" fill="none" stroke="#166534" stroke-width="18" stroke-dasharray="0 283" stroke-dashoffset="70.75" transform="rotate(-90 60 60)" style="transition:stroke-dasharray .5s ease"/>
+                    <text id="rts-total-txt" x="60" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#1a1c1a">0</text>
+                    <text x="60" y="71" text-anchor="middle" font-size="9" fill="#747878" letter-spacing="1">ALL</text>
+                  </svg>
+                </div>
+              </div>
+              <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:10px;height:10px;border-radius:2px;background:#166534;flex-shrink:0"></div>
+                  <span style="font-size:12px;color:#1a1c1a" id="rts-in-lbl">0 Punched In</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:10px;height:10px;border-radius:2px;background:#e3e2e0;flex-shrink:0"></div>
+                  <span style="font-size:12px;color:#747878" id="rts-out-lbl">0 Punched Out</span>
+                </div>
+              </div>
+            </div>
+            <!-- Punched In Inactive -->
+            <div class="mini-stat">
+              <div class="card-title" style="margin-bottom:8px;font-size:10px">Punched In (Inactive) Employees</div>
+              <div style="font-size:40px;font-weight:700;color:#1a1c1a;line-height:1" id="ov-inactive">0</div>
+            </div>
+            <!-- Staffing Strength -->
+            <div class="mini-stat">
+              <div class="card-title" style="margin-bottom:8px">Staffing Strength</div>
+              <div style="font-size:40px;font-weight:700;color:#1a1c1a;line-height:1" id="ov-staffing">—</div>
+              <div style="font-size:11px;color:#747878;margin-top:6px" id="ov-staffing-sub">Punched In / Total Workers</div>
+            </div>
+            <!-- Task Status -->
+            <div class="mini-stat">
+              <div class="card-title" style="margin-bottom:10px">Task Status Overview</div>
+              <div id="ov-task-mini"><div style="font-size:12px;color:#c4c7c7">Loading...</div></div>
+            </div>
+          </div>
+
+          <!-- Employees + Off Duty -->
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:20px;align-items:start">
+            <!-- Employees table -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Employees (<span id="ov-emp-count">0</span>)</div>
+                <input id="ov-emp-search" placeholder="Search Here..." oninput="filterOvEmp(this.value)"
+                  style="width:150px;padding:5px 10px;font-size:11px;border:1px solid #e3e2e0;border-radius:4px;margin:0">
+              </div>
+              <div style="overflow-x:auto;max-height:310px;overflow-y:auto">
+                <table>
+                  <thead><tr><th>Employee</th><th>Attendance</th><th>Last Location</th></tr></thead>
+                  <tbody id="ov-emp-tbody"><tr><td colspan="3" class="loading">Loading...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <!-- Off Duty -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Off Duty (<span id="ov-offduty-count">0</span>)</div>
+              </div>
+              <div id="ov-offduty-list" style="max-height:310px;overflow-y:auto">
+                <div class="empty">No off duty employees</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats row -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+            <div class="mini-stat">
+              <div style="font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Forms Filled</div>
+              <div style="font-size:32px;font-weight:700;color:#1a1c1a">0</div>
+              <div style="font-size:10px;color:#c4c7c7;margin-top:4px">0 Yesterday</div>
+            </div>
+            <div class="mini-stat">
+              <div style="font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Photos Uploaded</div>
+              <div style="font-size:32px;font-weight:700;color:#1a1c1a">0 <span style="font-size:14px;color:#c4c7c7">+0%</span></div>
+              <div style="font-size:10px;color:#c4c7c7;margin-top:4px">0 Yesterday</div>
+            </div>
+            <div class="mini-stat">
+              <div style="font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Tasks Completed</div>
+              <div style="font-size:32px;font-weight:700;color:#1a1c1a" id="ov-tasks-val">—</div>
+              <div style="font-size:10px;color:#695d4a;margin-top:4px" id="ov-tasks-sub">of total tasks</div>
+            </div>
+            <div class="mini-stat">
+              <div style="font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Pending Leaves</div>
+              <div style="font-size:32px;font-weight:700;color:#1a1c1a" id="ov-leaves-val">—</div>
+              <div style="font-size:10px;color:#c4c7c7;margin-top:4px">Awaiting approval</div>
+            </div>
+          </div>
+
+          <!-- Charts row -->
+          <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;margin-bottom:20px;align-items:start">
+            <!-- Daily Working Hours bar chart -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Daily Average Working Hours</div>
+                <select id="chart-days-sel" onchange="loadHoursChart()" style="padding:4px 8px;font-size:11px;border:1px solid #e3e2e0;border-radius:4px;width:auto;margin:0">
+                  <option value="30">This Month</option>
+                  <option value="7">Last 7 Days</option>
+                  <option value="90">Last 3 Months</option>
+                </select>
+              </div>
+              <div id="hours-chart-wrap" style="padding:16px;overflow-x:auto;min-height:180px">
+                <div class="loading">Loading chart...</div>
+              </div>
+            </div>
+            <!-- Task Status overview donut + bars -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">Task Status</div></div>
+              <div id="ov-task-status-detail" style="padding:18px">
+                <div class="loading">Loading...</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── LIVE LOCATION ──────────────────────────────────────────────── -->
+      <div id="dsub-liveloc" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <!-- Filter bar -->
+        <div style="padding:10px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap">
+          <div id="loc-filter-btns" style="display:flex;gap:8px">
+            <button class="filt-btn active" id="loc-filt-all" onclick="setLocFilter(this,'all')">All Employees</button>
+            <button class="filt-btn" id="loc-filt-in" onclick="setLocFilter(this,'in')">Punched In</button>
+            <button class="filt-btn" id="loc-filt-out" onclick="setLocFilter(this,'out')">Punched Out</button>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <button class="btn btn-secondary btn-sm" onclick="loadLiveLocView()">↻ Refresh</button>
           </div>
         </div>
-        <div id="live-map"><div style="display:flex;align-items:center;justify-content:center;height:380px;background:#f5f4f1;color:#747878;font-size:13px">Loading map...</div></div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Recent Attendance</div>
-          <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">↻ Refresh</button>
-        </div>
-        <div style="overflow-x:auto">
-          <table id="dash-att-table">
-            <thead><tr><th>Worker</th><th>Punch In</th><th>Punch Out</th><th>Hours</th><th>Status</th></tr></thead>
-            <tbody id="dash-att-body"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
-          </table>
+        <!-- Split layout -->
+        <div style="display:flex;flex:1;overflow:hidden">
+          <div id="loc-emp-list" style="width:340px;overflow-y:auto;border-right:1px solid #e3e2e0;flex-shrink:0;background:#fff">
+            <div class="loading">Loading...</div>
+          </div>
+          <div id="loc-map" style="flex:1;min-height:400px"></div>
         </div>
       </div>
-    </div>
 
+      <!-- ── TIMELINE ───────────────────────────────────────────────────── -->
+      <div id="dsub-timeline" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <!-- Controls -->
+        <div style="padding:10px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
+          <select id="tl-user-sel" style="padding:7px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;min-width:180px;width:auto;margin:0">
+            <option>Loading workers...</option>
+          </select>
+          <button onclick="tl_prevDay()" style="border:1px solid #e3e2e0;background:#fff;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:14px;flex-shrink:0">‹</button>
+          <input type="date" id="tl-date" style="padding:7px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:auto;margin:0"/>
+          <button onclick="tl_nextDay()" style="border:1px solid #e3e2e0;background:#fff;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:14px;flex-shrink:0">›</button>
+          <button class="btn btn-primary" onclick="loadTimeline()" style="flex-shrink:0">Apply</button>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm">All Visits</button>
+            <button class="btn btn-primary btn-sm">▶ Play</button>
+          </div>
+        </div>
+        <!-- Stats strip -->
+        <div id="tl-stats-row" style="display:flex;border-bottom:1px solid #e3e2e0;background:#faf9f6;flex-shrink:0;overflow-x:auto">
+          <div style="padding:12px 20px;font-size:12px;color:#c4c7c7">Select a worker and date, then click Apply.</div>
+        </div>
+        <!-- Split layout -->
+        <div style="display:flex;flex:1;overflow:hidden">
+          <div id="tl-events-list" style="width:340px;overflow-y:auto;border-right:1px solid #e3e2e0;flex-shrink:0;background:#fff">
+            <div style="padding:40px;text-align:center;color:#c4c7c7;font-size:13px">No data loaded</div>
+          </div>
+          <div id="tl-map" style="flex:1;min-height:400px"></div>
+        </div>
+      </div>
+
+      <!-- ── CARD VIEW ──────────────────────────────────────────────────── -->
+      <div id="dsub-cardview" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+        <div style="padding:10px 20px;border-bottom:1px solid #e3e2e0;background:#fff;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap">
+          <div id="cv-filter-btns" style="display:flex;gap:8px">
+            <button class="filt-btn active" onclick="setCVFilter(this,'all')">All Employees</button>
+            <button class="filt-btn" onclick="setCVFilter(this,'in')">Punched In</button>
+            <button class="filt-btn" onclick="setCVFilter(this,'out')">Punched Out</button>
+          </div>
+          <div style="margin-left:auto">
+            <input id="cv-search" placeholder="Search Here..." oninput="renderCardView()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:160px;margin:0">
+          </div>
+        </div>
+        <div id="cv-grid" style="flex:1;overflow-y:auto;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-content:start">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <!-- ── COMPLIANCE STATUS ──────────────────────────────────────────── -->
+      <div id="dsub-compliance" style="display:none;flex:1;overflow-y:auto">
+        <div style="padding:20px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+            <div class="card" style="padding:20px">
+              <div style="font-size:40px;font-weight:700;color:#1a1c1a;line-height:1;margin-bottom:8px" id="comp-bad-app">0</div>
+              <div style="font-size:12px;color:#747878;margin-bottom:16px">No of People having bad app settings yesterday</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-secondary btn-sm">Notify All</button>
+                <button class="btn btn-secondary btn-sm">View Names</button>
+              </div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div style="font-size:40px;font-weight:700;color:#1a1c1a;line-height:1;margin-bottom:8px" id="comp-bad-loc">0</div>
+              <div style="font-size:12px;color:#747878;margin-bottom:16px">No of People having bad location settings yesterday</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-secondary btn-sm">Notify All</button>
+                <button class="btn btn-secondary btn-sm">View Names</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="card-title" style="color:#695d4a">Compliance Status</div>
+            <div style="display:flex;align-items:center;gap:14px;font-size:11px;color:#747878">
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#22c55e;margin-right:4px;vertical-align:middle"></span>Good</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#ef4444;margin-right:4px;vertical-align:middle"></span>Bad</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e3e2e0;margin-right:4px;vertical-align:middle"></span>No Data</span>
+            </div>
+          </div>
+          <div class="card">
+            <div id="comp-table-wrap" style="overflow-x:auto"><div class="loading">Loading...</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-dashboard -->
+
+    <!-- ═══════════════════════════════════════════════════ OTHER TABS ═══ -->
     <div id="tab-workers" class="section" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <div class="card-title" style="color:#695d4a">All Workers</div>
@@ -280,13 +521,14 @@ textarea{min-height:70px;resize:vertical}
         <div class="card" style="padding:20px">
           <div style="font-size:24px;margin-bottom:8px">💰</div>
           <div style="font-weight:600;margin-bottom:4px;font-size:14px">Payroll Report</div>
-          <div style="font-size:11px;color:#747878;margin-bottom:14px">Monthly payroll estimate based on hours worked at ₹200/hr.</div>
+          <div style="font-size:11px;color:#747878;margin-bottom:14px">Monthly payroll estimate based on hours worked.</div>
           <button class="btn btn-success" onclick="downloadCSV('payroll')">⬇ Download CSV</button>
         </div>
       </div>
     </div>
-  </div>
-</div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
 
 <div id="modal-backdrop" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modal-content"></div>
@@ -303,13 +545,13 @@ let workerList = [];
 let lastChatVisit = new Date(0).toISOString();
 let unreadPollInterval = null;
 
+// ── Chat badge ──────────────────────────────────────────────────────────────
 function updateChatBadge(count){
   const el=document.getElementById('chat-badge');
   if(!el)return;
   if(count>0){el.textContent=count>9?'9+':String(count);el.style.display='inline';}
   else el.style.display='none';
 }
-
 async function pollChatUnread(){
   if(!token)return;
   try{
@@ -320,156 +562,554 @@ async function pollChatUnread(){
     updateChatBadge(count);
   }catch{}
 }
-
 function startUnreadPoll(){
   if(unreadPollInterval)clearInterval(unreadPollInterval);
   pollChatUnread();
   unreadPollInterval=setInterval(pollChatUnread,30000);
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const errEl = document.getElementById('login-err');
-  errEl.style.display = 'none';
-  try {
-    const res = await fetch(`${API}/api/auth/login`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email, password, device_uuid:'web-admin'}),
-    });
-    if (!res.ok) { errEl.style.display='block'; return; }
-    const data = await res.json();
-    if (!['admin','manager'].includes(data.role)) {
-      errEl.textContent='Only admin/manager accounts can access this panel.';
-      errEl.style.display='block'; return;
-    }
-    token = data.access_token; adminName = data.name;
-    localStorage.setItem('fp_token', token);
-    localStorage.setItem('fp_admin_name', adminName);
-    document.getElementById('admin-name').textContent = adminName;
+// ── Auth ────────────────────────────────────────────────────────────────────
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  const errEl=document.getElementById('login-err'); errEl.style.display='none';
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,device_uuid:'web-admin'})});
+    if(!res.ok){errEl.style.display='block';return;}
+    const data=await res.json();
+    if(!['admin','manager'].includes(data.role)){errEl.textContent='Only admin/manager can access this panel.';errEl.style.display='block';return;}
+    token=data.access_token; adminName=data.name;
+    localStorage.setItem('fp_token',token); localStorage.setItem('fp_admin_name',adminName);
+    document.getElementById('admin-name').textContent=adminName;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
-    showTab('dashboard');
-    startUnreadPoll();
-  } catch {
-    errEl.textContent='Unable to connect to server.'; errEl.style.display='block';
-  }
+    showTab('dashboard'); startUnreadPoll();
+  }catch{errEl.textContent='Unable to connect to server.';errEl.style.display='block';}
 }
-
-function doLogout() {
-  localStorage.removeItem('fp_token'); localStorage.removeItem('fp_admin_name');
-  token=null; location.reload();
-}
-
-async function apiFetch(path, opts={}) {
-  const res = await fetch(API+path, {
-    ...opts,
-    headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})},
-  });
-  if (res.status===401) { doLogout(); return null; }
+function doLogout(){localStorage.removeItem('fp_token');localStorage.removeItem('fp_admin_name');token=null;location.reload();}
+async function apiFetch(path,opts={}){
+  const res=await fetch(API+path,{...opts,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}});
+  if(res.status===401){doLogout();return null;}
   return res;
 }
 
-// ── Tab routing ───────────────────────────────────────────────────────────────
-const TABS = ['dashboard','workers','tasks','attendance','leaves','chat','geofence','performance','reports'];
-const TAB_TITLES = {dashboard:'Dashboard',workers:'Workers',tasks:'Tasks',attendance:'Attendance',
+// ── Tab routing ─────────────────────────────────────────────────────────────
+const TABS=['dashboard','workers','tasks','attendance','leaves','chat','geofence','performance','reports'];
+const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',tasks:'Tasks',attendance:'Attendance',
   leaves:'Leave Requests',chat:'Chat',geofence:'Geofence Alerts',performance:'Performance',reports:'Reports'};
 
-function showTab(name) {
-  document.querySelectorAll('.nav-item').forEach((el,i) => el.classList.toggle('active', TABS[i]===name));
-  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
-  const el = document.getElementById(`tab-${name}`);
-  if (el) el.style.display = 'block';
-  document.getElementById('topbar-title').textContent = TAB_TITLES[name]||name;
-  if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval=null; }
-  if (name==='chat') { lastChatVisit=new Date().toISOString(); updateChatBadge(0); }
-  const loaders = {dashboard:loadDashboard, workers:loadWorkers, tasks:loadTasks,
-    attendance:loadAttendance, leaves:loadLeaves, chat:loadChatRooms,
-    geofence:loadGeofence, performance:loadPerformance, reports:()=>{}};
-  if (loaders[name]) loaders[name]();
+function showTab(name){
+  document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',TABS[i]===name));
+  document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
+  const el=document.getElementById(`tab-${name}`);
+  if(el) el.style.display=name==='dashboard'?'flex':'block';
+  document.getElementById('topbar-title').textContent=TAB_TITLES[name]||name;
+  if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;}
+  if(name==='chat'){lastChatVisit=new Date().toISOString();updateChatBadge(0);}
+  const loaders={dashboard:()=>showDashSub('overview'),workers:loadWorkers,tasks:loadTasks,
+    attendance:loadAttendance,leaves:loadLeaves,chat:loadChatRooms,
+    geofence:loadGeofence,performance:loadPerformance,reports:()=>{}};
+  if(loaders[name])loaders[name]();
 }
 
-// ── Live Map (Leaflet + OpenStreetMap — no API key required) ─────────────────
-let liveMap=null; let liveMarkers=[];
-async function loadLiveMap(){
-  const mapEl=document.getElementById('live-map'); if(!mapEl)return;
+// ── Dashboard sub-tabs ──────────────────────────────────────────────────────
+const DASH_SUBS=['overview','liveloc','timeline','cardview','compliance'];
+let dashSubLoaded={};
+
+function showDashSub(name){
+  DASH_SUBS.forEach(s=>{
+    const el=document.getElementById(`dsub-${s}`);
+    if(el)el.style.display='none';
+    const btn=document.getElementById(`dsn-${s}`);
+    if(btn)btn.classList.remove('active');
+  });
+  const el=document.getElementById(`dsub-${name}`);
+  const btn=document.getElementById(`dsn-${name}`);
+  if(el)el.style.display=name==='overview'||name==='cardview'?'block':'flex';
+  if(btn)btn.classList.add('active');
+  const loaders={overview:loadOverview,liveloc:loadLiveLocView,timeline:initTimeline,cardview:loadCardView,compliance:loadCompliance};
+  if(loaders[name])loaders[name]();
+}
+
+// ═══════════════════════════════════════════════════════ OVERVIEW ═══════════
+
+let ovAllWorkers=[], ovLocs=[], ovStats=null;
+
+async function loadOverview(){
+  const[statsRes,locRes,usersRes]=await Promise.all([
+    apiFetch('/api/admin/stats'),
+    apiFetch('/api/admin/live-locations'),
+    apiFetch('/api/admin/users'),
+  ]);
+  if(!statsRes||!locRes||!usersRes)return;
+  ovStats=await statsRes.json();
+  ovLocs=await locRes.json();
+  ovAllWorkers=await usersRes.json();
+
+  const workers=ovAllWorkers.filter(u=>u.role==='field_worker');
+  const punchedIn=ovLocs.filter(l=>l.is_punched_in).length;
+  const punchedOut=ovLocs.length-punchedIn;
+  const total=ovLocs.length;
+
+  // Donut chart
+  const C=283;
+  const arc=document.getElementById('rts-arc-in');
+  const txt=document.getElementById('rts-total-txt');
+  if(arc){const f=total>0?punchedIn/total:0;arc.setAttribute('stroke-dasharray',`${(f*C).toFixed(1)} ${((1-f)*C).toFixed(1)}`);}
+  if(txt)txt.textContent=total;
+  const inLbl=document.getElementById('rts-in-lbl'); if(inLbl)inLbl.textContent=`${punchedIn} Punched In`;
+  const outLbl=document.getElementById('rts-out-lbl'); if(outLbl)outLbl.textContent=`${punchedOut} Punched Out`;
+
+  // Stat tiles
+  setSel('ov-inactive','0');
+  setSel('ov-staffing',`${punchedIn} / ${workers.length}`);
+  setSel('ov-staffing-sub','Punched In / Total Workers');
+  setSel('ov-tasks-val',ovStats.completed_tasks);
+  setSel('ov-tasks-sub',`of ${ovStats.total_tasks} total tasks`);
+  setSel('ov-leaves-val',ovStats.pending_leaves);
+
+  // Task mini card
+  const rate=ovStats.total_tasks>0?Math.round(ovStats.completed_tasks/ovStats.total_tasks*100):0;
+  document.getElementById('ov-task-mini').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${[{l:'Completed',v:ovStats.completed_tasks,c:'#166534'},{l:'Pending',v:ovStats.total_tasks-ovStats.completed_tasks,c:'#92400e'}].map(x=>`
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px"><span style="color:#747878">${x.l}</span><strong>${x.v}</strong></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${ovStats.total_tasks>0?(x.v/ovStats.total_tasks*100).toFixed(0):0}%;background:${x.c}"></div></div></div>`).join('')}
+    </div>
+    <div style="margin-top:12px;text-align:center"><div style="font-size:20px;font-weight:700;color:#166534">${rate}%</div><div style="font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px">completion</div></div>`;
+
+  // Task status detail panel
+  document.getElementById('ov-task-status-detail').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${[{l:'Completed',v:ovStats.completed_tasks,c:'#166534'},{l:'Pending',v:ovStats.total_tasks-ovStats.completed_tasks,c:'#92400e'}].map(x=>`
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px"><span style="color:#747878">${x.l}</span><strong>${x.v}</strong></div>
+        <div class="progress-bar" style="height:8px"><div class="progress-fill" style="height:8px;border-radius:4px;width:${ovStats.total_tasks>0?(x.v/ovStats.total_tasks*100).toFixed(0):0}%;background:${x.c}"></div></div></div>`).join('')}
+    </div>
+    <div style="margin-top:20px;padding-top:14px;border-top:1px solid #e3e2e0;text-align:center">
+      <div style="font-size:28px;font-weight:700;color:#166534">${rate}%</div>
+      <div style="font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;margin-top:4px">Task Completion Rate</div>
+    </div>`;
+
+  // Employee table
+  setSel('ov-emp-count',workers.length);
+  ovRenderEmpTable('');
+
+  // Off duty
+  const offDuty=workers.filter(u=>!ovLocs.find(l=>l.user_id===u.id));
+  setSel('ov-offduty-count',offDuty.length);
+  const odList=document.getElementById('ov-offduty-list');
+  if(odList)odList.innerHTML=offDuty.length===0?'<div class="empty" style="padding:30px">No off duty employees</div>':
+    offDuty.map(u=>`<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #f0efec">
+      <div style="width:34px;height:34px;border-radius:17px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:13px;flex-shrink:0">${u.name.charAt(0)}</div>
+      <div><div style="font-weight:600;font-size:13px">${esc(u.name)}</div><div style="font-size:10px;color:#c4c7c7">No GPS data today</div></div>
+    </div>`).join('');
+
+  loadHoursChart();
+}
+
+function ovRenderEmpTable(query){
+  const workers=ovAllWorkers.filter(u=>u.role==='field_worker');
+  const filtered=query?workers.filter(u=>u.name.toLowerCase().includes(query.toLowerCase())):workers;
+  const tbody=document.getElementById('ov-emp-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=filtered.map(u=>{
+    const loc=ovLocs.find(l=>l.user_id===u.id);
+    const isPunchedIn=loc?.is_punched_in;
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:17px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:13px;flex-shrink:0">${u.name.charAt(0)}</div>
+        <div><div style="font-weight:600;font-size:13px">${esc(u.name)}</div><div style="font-size:10px;color:#747878">${esc(u.email)}</div></div>
+      </div></td>
+      <td>
+        <div style="font-size:11px;color:${isPunchedIn?'#166534':'#747878'};font-weight:${isPunchedIn?'600':'400'}">
+          ${isPunchedIn?`Punched IN: ${loc.punch_in_time?fmtDT(loc.punch_in_time):'Today'}`:'Not Punched In'}
+        </div>
+        <span class="badge ${isPunchedIn?'badge-green':'badge-gray'}" style="margin-top:4px;display:inline-block">${isPunchedIn?'Active':'Inactive'}</span>
+      </td>
+      <td style="font-size:11px">
+        ${loc?`<div style="color:#1a1c1a">${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}</div>
+               <div style="color:#747878;margin-top:2px">${fmtDT(loc.last_seen)}</div>`
+             :'<span style="color:#c4c7c7">No location data</span>'}
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="3" class="empty">No workers found</td></tr>';
+}
+
+function filterOvEmp(q){ovRenderEmpTable(q);}
+
+async function loadHoursChart(){
+  const days=parseInt(document.getElementById('chart-days-sel')?.value||'30');
+  const res=await apiFetch(`/api/admin/daily-hours?days=${days}`);
+  if(!res)return;
+  const data=await res.json();
+  const wrap=document.getElementById('hours-chart-wrap');
+  if(!wrap)return;
+  const W=Math.max(wrap.clientWidth-32,300);
+  const H=160;
+  const PL=32,PR=10,PT=10,PB=28;
+  const cW=W-PL-PR, cH=H-PT-PB;
+  const maxH=Math.max(...data.map(d=>d.avg_hours),1);
+  const bW=Math.max(3,Math.floor(cW/data.length)-1);
+  const gap=cW/data.length;
+  let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">`;
+  for(let i=0;i<=4;i++){
+    const y=PT+cH-(i/4)*cH;
+    svg+=`<line x1="${PL}" y1="${y}" x2="${PL+cW}" y2="${y}" stroke="#e3e2e0" stroke-width="1"/>`;
+    svg+=`<text x="${PL-4}" y="${y+4}" text-anchor="end" font-size="9" fill="#747878">${((maxH*i)/4).toFixed(0)}</text>`;
+  }
+  data.forEach((d,i)=>{
+    const x=PL+i*gap+(gap-bW)/2;
+    const bh=d.avg_hours>0?Math.max(2,(d.avg_hours/maxH)*cH):0;
+    const y=PT+cH-bh;
+    if(bh>0)svg+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${bh.toFixed(1)}" fill="#1a1c1a" rx="2" opacity="0.85"/>`;
+    const lbl=d.date.slice(5);
+    const showLbl=data.length<=15||(data.length<=31&&i%2===0)||(data.length>31&&i%5===0);
+    if(showLbl)svg+=`<text x="${(x+bW/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="8" fill="#747878">${lbl}</text>`;
+  });
+  svg+='</svg>';
+  wrap.innerHTML=svg;
+}
+
+// ═══════════════════════════════════════════════════════ LIVE LOCATION ═══════
+let locMap=null, locMarkers=[], locAllData=[], locFilterMode='all';
+
+async function loadLiveLocView(){
   const res=await apiFetch('/api/admin/live-locations');
   if(!res)return;
-  const locs=await res.json();
-  const countEl=document.getElementById('live-map-count');
-  if(countEl)countEl.textContent=`${locs.length} worker${locs.length!==1?'s':''} active`;
-  if(!locs.length){
-    if(liveMap){liveMap.remove();liveMap=null;}
-    mapEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:380px;background:#f5f4f1;color:#c4c7c7;font-size:13px">No workers currently active</div>';
-    return;
+  locAllData=await res.json();
+  renderLocList();
+  renderLocMap();
+}
+
+function setLocFilter(btn,mode){
+  document.querySelectorAll('#loc-filter-btns .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  locFilterMode=mode;
+  renderLocList();
+}
+
+function renderLocList(){
+  const filtered=locFilterMode==='all'?locAllData
+    :locFilterMode==='in'?locAllData.filter(l=>l.is_punched_in)
+    :locAllData.filter(l=>!l.is_punched_in);
+
+  // Update counts on buttons
+  document.getElementById('loc-filt-all').textContent=`${locAllData.length} All Employees`;
+  document.getElementById('loc-filt-in').textContent=`${locAllData.filter(l=>l.is_punched_in).length} Punched In`;
+  document.getElementById('loc-filt-out').textContent=`${locAllData.filter(l=>!l.is_punched_in).length} Punched Out`;
+
+  const list=document.getElementById('loc-emp-list');
+  if(!filtered.length){list.innerHTML='<div class="empty">No employees</div>';return;}
+  list.innerHTML=filtered.map(loc=>`
+    <div class="loc-item" onclick="focusLocWorker('${loc.user_id}')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:38px;height:38px;border-radius:19px;background:${loc.is_punched_in?'#1a1c1a':'#c4c7c7'};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px;flex-shrink:0">${loc.user_name.charAt(0)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(loc.user_name)}</div>
+          <div style="font-size:10px;color:#747878;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(loc.user_email)}</div>
+        </div>
+        <div style="width:8px;height:8px;border-radius:4px;background:${loc.is_punched_in?'#22c55e':'#e3e2e0'};flex-shrink:0"></div>
+      </div>
+      <div style="font-size:11px;color:${loc.is_punched_in?'#166534':'#747878'};font-weight:${loc.is_punched_in?'600':'400'};display:flex;align-items:center;gap:6px">
+        <span style="flex:1">${loc.is_punched_in?`Punched IN : ${loc.punch_in_time?fmtDT(loc.punch_in_time):'Today'}`:'Punched OUT'}</span>
+        <button onclick="event.stopPropagation();openTimelineFor('${loc.user_id}')" style="padding:2px 8px;font-size:9px;border:1px solid #e3e2e0;border-radius:4px;cursor:pointer;background:#fff;color:#695d4a;white-space:nowrap">Timeline ↗</button>
+      </div>
+      <div style="font-size:11px;color:#747878;margin-top:6px;display:flex;align-items:center;gap:4px">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}</span>
+        <span style="color:#c4c7c7;margin-left:4px">${fmtDT(loc.last_seen)}</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderLocMap(){
+  const mapEl=document.getElementById('loc-map'); if(!mapEl)return;
+  const valid=locAllData.filter(l=>l.latitude&&l.longitude);
+  if(!locMap){
+    locMap=L.map(mapEl,{zoomControl:true});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(locMap);
   }
-  // Init Leaflet map once
-  if(!liveMap){
-    mapEl.innerHTML=''; // clear placeholder text
-    liveMap=L.map(mapEl,{zoomControl:true,attributionControl:true});
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      attribution:'© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
-      maxZoom:19
-    }).addTo(liveMap);
-  }
-  // Clear old markers
-  liveMarkers.forEach(m=>m.remove()); liveMarkers=[];
+  locMarkers.forEach(m=>m.remove()); locMarkers=[];
+  if(!valid.length){locMap.setView([20.5937,78.9629],5);return;}
   const bounds=[];
-  locs.forEach(loc=>{
+  valid.forEach(loc=>{
     bounds.push([loc.latitude,loc.longitude]);
-    const initial=loc.user_name.charAt(0).toUpperCase();
-    const icon=L.divIcon({
-      className:'',
-      html:`<div style="width:38px;height:38px;border-radius:19px;background:#1a1c1a;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.35);font-family:-apple-system,sans-serif">${initial}</div>`,
-      iconSize:[38,38],iconAnchor:[19,19],popupAnchor:[0,-22]
-    });
-    const popup=`<div style="font-family:-apple-system,sans-serif;min-width:160px">
-      <div style="font-weight:700;font-size:13px;color:#1a1c1a">${esc(loc.user_name)}</div>
-      <div style="font-size:11px;color:#747878;margin-top:2px">${esc(loc.user_email||'')}</div>
-      <div style="font-size:10px;color:#695d4a;margin-top:6px;font-weight:600">Last seen</div>
-      <div style="font-size:11px;color:#1a1c1a">${fmtDT(loc.timestamp)}</div>
-      <div style="font-size:10px;color:#c4c7c7;margin-top:4px">${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}</div>
-    </div>`;
-    const marker=L.marker([loc.latitude,loc.longitude],{icon}).addTo(liveMap).bindPopup(popup);
-    liveMarkers.push(marker);
+    const icon=L.divIcon({className:'',
+      html:`<div style="width:40px;height:40px;border-radius:20px;background:${loc.is_punched_in?'#1a1c1a':'#9ca3af'};border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.3)">${loc.user_name.charAt(0)}</div>`,
+      iconSize:[40,40],iconAnchor:[20,20],popupAnchor:[0,-24]});
+    const m=L.marker([loc.latitude,loc.longitude],{icon}).addTo(locMap).bindPopup(
+      `<div style="min-width:160px;font-family:sans-serif">
+        <div style="font-weight:700;font-size:13px;color:#1a1c1a">${esc(loc.user_name)}</div>
+        <div style="font-size:11px;color:#747878">${esc(loc.user_email)}</div>
+        <div style="margin-top:8px;font-size:11px;color:${loc.is_punched_in?'#166534':'#747878'};font-weight:600">${loc.is_punched_in?'● Punched In':'○ Punched Out'}</div>
+        <div style="font-size:10px;color:#c4c7c7;margin-top:4px">Last: ${fmtDT(loc.last_seen)}</div>
+      </div>`);
+    m._wid=loc.user_id;
+    locMarkers.push(m);
   });
-  if(locs.length===1) liveMap.setView(bounds[0],14);
-  else liveMap.fitBounds(bounds,{padding:[40,40]});
+  if(valid.length===1)locMap.setView(bounds[0],14);
+  else locMap.fitBounds(bounds,{padding:[40,40]});
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-async function loadDashboard() {
-  loadLiveMap();
-  const res = await apiFetch('/api/admin/stats');
-  if (!res) return;
-  const s = await res.json();
-  document.getElementById('stat-cards').innerHTML = [
-    {label:'Total Workers',value:s.total_workers,sub:'Field team members',icon:'👷'},
-    {label:'Tasks Total',value:s.total_tasks,sub:`${s.completed_tasks} completed`,icon:'📋'},
-    {label:'Active Shifts',value:s.active_shifts,sub:'Currently clocked in',icon:'🟢'},
-    {label:'Pending Leaves',value:s.pending_leaves,sub:'Awaiting approval',icon:'📅'},
-  ].map(c=>`<div class="stat-card"><div style="font-size:22px;margin-bottom:6px">${c.icon}</div><div class="stat-value">${c.value}</div><div class="stat-label">${c.label}</div><div class="stat-sub">${c.sub}</div></div>`).join('');
-  const attRes = await apiFetch('/api/admin/attendance');
-  if (!attRes) return;
-  const logs = await attRes.json();
-  const tbody = document.getElementById('dash-att-body');
-  tbody.innerHTML = logs.slice(0,8).map(l=>`<tr>
-    <td><strong>${esc(l.user_name)}</strong></td>
-    <td>${fmtDT(l.punch_in_time)}</td>
-    <td>${l.punch_out_time?fmtDT(l.punch_out_time):'<span style="color:#c4c7c7">Active</span>'}</td>
-    <td>${l.total_hours?l.total_hours.toFixed(1)+'h':'--'}</td>
-    <td><span class="badge ${l.status==='active'?'badge-green':'badge-gray'}">${l.status}</span></td>
-  </tr>`).join('') || '<tr><td colspan="5" class="empty">No attendance records</td></tr>';
+function focusLocWorker(uid){
+  const loc=locAllData.find(l=>l.user_id===uid);
+  if(!loc||!locMap)return;
+  locMap.setView([loc.latitude,loc.longitude],16);
+  const m=locMarkers.find(x=>x._wid===uid); if(m)m.openPopup();
 }
 
-// ── Workers ───────────────────────────────────────────────────────────────────
-async function loadWorkers() {
-  const res = await apiFetch('/api/admin/users');
-  if (!res) return;
-  workerList = await res.json();
-  const tbody = document.getElementById('workers-body');
-  tbody.innerHTML = workerList.length===0 ? '<tr><td colspan="6" class="empty">No users</td></tr>' :
+function openTimelineFor(uid){
+  showDashSub('timeline');
+  setTimeout(()=>{
+    const sel=document.getElementById('tl-user-sel'); if(sel&&uid)sel.value=uid;
+    loadTimeline();
+  },100);
+}
+
+// ═══════════════════════════════════════════════════════ TIMELINE ═══════════
+let tlMap=null, tlMarkers=[], tlPolyline=null, tlWorkers=[];
+
+async function initTimeline(){
+  const today=new Date();
+  const todayStr=today.toISOString().slice(0,10);
+  const minStr=new Date(Date.now()-90*86400000).toISOString().slice(0,10);
+  const di=document.getElementById('tl-date');
+  if(di){di.max=todayStr; di.min=minStr; if(!di.value)di.value=todayStr;}
+
+  if(!tlWorkers.length){
+    const res=await apiFetch('/api/admin/users'); if(!res)return;
+    tlWorkers=await res.json();
+  }
+  const sel=document.getElementById('tl-user-sel');
+  if(sel){
+    const workers=tlWorkers.filter(u=>u.role==='field_worker');
+    sel.innerHTML=workers.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  }
+
+  const mapEl=document.getElementById('tl-map');
+  if(mapEl&&!tlMap){
+    tlMap=L.map(mapEl,{zoomControl:true});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(tlMap);
+    tlMap.setView([20.5937,78.9629],5);
+  }
+}
+
+async function loadTimeline(){
+  const uid=document.getElementById('tl-user-sel')?.value;
+  const date=document.getElementById('tl-date')?.value;
+  if(!uid||!date)return;
+  document.getElementById('tl-events-list').innerHTML='<div class="loading">Loading timeline...</div>';
+  document.getElementById('tl-stats-row').innerHTML='<div style="padding:12px 20px;font-size:12px;color:#c4c7c7">Loading...</div>';
+  const res=await apiFetch(`/api/admin/user-timeline?user_id=${encodeURIComponent(uid)}&date=${date}`);
+  if(!res)return;
+  const data=await res.json();
+  const s=data.stats;
+
+  // Stats strip
+  const statusClr=s.attendance_status==='active'?'#166534':s.attendance_status==='completed'?'#1e40af':'#747878';
+  document.getElementById('tl-stats-row').innerHTML=[
+    {l:'Attendance Status',v:`<span style="color:${statusClr};font-weight:600;text-transform:capitalize">${s.attendance_status}</span>`},
+    {l:'Attendance Hours',v:`${s.attendance_hours}h`},
+    {l:'Time Tracked',v:`${s.tracked_hours}h`},
+    {l:'GPS Distance',v:`${s.gps_distance_km} KM`},
+    {l:'Activities',v:String(s.activities)},
+  ].map(x=>`<div style="padding:12px 20px;border-right:1px solid #e3e2e0;min-width:130px">
+    <div style="font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${x.l}</div>
+    <div style="font-size:14px;font-weight:600;color:#1a1c1a">${x.v}</div>
+  </div>`).join('');
+
+  // Events list
+  if(!data.events.length){
+    document.getElementById('tl-events-list').innerHTML='<div class="empty">No GPS data for this date.<br>The worker may not have sent location pings.</div>';
+  }else{
+    const colorMap={punch_in:'#166534',punch_out:'#991b1b',travel:'#695d4a',halt:'#1e40af'};
+    const bgMap={punch_in:'#dcfce7',punch_out:'#fee2e2',travel:'#f5f4f1',halt:'#dbeafe'};
+    document.getElementById('tl-events-list').innerHTML=data.events.map((e,i)=>{
+      const clr=colorMap[e.type]||'#747878';
+      const bg=bgMap[e.type]||'#f5f4f1';
+      let detail='';
+      if(e.type==='travel')detail=`<span style="font-size:10px;color:#747878;margin-left:8px">${e.distance_km} KM</span>`;
+      if(e.type==='halt')detail=`<span style="font-size:10px;color:#747878;margin-left:8px">${e.duration_min}m</span>`;
+      const isLast=i===data.events.length-1;
+      return `<div class="tl-event" onclick="tlFocus(${e.lat},${e.lng})">
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <div class="tl-dot" style="background:${clr}"></div>
+          ${!isLast?`<div style="width:1px;flex:1;background:#e3e2e0;min-height:24px;margin-top:3px"></div>`:''}
+        </div>
+        <div style="flex:1;padding-bottom:${isLast?'0':'10'}px">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="background:${bg};color:${clr};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">${e.label}</span>
+            ${detail}
+          </div>
+          <div style="font-size:11px;color:#747878;margin-top:4px">${fmtTime(e.time)}</div>
+          ${e.duration_min>0?`<div style="font-size:10px;color:#c4c7c7">(${e.duration_min}m)</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Draw route on map
+  tlMarkers.forEach(m=>m.remove()); tlMarkers=[];
+  if(tlPolyline){tlPolyline.remove();tlPolyline=null;}
+  if(data.pings.length>0&&tlMap){
+    const coords=data.pings.map(p=>[p.lat,p.lng]);
+    tlPolyline=L.polyline(coords,{color:'#695d4a',weight:3,opacity:.75}).addTo(tlMap);
+    const mkIcon=(clr)=>L.divIcon({className:'',
+      html:`<div style="width:12px;height:12px;border-radius:6px;background:${clr};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`,
+      iconSize:[12,12],iconAnchor:[6,6]});
+    tlMarkers.push(L.marker(coords[0],{icon:mkIcon('#166534')}).addTo(tlMap));
+    if(coords.length>1)tlMarkers.push(L.marker(coords[coords.length-1],{icon:mkIcon('#991b1b')}).addTo(tlMap));
+    tlMap.fitBounds(coords,{padding:[30,30]});
+  }else if(tlMap){
+    tlMap.setView([20.5937,78.9629],5);
+  }
+}
+
+function tlFocus(lat,lng){if(!lat||!lng||!tlMap)return;tlMap.setView([lat,lng],16);}
+function tl_prevDay(){
+  const d=document.getElementById('tl-date'); if(!d||!d.value)return;
+  const nd=new Date(d.value); nd.setDate(nd.getDate()-1);
+  if(nd>=new Date(d.min))d.value=nd.toISOString().slice(0,10);
+}
+function tl_nextDay(){
+  const d=document.getElementById('tl-date'); if(!d||!d.value)return;
+  const nd=new Date(d.value); nd.setDate(nd.getDate()+1);
+  if(nd<=new Date(d.max))d.value=nd.toISOString().slice(0,10);
+}
+
+// ═══════════════════════════════════════════════════════ CARD VIEW ══════════
+let cvAllData=[], cvFilter='all';
+
+async function loadCardView(){
+  const[locRes,usersRes]=await Promise.all([apiFetch('/api/admin/live-locations'),apiFetch('/api/admin/users')]);
+  if(!locRes||!usersRes)return;
+  const locs=await locRes.json();
+  const users=await usersRes.json();
+  cvAllData=users.filter(u=>u.role==='field_worker').map(u=>({...u,loc:locs.find(l=>l.user_id===u.id)||null}));
+  renderCardView();
+}
+
+function setCVFilter(btn,mode){
+  document.querySelectorAll('#cv-filter-btns .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); cvFilter=mode; renderCardView();
+}
+
+function renderCardView(){
+  const q=(document.getElementById('cv-search')?.value||'').toLowerCase();
+  let data=cvFilter==='all'?cvAllData:cvFilter==='in'?cvAllData.filter(w=>w.loc?.is_punched_in):cvAllData.filter(w=>!w.loc?.is_punched_in);
+  if(q)data=data.filter(w=>w.name.toLowerCase().includes(q)||w.email.toLowerCase().includes(q));
+  const btns=document.querySelectorAll('#cv-filter-btns .filt-btn');
+  if(btns[0])btns[0].textContent=`${cvAllData.length} All Employees`;
+  if(btns[1])btns[1].textContent=`${cvAllData.filter(w=>w.loc?.is_punched_in).length} Punched In`;
+  if(btns[2])btns[2].textContent=`${cvAllData.filter(w=>!w.loc?.is_punched_in).length} Punched Out`;
+  const grid=document.getElementById('cv-grid');
+  if(!grid)return;
+  grid.innerHTML=data.length===0?'<div class="empty" style="grid-column:1/-1">No employees found</div>':
+    data.map(w=>{
+      const loc=w.loc; const pIn=loc?.is_punched_in;
+      return `<div class="card">
+        <div style="padding:16px;border-bottom:1px solid #f0efec">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="width:40px;height:40px;border-radius:20px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:16px;flex-shrink:0">${w.name.charAt(0)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(w.name)}</div>
+              <div style="font-size:11px;color:#747878;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(w.email)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <div style="width:8px;height:8px;border-radius:4px;background:${pIn?'#22c55e':'#e3e2e0'}"></div>
+              <span style="font-size:10px;color:${pIn?'#166534':'#747878'}">${pIn?'In':'Out'}</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:${pIn?'#166534':'#747878'};font-weight:${pIn?'600':'400'};margin-bottom:6px">
+            ${pIn?`Punched IN : ${loc.punch_in_time?fmtDT(loc.punch_in_time):'Today'}`:'Punched OUT : '+(loc?fmtDT(loc.last_seen):'--')}
+            <button onclick="openTimelineFor('${w.id}')" style="margin-left:6px;padding:2px 7px;font-size:9px;border:1px solid #e3e2e0;border-radius:4px;cursor:pointer;background:#fff;color:#695d4a">Timeline ↗</button>
+          </div>
+          ${loc?`<div style="font-size:11px;color:#747878;display:flex;align-items:center;gap:4px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            ${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}
+          </div>`:'<div style="font-size:11px;color:#c4c7c7">No location data</div>'}
+        </div>
+        <div style="display:flex;border-bottom:1px solid #f0efec" id="cvtab-${w.id}">
+          ${['Tasks','Orders','Forms'].map((t,i)=>`<button onclick="cvTabSwitch(this,'${w.id}')" data-t="${t.toLowerCase()}" style="flex:1;padding:10px;font-size:11px;border:none;background:${i===0?'#faf9f6':'#fff'};cursor:pointer;color:${i===0?'#695d4a':'#747878'};font-weight:${i===0?'600':'400'};border-bottom:2px solid ${i===0?'#695d4a':'transparent'}">${t}</button>`).join('')}
+        </div>
+        <div style="padding:14px;font-size:12px;color:#c4c7c7;text-align:center;min-height:50px">No tasks data for today</div>
+      </div>`;
+    }).join('');
+}
+
+function cvTabSwitch(btn,wid){
+  const tabs=document.querySelectorAll(`#cvtab-${wid} button`);
+  tabs.forEach(b=>{b.style.background='#fff';b.style.color='#747878';b.style.fontWeight='400';b.style.borderBottom='2px solid transparent';});
+  btn.style.background='#faf9f6'; btn.style.color='#695d4a'; btn.style.fontWeight='600'; btn.style.borderBottom='2px solid #695d4a';
+}
+
+// ═══════════════════════════════════════════════════ COMPLIANCE STATUS ═══════
+async function loadCompliance(){
+  const[usersRes,attRes]=await Promise.all([apiFetch('/api/admin/users'),apiFetch('/api/admin/attendance')]);
+  if(!usersRes||!attRes)return;
+  const users=await usersRes.json();
+  const att=await attRes.json();
+  const workers=users.filter(u=>u.role==='field_worker');
+  const today=new Date();
+  const days=Array.from({length:13},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()-(12-i));return d.toISOString().slice(0,10);});
+  const range=`${days[0].replace(/-/g,'.')} to ${days[12].replace(/-/g,'.')}`;
+  const wComp=workers.map(w=>{
+    const byDate=new Set(att.filter(a=>a.user_email===w.email).map(a=>a.punch_in_time?.slice(0,10)));
+    const dots=days.map(d=>byDate.has(d));
+    return{user:w,dots,good:dots.filter(Boolean).length,bad:dots.filter(d=>!d).length};
+  });
+  setSel('comp-bad-app',wComp.filter(c=>c.bad>0).length);
+  setSel('comp-bad-loc',wComp.filter(c=>c.bad>0).length);
+  document.getElementById('comp-table-wrap').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">
+      <thead><tr>
+        <th style="padding:10px 14px;text-align:left;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">Employee</th>
+        <th style="padding:10px 14px;text-align:left;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0">App Version</th>
+        <th colspan="2" style="padding:10px 14px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0;border-left:1px solid #e3e2e0">
+          App Setting <span style="font-weight:400;text-transform:none;font-size:9px;color:#c4c7c7;letter-spacing:0">${range}</span>
+        </th>
+        <th colspan="2" style="padding:10px 14px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;background:#faf9f6;border-bottom:1px solid #e3e2e0;border-left:1px solid #e3e2e0">
+          Location Setting <span style="font-weight:400;text-transform:none;font-size:9px;color:#c4c7c7;letter-spacing:0">${range}</span>
+        </th>
+      </tr></thead>
+      <tbody>
+        ${wComp.map(c=>`<tr>
+          <td style="padding:12px 14px;border-bottom:1px solid #f0efec">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:32px;height:32px;border-radius:16px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:12px;flex-shrink:0">${c.user.name.charAt(0)}</div>
+              <strong>${esc(c.user.name)}</strong>
+            </div>
+          </td>
+          <td style="padding:12px 14px;border-bottom:1px solid #f0efec;font-size:11px">
+            <span style="display:flex;align-items:center;gap:4px">📱 v2.0.0</span>
+          </td>
+          <td style="padding:12px 14px;border-bottom:1px solid #f0efec;border-left:1px solid #f0efec">
+            <div style="display:flex;gap:2px">${c.dots.map(d=>`<span class="comp-dot comp-dot-${d?'green':'grey'}"></span>`).join('')}</div>
+          </td>
+          <td style="padding:12px 14px;border-bottom:1px solid #f0efec;font-size:11px">
+            <span style="color:#166534;font-weight:600">${c.good}</span>
+            <span style="color:#c4c7c7"> / 0 / ${c.bad}</span>
+            <button class="btn btn-secondary btn-sm" style="margin-left:6px">Notify</button>
+          </td>
+          <td style="padding:12px 14px;border-bottom:1px solid #f0efec;border-left:1px solid #f0efec">
+            <div style="display:flex;gap:2px">${c.dots.map(d=>`<span class="comp-dot comp-dot-${d?'green':'grey'}"></span>`).join('')}</div>
+          </td>
+          <td style="padding:12px 14px;border-bottom:1px solid #f0efec;font-size:11px">
+            <span style="color:#166534;font-weight:600">${c.good}</span>
+            <span style="color:#c4c7c7"> / 0 / ${c.bad}</span>
+            <button class="btn btn-secondary btn-sm" style="margin-left:6px">Notify</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ═══════════════════════════════════════════════════════ WORKERS ═════════════
+async function loadWorkers(){
+  const res=await apiFetch('/api/admin/users'); if(!res)return;
+  workerList=await res.json();
+  const tbody=document.getElementById('workers-body');
+  tbody.innerHTML=workerList.length===0?'<tr><td colspan="6" class="empty">No users</td></tr>':
     workerList.map(u=>`<tr>
       <td><div style="display:flex;align-items:center;gap:10px">
         ${u.photo_url?`<img src="${u.photo_url}" style="width:32px;height:32px;border-radius:16px;object-fit:cover">`:
@@ -483,7 +1123,7 @@ async function loadWorkers() {
     </tr>`).join('');
 }
 
-function showAddWorkerModal() {
+function showAddWorkerModal(){
   document.getElementById('modal-content').innerHTML=`
     <h3>Add Worker</h3>
     <label>Full Name</label><input id="w-name" placeholder="John Doe" />
@@ -499,13 +1139,12 @@ function showAddWorkerModal() {
   openModal();
 }
 
-async function submitAddWorker() {
+async function submitAddWorker(){
   const name=document.getElementById('w-name').value.trim();
   const email=document.getElementById('w-email').value.trim();
   const password=document.getElementById('w-pass').value;
   const role=document.getElementById('w-role').value;
-  const errEl=document.getElementById('w-err');
-  errEl.style.display='none';
+  const errEl=document.getElementById('w-err'); errEl.style.display='none';
   if(!name||!email||!password){errEl.textContent='All fields required';errEl.style.display='block';return;}
   const res=await apiFetch('/api/admin/users',{method:'POST',body:JSON.stringify({name,email,password,role})});
   if(!res)return;
@@ -513,9 +1152,9 @@ async function submitAddWorker() {
   closeModal(); loadWorkers();
 }
 
-// ── Tasks ─────────────────────────────────────────────────────────────────────
-async function loadTasks() {
-  const [tasksRes,usersRes]=await Promise.all([apiFetch('/api/admin/tasks'),apiFetch('/api/admin/users')]);
+// ═══════════════════════════════════════════════════════ TASKS ═══════════════
+async function loadTasks(){
+  const[tasksRes,usersRes]=await Promise.all([apiFetch('/api/admin/tasks'),apiFetch('/api/admin/users')]);
   if(!tasksRes)return;
   const tasks=await tasksRes.json();
   if(usersRes)workerList=await usersRes.json();
@@ -530,9 +1169,7 @@ async function loadTasks() {
     </tr>`).join('');
 }
 
-function workerOptions(){
-  return workerList.filter(u=>u.role==='field_worker').map(u=>`<option value="${u.email}">${esc(u.name)} (${u.email})</option>`).join('');
-}
+function workerOptions(){return workerList.filter(u=>u.role==='field_worker').map(u=>`<option value="${u.email}">${esc(u.name)} (${u.email})</option>`).join('');}
 
 function showAddTaskModal(){
   document.getElementById('modal-content').innerHTML=`
@@ -559,9 +1196,8 @@ async function submitTask(){
   const errEl=document.getElementById('t-err'); errEl.style.display='none';
   if(!title){errEl.textContent='Task title required';errEl.style.display='block';return;}
   const res=await apiFetch('/api/admin/tasks',{method:'POST',body:JSON.stringify({
-    title, description:document.getElementById('t-desc').value,
-    location:document.getElementById('t-loc').value, client_name:document.getElementById('t-client').value,
-    assignee_email:document.getElementById('t-assignee').value,
+    title,description:document.getElementById('t-desc').value,location:document.getElementById('t-loc').value,
+    client_name:document.getElementById('t-client').value,assignee_email:document.getElementById('t-assignee').value,
     scheduled_time:document.getElementById('t-time').value?new Date(document.getElementById('t-time').value).toISOString():null,
   })});
   if(!res||!res.ok){errEl.textContent='Failed';errEl.style.display='block';return;}
@@ -600,19 +1236,17 @@ async function submitBulkTask(){
   if(!title){errEl.textContent='Title required';errEl.style.display='block';return;}
   if(!emails.length){errEl.textContent='Select at least one worker';errEl.style.display='block';return;}
   const res=await apiFetch('/api/admin/bulk-tasks',{method:'POST',body:JSON.stringify({
-    title, description:document.getElementById('bt-desc').value,
-    location:document.getElementById('bt-loc').value, assignee_emails:emails,
-    scheduled_time:document.getElementById('bt-time').value?new Date(document.getElementById('bt-time').value).toISOString():null,
+    title,description:document.getElementById('bt-desc').value,location:document.getElementById('bt-loc').value,
+    assignee_emails:emails,scheduled_time:document.getElementById('bt-time').value?new Date(document.getElementById('bt-time').value).toISOString():null,
   })});
   if(!res||!res.ok){errEl.textContent='Failed';errEl.style.display='block';return;}
   const d=await res.json(); closeModal();
   alert(`✅ Task assigned to ${d.created} workers.`); loadTasks();
 }
 
-// ── Attendance ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════ ATTENDANCE ═════════════
 async function loadAttendance(){
-  const res=await apiFetch('/api/admin/attendance');
-  if(!res)return;
+  const res=await apiFetch('/api/admin/attendance'); if(!res)return;
   const logs=await res.json();
   document.getElementById('attendance-body').innerHTML=logs.length===0?'<tr><td colspan="6" class="empty">No records</td></tr>':
     logs.map(l=>`<tr>
@@ -625,18 +1259,9 @@ async function loadAttendance(){
     </tr>`).join('');
 }
 
-// ── Leaves ─────────────────────────────────────────────────────────────────────
-async function loadLeaves(){
-  const res=await apiFetch('/api/admin/leaves');
-  if(!res)return;
-  allLeaves=await res.json(); renderLeaves('all');
-}
-
-function filterLeaves(el,status){
-  document.querySelectorAll('.pill-tabs .pill').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active'); renderLeaves(status);
-}
-
+// ═══════════════════════════════════════════════════════ LEAVES ═════════════
+async function loadLeaves(){const res=await apiFetch('/api/admin/leaves');if(!res)return;allLeaves=await res.json();renderLeaves('all');}
+function filterLeaves(el,status){document.querySelectorAll('.pill-tabs .pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');renderLeaves(status);}
 function renderLeaves(status){
   const data=status==='all'?allLeaves:allLeaves.filter(l=>l.status===status);
   const sb={pending:'badge-yellow',approved:'badge-green',rejected:'badge-red'};
@@ -651,19 +1276,13 @@ function renderLeaves(status){
       <td>${l.status==='pending'?`<button class="btn btn-success btn-sm" onclick="leaveAction('${l.id}','approved')">✓ Approve</button> <button class="btn btn-danger btn-sm" onclick="leaveAction('${l.id}','rejected')">✗</button>`:'--'}</td>
     </tr>`).join('');
 }
+async function leaveAction(id,status){const res=await apiFetch(`/api/admin/leaves/${id}`,{method:'PUT',body:JSON.stringify({status})});if(res&&res.ok)loadLeaves();}
 
-async function leaveAction(id,status){
-  const res=await apiFetch(`/api/admin/leaves/${id}`,{method:'PUT',body:JSON.stringify({status})});
-  if(res&&res.ok) loadLeaves();
-}
-
-// ── Chat ──────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════ CHAT ════════════════
 async function loadChatRooms(){
-  const res=await apiFetch('/api/admin/chat/rooms');
-  if(!res)return;
+  const res=await apiFetch('/api/admin/chat/rooms'); if(!res)return;
   const rooms=await res.json();
-  const groups=rooms.filter(r=>r.room_type==='group');
-  const dms=rooms.filter(r=>r.room_type==='direct');
+  const groups=rooms.filter(r=>r.room_type==='group'), dms=rooms.filter(r=>r.room_type==='direct');
   function roomHTML(r){
     const icon=r.room_type==='direct'?'👤':'👥';
     return `<div class="room-item" onclick="selectChatRoom('${r.id}','${esc(r.name)}','${r.room_type}')" id="room-${r.id}">
@@ -675,22 +1294,18 @@ async function loadChatRooms(){
     </div>`;
   }
   let html='';
-  if(groups.length>0){html+=`<div style="padding:8px 14px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f0efec">Group Chats</div>`;html+=groups.map(roomHTML).join('');}
-  if(dms.length>0){html+=`<div style="padding:8px 14px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f0efec;border-top:${groups.length?'1px solid #e3e2e0':'none'}">Direct Messages</div>`;html+=dms.map(roomHTML).join('');}
+  if(groups.length)html+=`<div style="padding:8px 14px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f0efec">Group Chats</div>`+groups.map(roomHTML).join('');
+  if(dms.length)html+=`<div style="padding:8px 14px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f0efec${groups.length?';border-top:1px solid #e3e2e0':''}">Direct Messages</div>`+dms.map(roomHTML).join('');
   document.getElementById('rooms-list').innerHTML=html||'<div class="empty">No rooms yet</div>';
 }
 
 function showNewDMModal(){
-  const workers=workerList.length?workerList:[];
-  if(!workers.length){
-    apiFetch('/api/admin/users').then(async res=>{if(res){workerList=await res.json();showNewDMModal();}});
-    return;
-  }
+  if(!workerList.length){apiFetch('/api/admin/users').then(async res=>{if(res){workerList=await res.json();showNewDMModal();}});return;}
   document.getElementById('modal-content').innerHTML=`
     <h3>New Direct Message</h3>
     <p style="font-size:12px;color:#747878;margin-bottom:14px">Select a team member to start a conversation</p>
     <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto">
-      ${workers.map(u=>`<div onclick="openDMWithWorker('${u.id}','${esc(u.name)}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;border:1px solid #e3e2e0;cursor:pointer;transition:background .1s" onmouseover="this.style.background='#faf9f6'" onmouseout="this.style.background='#fff'">
+      ${workerList.map(u=>`<div onclick="openDMWithWorker('${u.id}','${esc(u.name)}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;border:1px solid #e3e2e0;cursor:pointer" onmouseover="this.style.background='#faf9f6'" onmouseout="this.style.background='#fff'">
         <div style="width:38px;height:38px;border-radius:19px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:14px;flex-shrink:0">${u.name.charAt(0)}</div>
         <div><div style="font-weight:600;font-size:13px">${esc(u.name)}</div><div style="font-size:11px;color:#747878;text-transform:capitalize">${u.role.replace('_',' ')}</div></div>
       </div>`).join('')}
@@ -713,11 +1328,10 @@ async function selectChatRoom(roomId,roomName,roomType='group'){
   document.querySelectorAll('.room-item').forEach(el=>el.classList.remove('active'));
   const el=document.getElementById(`room-${roomId}`); if(el)el.classList.add('active');
   const icon=roomType==='direct'?'👤':'👥';
-  const typeLabel=roomType==='direct'?'Direct Message':'Group Chat';
   document.getElementById('chat-main').innerHTML=`
     <div class="chat-header">
       <div style="width:36px;height:36px;border-radius:18px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-size:16px">${icon}</div>
-      <div><div style="font-weight:600;font-size:14px">${esc(roomName)}</div><div style="font-size:10px;color:#747878">${typeLabel}</div></div>
+      <div><div style="font-weight:600;font-size:14px">${esc(roomName)}</div><div style="font-size:10px;color:#747878">${roomType==='direct'?'Direct Message':'Group Chat'}</div></div>
     </div>
     <div class="messages" id="chat-messages"></div>
     <div class="chat-input-area">
@@ -730,8 +1344,7 @@ async function selectChatRoom(roomId,roomName,roomType='group'){
 }
 
 async function loadChatMessages(roomId){
-  const res=await apiFetch(`/api/admin/chat/messages/${roomId}`);
-  if(!res)return;
+  const res=await apiFetch(`/api/admin/chat/messages/${roomId}`); if(!res)return;
   const msgs=await res.json();
   const container=document.getElementById('chat-messages'); if(!container)return;
   const atBottom=container.scrollHeight-container.scrollTop-container.clientHeight<60;
@@ -756,10 +1369,9 @@ async function sendAdminMessage(){
   loadChatMessages(currentRoomId);
 }
 
-// ── Geofence ──────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════ GEOFENCE ════════════════
 async function loadGeofence(){
-  const res=await apiFetch('/api/admin/geofence-alerts');
-  if(!res)return;
+  const res=await apiFetch('/api/admin/geofence-alerts'); if(!res)return;
   const alerts=await res.json();
   document.getElementById('geofence-body').innerHTML=alerts.length===0?'<tr><td colspan="5" class="empty">No breaches detected</td></tr>':
     alerts.map(a=>`<tr>
@@ -771,10 +1383,9 @@ async function loadGeofence(){
     </tr>`).join('');
 }
 
-// ── Performance ───────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════ PERFORMANCE ═════════════
 async function loadPerformance(){
-  const res=await apiFetch('/api/admin/performance');
-  if(!res)return;
+  const res=await apiFetch('/api/admin/performance'); if(!res)return;
   const data=await res.json();
   document.getElementById('performance-grid').innerHTML=data.length===0?'<div class="empty">No data</div>':
     data.map((w,i)=>`<div class="card" style="padding:18px">
@@ -799,7 +1410,7 @@ async function loadPerformance(){
     </div>`).join('');
 }
 
-// ── Reports ───────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════ REPORTS ═════════════
 async function downloadCSV(type){
   const path=type==='payroll'?'/api/admin/reports/payroll-csv':'/api/admin/reports/attendance-csv';
   const res=await fetch(`${API}${path}`,{headers:{Authorization:`Bearer ${token}`}});
@@ -811,15 +1422,16 @@ async function downloadCSV(type){
   a.click(); URL.revokeObjectURL(url);
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════ HELPERS ═════════════
 function openModal(){document.getElementById('modal-backdrop').style.display='flex';}
 function closeModal(){document.getElementById('modal-backdrop').style.display='none';}
 function fmtDT(iso){if(!iso)return'--';const d=new Date(iso);return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});}
 function fmtDate(iso){if(!iso)return'--';return new Date(iso).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
 function fmtTime(iso){if(!iso)return'';return new Date(iso).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function setSel(id,val){const el=document.getElementById(id);if(el)el.textContent=String(val);}
 
-document.addEventListener('DOMContentLoaded',()=>{ if(window.feather) feather.replace({class:'nav-icon'}); });
+document.addEventListener('DOMContentLoaded',()=>{if(window.feather)feather.replace({class:'nav-icon'});});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 

@@ -693,12 +693,126 @@ def admin_live_locations(admin: User = Depends(require_admin), db: Session = Dep
                                                   AttendanceLog.status == "active").first()
         if ping:
             result.append({
-                "user_id": w.id, "name": w.name, "email": w.email,
+                "user_id": w.id, "user_name": w.name, "user_email": w.email,
                 "latitude": ping.latitude, "longitude": ping.longitude,
-                "last_seen": ping.created_at.isoformat() + "Z",
+                "last_seen": ping.timestamp.isoformat() + "Z",
                 "is_punched_in": active is not None,
+                "punch_in_time": active.punch_in_time.isoformat() + "Z" if active else None,
             })
     return result
+
+@app.get("/api/admin/user-timeline")
+def user_timeline(user_id: str, date: Optional[str] = None,
+                  admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    today = datetime.utcnow().date()
+    min_date = today - timedelta(days=90)
+    if date:
+        try:
+            target = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(400, "Use YYYY-MM-DD")
+        if target < min_date:
+            raise HTTPException(400, "Date must be within last 90 days")
+    else:
+        target = today
+    day_start = datetime(target.year, target.month, target.day)
+    day_end = day_start + timedelta(days=1)
+
+    attendance = (db.query(AttendanceLog)
+                  .filter(AttendanceLog.user_id == user_id,
+                          AttendanceLog.punch_in_time >= day_start,
+                          AttendanceLog.punch_in_time < day_end)
+                  .order_by(AttendanceLog.punch_in_time).first())
+
+    pings = (db.query(GPSPing)
+             .filter(GPSPing.user_id == user_id,
+                     GPSPing.timestamp >= day_start,
+                     GPSPing.timestamp < day_end)
+             .order_by(GPSPing.timestamp).all())
+
+    def hav(lat1, lon1, lat2, lon2):
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        a = (math.sin(math.radians(lat2-lat1)/2)**2 +
+             math.cos(phi1)*math.cos(phi2)*math.sin(math.radians(lon2-lon1)/2)**2)
+        return 2*6371000*math.asin(math.sqrt(a))
+
+    events = []
+    if attendance:
+        events.append({"type":"punch_in","time":attendance.punch_in_time.isoformat()+"Z",
+                        "label":"Punch In","duration_min":0,"distance_km":0,
+                        "lat":attendance.latitude,"lng":attendance.longitude})
+
+    if len(pings) >= 2:
+        seg_pings, seg_type, segments = [pings[0]], None, []
+        for i in range(1, len(pings)):
+            d = hav(pings[i-1].latitude, pings[i-1].longitude, pings[i].latitude, pings[i].longitude)
+            ntype = "travel" if d > 30 else "halt"
+            if seg_type is None: seg_type = ntype
+            if ntype != seg_type and len(seg_pings) >= 2:
+                segments.append({"type":seg_type,"pings":seg_pings})
+                seg_pings, seg_type = [pings[i-1], pings[i]], ntype
+            else:
+                seg_pings.append(pings[i])
+        if seg_pings: segments.append({"type":seg_type or "halt","pings":seg_pings})
+        for seg in segments:
+            ps = seg["pings"]
+            if not ps: continue
+            dur = int((ps[-1].timestamp - ps[0].timestamp).total_seconds()/60)
+            dist = sum(hav(ps[j-1].latitude,ps[j-1].longitude,ps[j].latitude,ps[j].longitude) for j in range(1,len(ps)))
+            mid = ps[len(ps)//2]
+            events.append({"type":seg["type"],"time":ps[0].timestamp.isoformat()+"Z",
+                            "end_time":ps[-1].timestamp.isoformat()+"Z",
+                            "duration_min":dur,"distance_km":round(dist/1000,2),
+                            "lat":mid.latitude,"lng":mid.longitude,
+                            "label":"Travel" if seg["type"]=="travel" else "Halt"})
+
+    if attendance and attendance.punch_out_time:
+        events.append({"type":"punch_out","time":attendance.punch_out_time.isoformat()+"Z",
+                        "label":"Punch Out","duration_min":0,"distance_km":0,
+                        "lat":attendance.latitude,"lng":attendance.longitude})
+
+    events.sort(key=lambda e: e["time"])
+
+    total_gps_km = (sum(hav(pings[i-1].latitude,pings[i-1].longitude,pings[i].latitude,pings[i].longitude)
+                       for i in range(1,len(pings)))/1000) if len(pings)>1 else 0
+    tracked_h = 0
+    if attendance:
+        end = attendance.punch_out_time or datetime.utcnow()
+        tracked_h = (end - attendance.punch_in_time).total_seconds()/3600
+
+    return {"events":events,
+            "pings":[{"lat":p.latitude,"lng":p.longitude,"time":p.timestamp.isoformat()+"Z"} for p in pings],
+            "stats":{"attendance_status":attendance.status if attendance else "absent",
+                     "attendance_hours":round(attendance.total_hours or 0,2) if attendance else 0,
+                     "tracked_hours":round(tracked_h,2),
+                     "gps_distance_km":round(total_gps_km,2),
+                     "activities":len([e for e in events if e["type"] in ["travel","halt"]]),
+                     "punch_in":attendance.punch_in_time.isoformat()+"Z" if attendance else None,
+                     "punch_out":attendance.punch_out_time.isoformat()+"Z" if attendance and attendance.punch_out_time else None},
+            "date":target.isoformat(),"user_id":user_id}
+
+
+@app.get("/api/admin/daily-hours")
+def daily_hours(days: int = 30, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    from collections import defaultdict
+    end_date = datetime.utcnow().date()
+    start_date = end_date - timedelta(days=days-1)
+    day_start_dt = datetime(start_date.year, start_date.month, start_date.day)
+    day_end_dt = datetime(end_date.year, end_date.month, end_date.day) + timedelta(days=1)
+    logs = (db.query(AttendanceLog)
+            .filter(AttendanceLog.punch_in_time >= day_start_dt,
+                    AttendanceLog.punch_in_time < day_end_dt,
+                    AttendanceLog.total_hours.isnot(None)).all())
+    daily = defaultdict(list)
+    for log in logs:
+        if log.total_hours:
+            daily[log.punch_in_time.date().isoformat()].append(log.total_hours)
+    return [{"date":(start_date+timedelta(days=i)).isoformat(),
+             "avg_hours":round(sum(daily.get((start_date+timedelta(days=i)).isoformat(),[]))/
+                               max(len(daily.get((start_date+timedelta(days=i)).isoformat(),[])),1),1),
+             "workers":len(daily.get((start_date+timedelta(days=i)).isoformat(),[]))}
+            for i in range(days)]
+
 
 @app.get("/api/admin/geofence-alerts")
 def geofence_alerts(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
