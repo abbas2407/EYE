@@ -10,6 +10,7 @@ import { apiFetch, getUserName } from '../api/client';
 interface ScheduleScreenProps {
   isPunchedIn: boolean;
   punchInTime: string | null;
+  isPunchSyncing: boolean;
   onPunchPress: () => void;
   onNavigateToMap: () => void;
   onNavigateToDailySummary: () => void;
@@ -73,6 +74,7 @@ function formatDate(date: Date): string {
 export default function ScheduleScreen({
   isPunchedIn,
   punchInTime,
+  isPunchSyncing,
   onPunchPress,
   onNavigateToMap,
   onNavigateToDailySummary,
@@ -141,7 +143,17 @@ export default function ScheduleScreen({
 
         {/* Punch Status Banner */}
         <View style={{ marginHorizontal: 20, marginVertical: 12 }}>
-          {isPunchedIn ? (
+          {isPunchSyncing ? (
+            <View style={{
+              backgroundColor: '#f5f4f1', borderRadius: 8, padding: 16,
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+            }}>
+              <ActivityIndicator size="small" color="#695d4a" />
+              <Text style={{ fontSize: 12, color: '#695d4a', fontFamily: 'DM-Sans', textTransform: 'uppercase', letterSpacing: 1 }}>
+                Checking status…
+              </Text>
+            </View>
+          ) : isPunchedIn ? (
             <View style={{
               backgroundColor: '#dcfce7',
               borderRadius: 8,

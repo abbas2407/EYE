@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, Component } from 'react';
+import React, { useState, useEffect, useRef, Component, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ActivityIndicator, Platform
+  ActivityIndicator, Platform, AppState
 } from 'react-native';
 
 // Prevents a single screen crash from blanking the entire app
@@ -80,24 +80,33 @@ function MainApp() {
   const [isPunchedIn, setIsPunchedIn] = useState(false);
   const [punchInTime, setPunchInTime] = useState<string | null>(null);
   const [attendanceLogId, setAttendanceLogId] = useState<string | null>(null);
+  const [isPunchSyncing, setIsPunchSyncing] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [chatUnread, setChatUnread] = useState(0);
   const lastChatVisitRef = useRef(new Date().toISOString());
 
-  // Restore punch state from server on every app foreground / cold start
-  useEffect(() => {
-    async function syncPunchState() {
-      try {
-        const res = await apiFetch('/api/attendance/summary');
-        if (!res?.ok) return;
-        const data = await res.json();
-        setIsPunchedIn(!!data.is_punched_in);
-        setPunchInTime(data.punch_in_time ?? null);
-        setAttendanceLogId(data.attendance_log_id ?? null);
-      } catch {}
-    }
-    syncPunchState();
+  // Restore punch state from server — runs on cold start and every time
+  // the app comes back to the foreground (handles swipe-away + reopen).
+  const syncPunchState = useCallback(async () => {
+    try {
+      setIsPunchSyncing(true);
+      const res = await apiFetch('/api/attendance/summary');
+      if (!res?.ok) return;
+      const data = await res.json();
+      setIsPunchedIn(!!data.is_punched_in);
+      setPunchInTime(data.punch_in_time ?? null);
+      setAttendanceLogId(data.attendance_log_id ?? null);
+    } catch {}
+    finally { setIsPunchSyncing(false); }
   }, []);
+
+  useEffect(() => {
+    syncPunchState();
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') syncPunchState();
+    });
+    return () => sub.remove();
+  }, [syncPunchState]);
 
   useEffect(() => {
     const unsub = NetInfo.addEventListener(state => {
@@ -164,6 +173,7 @@ function MainApp() {
             <ScheduleScreen
               isPunchedIn={isPunchedIn}
               punchInTime={punchInTime}
+              isPunchSyncing={isPunchSyncing}
               onPunchPress={() => setPunchModalVisible(true)}
               onNavigateToMap={() => setActiveTab('MAP')}
               onNavigateToDailySummary={() => setScreen('DAILY_SUMMARY')}
