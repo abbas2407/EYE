@@ -1434,24 +1434,58 @@ let workerList = [];
 let lastChatVisit = new Date(0).toISOString();
 let unreadPollInterval = null;
 
-// ── Chat badge ──────────────────────────────────────────────────────────────
+// ── Chat unread tracking (persisted in localStorage) ─────────────────────────
+// seenIncoming[roomId] = incoming_count at the time admin last opened that room
+let seenIncoming = {};
+function loadSeenIncoming(){
+  try{const s=localStorage.getItem('fp_chat_seen');if(s)seenIncoming=JSON.parse(s);}catch{}
+}
+function saveSeenIncoming(){
+  try{localStorage.setItem('fp_chat_seen',JSON.stringify(seenIncoming));}catch{}
+}
+function getRoomUnread(room){
+  if(seenIncoming[room.id]==null){
+    // First ever view of this room — treat all existing messages as seen, no false badge
+    seenIncoming[room.id]=room.incoming_count||0;
+    saveSeenIncoming();
+    return 0;
+  }
+  return Math.max(0,(room.incoming_count||0)-seenIncoming[room.id]);
+}
+function markRoomSeen(room){
+  seenIncoming[room.id]=room.incoming_count||0;
+  saveSeenIncoming();
+}
+function fmtUnreadBadge(n){
+  if(n<=0)return'';
+  if(n===1)return'1';
+  return n+'+ messages';
+}
+
+// ── Chat nav badge ────────────────────────────────────────────────────────────
 function updateChatBadge(count){
   const el=document.getElementById('chat-badge');
   if(!el)return;
   if(count>0){el.textContent=count>9?'9+':String(count);el.style.display='inline';}
   else el.style.display='none';
 }
+let _lastRooms=[];
 async function pollChatUnread(){
   if(!token)return;
   try{
     const res=await apiFetch('/api/admin/chat/rooms');
     if(!res)return;
-    const rooms=await res.json();
-    const count=rooms.filter(r=>r.last_message_time&&r.last_message_time>lastChatVisit).length;
-    updateChatBadge(count);
+    _lastRooms=await res.json();
+    const total=_lastRooms.reduce((s,r)=>s+getRoomUnread(r),0);
+    updateChatBadge(total);
+    // If chat tab is open, refresh the room list live to update per-room badges
+    if(document.getElementById('rooms-list')&&document.getElementById('tab-chat')?.style.display!=='none'){
+      renderChatRooms(_lastRooms);
+    }
   }catch{}
 }
 function startUnreadPoll(){
+  loadSeenIncoming();
   if(unreadPollInterval)clearInterval(unreadPollInterval);
   pollChatUnread();
   unreadPollInterval=setInterval(pollChatUnread,30000);
@@ -1493,8 +1527,8 @@ function showTab(name){
   const el=document.getElementById(`tab-${name}`);
   if(el) el.style.display=(name==='dashboard'||name==='attendance'||name==='clients'||name==='organization')?'flex':'block';
   document.getElementById('topbar-title').textContent=TAB_TITLES[name]||name;
-  if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;}
-  if(name==='chat'){lastChatVisit=new Date().toISOString();updateChatBadge(0);}
+  if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;currentRoomId=null;}
+  if(name==='chat'){/* unread cleared per-room when room is opened */}
   const loaders={dashboard:()=>showDashSub('overview'),workers:loadWorkers,tasks:loadTasks,
     attendance:loadAttendance,leaves:loadLeaves,chat:loadChatRooms,
     clients:loadClients,organization:loadOrganization,performance:loadPerformance,reports:()=>{}};
@@ -2602,21 +2636,44 @@ async function leaveAction(id,status){const res=await apiFetch(`/api/admin/leave
 // ═══════════════════════════════════════════════════════ CHAT ════════════════
 async function loadChatRooms(){
   const res=await apiFetch('/api/admin/chat/rooms'); if(!res)return;
-  const rooms=await res.json();
+  _lastRooms=await res.json();
+  renderChatRooms(_lastRooms);
+  const total=_lastRooms.reduce((s,r)=>s+getRoomUnread(r),0);
+  updateChatBadge(total);
+}
+
+function renderChatRooms(rooms){
   const groups=rooms.filter(r=>r.room_type==='group'), dms=rooms.filter(r=>r.room_type==='direct');
   function roomHTML(r){
-    const icon=r.room_type==='direct'?'👤':'👥';
-    return `<div class="room-item" onclick="selectChatRoom('${r.id}','${esc(r.name)}','${r.room_type}')" id="room-${r.id}">
-      <div style="width:38px;height:38px;border-radius:19px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${icon}</div>
-      <div style="overflow:hidden">
-        <div class="room-name">${esc(r.name)}</div>
-        ${r.last_message?`<div class="room-last">${r.last_sender?esc(r.last_sender)+': ':''}${esc(r.last_message)}</div>`:'<div class="room-last" style="color:#c4c7c7">No messages yet</div>'}
+    const unread=getRoomUnread(r);
+    const hasUnread=unread>0;
+    const initial=r.name.charAt(0).toUpperCase();
+    const lastPreview=r.last_message
+      ?`<div class="room-last" style="${hasUnread?'color:var(--text-primary);font-weight:600':''}">
+          ${r.last_sender?`<span style="font-weight:${hasUnread?700:500}">${esc(r.last_sender)}</span>: `:''}${esc(r.last_message)}
+        </div>`
+      :'<div class="room-last">No messages yet</div>';
+    const badge=hasUnread
+      ?`<div style="min-width:20px;height:20px;border-radius:10px;background:#ba1a1a;color:#fff;
+          font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;
+          padding:0 5px;flex-shrink:0;margin-left:auto">${unread===1?'1':unread+'+'}</div>`
+      :'';
+    return `<div class="room-item${currentRoomId===r.id?' active':''}" id="room-${r.id}"
+      onclick="selectChatRoomObj(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <div style="width:38px;height:38px;border-radius:19px;background:var(--avatar-bg);
+        display:flex;align-items:center;justify-content:center;font-weight:700;
+        color:var(--avatar-text);font-size:15px;flex-shrink:0">${initial}</div>
+      <div style="flex:1;overflow:hidden;min-width:0">
+        <div class="room-name" style="${hasUnread?'font-weight:700':''}">${esc(r.name)}</div>
+        ${lastPreview}
       </div>
+      ${badge}
     </div>`;
   }
+  const secStyle='padding:8px 14px 4px;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border-soft)';
   let html='';
-  if(groups.length)html+=`<div style="padding:8px 14px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f0efec">Group Chats</div>`+groups.map(roomHTML).join('');
-  if(dms.length)html+=`<div style="padding:8px 14px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f0efec${groups.length?';border-top:1px solid #e3e2e0':''}">Direct Messages</div>`+dms.map(roomHTML).join('');
+  if(groups.length)html+=`<div style="${secStyle}">Group Chats</div>`+groups.map(roomHTML).join('');
+  if(dms.length)html+=`<div style="${secStyle}${groups.length?';border-top:1px solid var(--border)':''}">Direct Messages</div>`+dms.map(roomHTML).join('');
   document.getElementById('rooms-list').innerHTML=html||'<div class="empty">No rooms yet</div>';
 }
 
@@ -2644,15 +2701,25 @@ async function openDMWithWorker(userId,userName){
   setTimeout(()=>selectChatRoom(room.id,userName,'direct'),200);
 }
 
+function selectChatRoomObj(room){
+  // Mark room as seen — clears its unread badge immediately
+  markRoomSeen(room);
+  // Update badge on the sidebar nav
+  const total=_lastRooms.reduce((s,r)=>s+(r.id===room.id?0:getRoomUnread(r)),0);
+  updateChatBadge(total);
+  selectChatRoom(room.id,room.name,room.room_type);
+  // Re-render room list so badge disappears instantly
+  _lastRooms=_lastRooms.map(r=>r.id===room.id?{...r}:r);
+  renderChatRooms(_lastRooms);
+}
+
 async function selectChatRoom(roomId,roomName,roomType='group'){
   currentRoomId=roomId;
-  document.querySelectorAll('.room-item').forEach(el=>el.classList.remove('active'));
-  const el=document.getElementById(`room-${roomId}`); if(el)el.classList.add('active');
-  const icon=roomType==='direct'?'👤':'👥';
+  const initial=roomName.charAt(0).toUpperCase();
   document.getElementById('chat-main').innerHTML=`
     <div class="chat-header">
-      <div style="width:36px;height:36px;border-radius:18px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-size:16px">${icon}</div>
-      <div><div style="font-weight:600;font-size:14px">${esc(roomName)}</div><div style="font-size:10px;color:#747878">${roomType==='direct'?'Direct Message':'Group Chat'}</div></div>
+      <div style="width:36px;height:36px;border-radius:18px;background:var(--avatar-bg);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--avatar-text);font-size:15px">${initial}</div>
+      <div><div style="font-weight:600;font-size:14px">${esc(roomName)}</div><div style="font-size:10px;color:var(--text-muted)">${roomType==='direct'?'Direct Message':'Group Chat'}</div></div>
     </div>
     <div class="messages" id="chat-messages"></div>
     <div class="chat-input-area">
@@ -2661,7 +2728,19 @@ async function selectChatRoom(roomId,roomName,roomType='group'){
     </div>`;
   await loadChatMessages(roomId);
   if(chatPollInterval)clearInterval(chatPollInterval);
-  chatPollInterval=setInterval(()=>loadChatMessages(roomId),5000);
+  chatPollInterval=setInterval(async()=>{
+    await loadChatMessages(roomId);
+    // After loading new messages, refresh incoming_count so badge stays accurate
+    const res=await apiFetch('/api/admin/chat/rooms');
+    if(res){
+      _lastRooms=await res.json();
+      const room=_lastRooms.find(r=>r.id===roomId);
+      if(room)markRoomSeen(room);
+      renderChatRooms(_lastRooms);
+      const total=_lastRooms.reduce((s,r)=>s+(r.id===roomId?0:getRoomUnread(r)),0);
+      updateChatBadge(total);
+    }
+  },5000);
 }
 
 async function loadChatMessages(roomId){

@@ -479,11 +479,15 @@ def get_rooms(current_user: User = Depends(get_current_user), db: Session = Depe
             display_name = room.name
         last_msg = (db.query(Message).filter(Message.room_id == room.id)
                     .order_by(Message.created_at.desc()).first())
+        incoming_count = (db.query(Message)
+                          .filter(Message.room_id == room.id, Message.sender_id != current_user.id)
+                          .count())
         rooms.append({
             "id": room.id, "name": display_name, "room_type": room.room_type,
             "last_message": last_msg.content[:60] if last_msg else None,
             "last_message_time": last_msg.created_at.isoformat() + "Z" if last_msg else None,
             "last_sender": last_msg.sender.name if last_msg else None,
+            "incoming_count": incoming_count,
         })
     return rooms
 
