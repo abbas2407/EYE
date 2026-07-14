@@ -44,6 +44,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Font from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import LoginScreen from './src/screens/LoginScreen';
 import ScheduleScreen from './src/screens/ScheduleScreen';
@@ -81,7 +82,7 @@ function MainApp() {
   const [attendanceLogId, setAttendanceLogId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [chatUnread, setChatUnread] = useState(0);
-  const lastChatVisitRef = useRef(new Date(0).toISOString());
+  const lastChatVisitRef = useRef(new Date().toISOString());
 
   // Restore punch state from server on every app foreground / cold start
   useEffect(() => {
@@ -105,8 +106,16 @@ function MainApp() {
     return () => unsub();
   }, []);
 
-  // Poll for unread messages every 30 s
+  // Poll for unread messages every 30 s; persist last-visit so badge
+  // doesn't reset to 0 on every cold start.
   useEffect(() => {
+    async function init() {
+      try {
+        const saved = await AsyncStorage.getItem('chat_last_visit');
+        if (saved) lastChatVisitRef.current = saved;
+      } catch {}
+      pollUnread();
+    }
     async function pollUnread() {
       try {
         const res = await apiFetch('/api/chat/rooms');
@@ -118,7 +127,7 @@ function MainApp() {
         setChatUnread(count);
       } catch {}
     }
-    pollUnread();
+    init();
     const t = setInterval(pollUnread, 30000);
     return () => clearInterval(t);
   }, []);
@@ -218,7 +227,9 @@ function MainApp() {
               style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}
               onPress={() => {
                 if (tab.key === 'CHAT') {
-                  lastChatVisitRef.current = new Date().toISOString();
+                  const now = new Date().toISOString();
+                  lastChatVisitRef.current = now;
+                  AsyncStorage.setItem('chat_last_visit', now).catch(() => {});
                   setChatUnread(0);
                 }
                 setActiveTab(tab.key);
