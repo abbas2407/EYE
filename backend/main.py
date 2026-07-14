@@ -367,6 +367,21 @@ async def punch_out(req: PunchOutRequest, background: BackgroundTasks,
     return {"id": entry.id, "punch_out_time": now.isoformat() + "Z",
             "total_hours": total_hours, "message": "Punched out"}
 
+@app.get("/api/attendance/summary")
+def attendance_summary(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Lightweight endpoint: returns current punch state for the mobile app.
+    Searches ALL dates so stale active logs from previous days are detected."""
+    active = db.query(AttendanceLog).filter(
+        AttendanceLog.user_id == current_user.id,
+        AttendanceLog.punch_out_time == None,
+        AttendanceLog.status == "active"
+    ).order_by(AttendanceLog.punch_in_time.desc()).first()
+    return {
+        "is_punched_in": active is not None,
+        "punch_in_time": active.punch_in_time.isoformat() + "Z" if active else None,
+        "attendance_log_id": active.id if active else None,
+    }
+
 @app.get("/api/attendance/logs")
 def attendance_logs(limit: int = 10, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     logs = (db.query(AttendanceLog).filter(AttendanceLog.user_id == current_user.id)

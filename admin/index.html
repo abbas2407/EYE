@@ -1529,6 +1529,7 @@ function showTab(name){
   if(el) el.style.display=(name==='dashboard'||name==='attendance'||name==='clients'||name==='organization')?'flex':'block';
   document.getElementById('topbar-title').textContent=TAB_TITLES[name]||name;
   if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;currentRoomId=null;}
+  if(attPollInterval && name!=='attendance'){clearInterval(attPollInterval);attPollInterval=null;}
   if(name==='chat'){/* unread cleared per-room when room is opened */}
   const loaders={dashboard:()=>showDashSub('overview'),workers:loadWorkers,tasks:loadTasks,
     attendance:loadAttendance,leaves:loadLeaves,chat:loadChatRooms,
@@ -2179,7 +2180,11 @@ async function submitBulkTask(){
 
 // ═══════════════════════════════════════════════════ ATTENDANCE ═════════════
 // ─── Entry point wired to showTab('attendance') ───────────────────────────
-function loadAttendance(){ showAttSub('overview'); }
+function loadAttendance(){
+  showAttSub('overview');
+  if(attPollInterval) clearInterval(attPollInterval);
+  attPollInterval=setInterval(()=>{ showAttSub('overview'); },30000);
+}
 
 // ─── Sub-tab switcher ─────────────────────────────────────────────────────
 const ATT_SUBS=['overview','muster','punches'];
@@ -2201,9 +2206,10 @@ function showAttSub(name){
 
 // ─── Shared attendance data cache ────────────────────────────────────────
 let attAllLogs=[], attAllUsers=[], attLiveLocs=[], attEmpFilter='all';
+let attPollInterval=null;
 
 async function fetchAttData(){
-  if(attAllLogs.length && attAllUsers.length) return; // cached
+  // Always fetch fresh — no cache so live punch-ins show immediately
   const[lRes,uRes,locRes]=await Promise.all([
     apiFetch('/api/admin/attendance'),
     apiFetch('/api/admin/users'),
