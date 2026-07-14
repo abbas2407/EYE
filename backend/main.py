@@ -1043,3 +1043,19 @@ def admin_delete_site(site_id: str, admin: User = Depends(require_admin), db: Se
         raise HTTPException(status_code=404, detail="Site not found")
     db.delete(s); db.commit()
     return {"ok": True}
+
+@app.delete("/api/admin/clear-test-data")
+def admin_clear_test_data(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """One-shot endpoint: wipes attendance logs, GPS pings, tasks, and leaves.
+    User accounts, clients, sites, chat rooms/messages are left intact."""
+    counts = {}
+    for Model, name in [
+        (AttendanceLog, "attendance_logs"),
+        (GPSPing,       "gps_pings"),
+        (Task,          "tasks"),
+        (Leave,         "leaves"),
+    ]:
+        n = db.query(Model).delete(synchronize_session=False)
+        counts[name] = n
+    db.commit()
+    return {"ok": True, "deleted": counts}
