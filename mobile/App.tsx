@@ -83,6 +83,21 @@ function MainApp() {
   const [chatUnread, setChatUnread] = useState(0);
   const lastChatVisitRef = useRef(new Date(0).toISOString());
 
+  // Restore punch state from server on every app foreground / cold start
+  useEffect(() => {
+    async function syncPunchState() {
+      try {
+        const res = await apiFetch('/api/attendance/summary');
+        if (!res?.ok) return;
+        const data = await res.json();
+        setIsPunchedIn(!!data.is_punched_in);
+        setPunchInTime(data.punch_in_time ?? null);
+        setAttendanceLogId(data.attendance_log_id ?? null);
+      } catch {}
+    }
+    syncPunchState();
+  }, []);
+
   useEffect(() => {
     const unsub = NetInfo.addEventListener(state => {
       setIsOnline(state.isConnected ?? true);
