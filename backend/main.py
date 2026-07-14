@@ -1065,6 +1065,19 @@ def admin_clear_test_data(admin: User = Depends(require_admin), db: Session = De
     db.commit()
     return {"ok": True, "deleted": counts}
 
+@app.delete("/api/admin/full-reset")
+def admin_full_reset(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Nuclear reset: deletes all field workers + all operational data.
+    Keeps only the admin account, clients, and sites."""
+    # Delete all operational data first (foreign key order)
+    for Model in [Message, ChatMember, ChatRoom, GPSPing, AttendanceLog,
+                  LeaveBalance, Leave, Task, PushToken, RefreshToken]:
+        db.query(Model).delete(synchronize_session=False)
+    # Delete all non-admin users
+    deleted_users = db.query(User).filter(User.role != "admin").delete(synchronize_session=False)
+    db.commit()
+    return {"ok": True, "deleted_users": deleted_users}
+
 @app.post("/api/admin/force-punch-out/{user_id}")
 def admin_force_punch_out(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Force-close any open attendance log for a user without requiring selfie/location."""
