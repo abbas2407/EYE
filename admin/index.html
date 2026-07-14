@@ -109,7 +109,8 @@ textarea{min-height:70px;resize:vertical}
 .msg{display:flex;gap:10px;align-items:flex-end}
 .msg.mine{flex-direction:row-reverse}
 .msg-avatar{width:30px;height:30px;border-radius:15px;background:var(--avatar-bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--avatar-text);flex-shrink:0}
-.msg-bubble{max-width:65%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap}
+.msg-body{max-width:65%;min-width:0}
+.msg-bubble{padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word;overflow-wrap:break-word}
 .msg-bubble.them{background:var(--card-bg);border:1px solid var(--border);border-bottom-left-radius:3px}
 .msg-bubble.mine{background:var(--primary);color:#fff;border-bottom-right-radius:3px}
 .msg-meta{font-size:9px;color:var(--text-muted);margin-top:3px}
@@ -2751,7 +2752,7 @@ async function loadChatMessages(roomId){
   container.innerHTML=msgs.length===0?'<div class="empty">No messages yet</div>':
     msgs.map(m=>`<div class="msg ${m.is_me?'mine':''}">
       ${!m.is_me?`<div class="msg-avatar">${m.sender_name.charAt(0).toUpperCase()}</div>`:''}
-      <div>
+      <div class="msg-body">
         ${!m.is_me?`<div style="font-size:10px;color:#747878;margin-bottom:3px">${esc(m.sender_name)}</div>`:''}
         <div class="msg-bubble ${m.is_me?'mine':'them'}">${esc(m.content)}</div>
         <div class="msg-meta">${fmtTime(m.created_at)}</div>
