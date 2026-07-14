@@ -205,14 +205,17 @@ export default function PunchModal({
             const summary = await apiFetch('/api/attendance/summary').catch(() => null);
             if (summary?.ok) {
               const sd = await summary.json();
-              const punchTime = sd.punch_in_time
-                ? new Date(sd.punch_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
-                : new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-              const logId = sd.attendance_log_id ?? '';
-              setSuccessTime(punchTime);
-              setStep('success');
-              setTimeout(() => onPunchInSuccess(punchTime, String(logId)), 1500);
-              return;
+              // Only recover if we got a real active log — backend fix now returns
+              // active logs from any date, not just today
+              if (sd.attendance_log_id) {
+                const punchTime = sd.punch_in_time
+                  ? new Date(sd.punch_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                  : new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                setSuccessTime(punchTime);
+                setStep('success');
+                setTimeout(() => onPunchInSuccess(punchTime, String(sd.attendance_log_id)), 1500);
+                return;
+              }
             }
           }
           setStepError(detail || 'Failed to punch in. Please try again.');

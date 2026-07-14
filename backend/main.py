@@ -381,21 +381,26 @@ def attendance_logs(limit: int = 10, current_user: User = Depends(get_current_us
 def daily_summary(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     today_end   = today_start + timedelta(days=1)
-    logs = db.query(AttendanceLog).filter(AttendanceLog.user_id == current_user.id,
+    today_logs = db.query(AttendanceLog).filter(AttendanceLog.user_id == current_user.id,
                                            AttendanceLog.punch_in_time >= today_start,
                                            AttendanceLog.punch_in_time < today_end).all()
+    # Check for ANY active log (not just today) so stale punch-ins are detected
+    active_log = db.query(AttendanceLog).filter(
+        AttendanceLog.user_id == current_user.id,
+        AttendanceLog.punch_out_time == None,
+        AttendanceLog.status == "active"
+    ).order_by(AttendanceLog.punch_in_time.desc()).first()
     tasks = db.query(Task).filter(Task.assignee_id == current_user.id,
                                    Task.scheduled_time >= today_start,
                                    Task.scheduled_time < today_end).all()
-    active_log = next((l for l in logs if l.status == "active"), None)
-    total_hours = sum(l.total_hours or 0 for l in logs if l.status == "completed")
+    total_hours = sum(l.total_hours or 0 for l in today_logs if l.status == "completed")
     return {
         "date": today_start.date().isoformat(),
         "is_punched_in": active_log is not None,
         "punch_in_time": active_log.punch_in_time.isoformat() + "Z" if active_log else None,
         "attendance_log_id": active_log.id if active_log else None,
         "total_hours_today": round(total_hours, 2),
-        "total_shifts": len(logs),
+        "total_shifts": len(today_logs),
         "tasks_today": len(tasks),
         "tasks_completed_today": sum(1 for t in tasks if t.status == "completed"),
         "tasks": [{"id": t.id, "title": t.title, "status": t.status, "location": t.location,
@@ -1046,7 +1051,7 @@ def admin_delete_site(site_id: str, admin: User = Depends(require_admin), db: Se
 
 @app.delete("/api/admin/clear-test-data")
 def admin_clear_test_data(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    """One-shot endpoint: wipes attendance logs, GPS pings, tasks, and leaves.
+    """Wipes attendance logs, GPS pings, tasks, and leaves.
     User accounts, clients, sites, chat rooms/messages are left intact."""
     counts = {}
     for Model, name in [
@@ -1059,3 +1064,20 @@ def admin_clear_test_data(admin: User = Depends(require_admin), db: Session = De
         counts[name] = n
     db.commit()
     return {"ok": True, "deleted": counts}
+
+@app.post("/api/admin/force-punch-out/{user_id}")
+def admin_force_punch_out(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Force-close any open attendance log for a user without requiring selfie/location."""
+    active = db.query(AttendanceLog).filter(
+        AttendanceLog.user_id == user_id,
+        AttendanceLog.punch_out_time == None,
+        AttendanceLog.status == "active"
+    ).first()
+    if not active:
+        return {"ok": True, "message": "No active punch found"}
+    now = datetime.utcnow()
+    active.punch_out_time = now
+    active.total_hours = round((now - active.punch_in_time).total_seconds() / 3600, 2)
+    active.status = "completed"
+    db.commit()
+    return {"ok": True, "closed_log_id": active.id}
