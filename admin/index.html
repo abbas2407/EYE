@@ -2329,7 +2329,7 @@ function renderAttEmpList(){
         </div></td>
         <td><span class="badge ${bc}">${status}</span></td>
         <td style="font-size:11px">${log?fmtDT(log.punch_in_time):'<span style="color:#c4c7c7">—</span>'}</td>
-        <td style="font-size:11px">${log?.punch_out_time?fmtDT(log.punch_out_time):'<span style="color:#c4c7c7">Active</span>'}</td>
+        <td style="font-size:11px">${log?.punch_out_time?fmtDT(log.punch_out_time):log?'<span style="color:#22c55e;font-weight:600">Active</span>':'<span style="color:#c4c7c7">—</span>'}</td>
         <td style="font-size:11px">${log?.total_hours?log.total_hours.toFixed(1)+'h':'—'}</td>
         <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(log?.check_in_note||'—')}</td>
       </tr>`;
@@ -2807,7 +2807,7 @@ function loadOrganization(){
 }
 
 async function loadOrgEmployees(){
-  const res=await apiFetch('/api/admin/workers'); if(!res)return;
+  const res=await apiFetch('/api/admin/users'); if(!res)return;
   orgEmpData=await res.json();
   document.getElementById('org-emp-count').textContent=orgEmpData.length;
   renderOrgEmployees();
@@ -2837,7 +2837,7 @@ function renderOrgEmployees(){
 }
 
 async function loadOrgAdmins(){
-  const res=await apiFetch('/api/admin/workers'); if(!res)return;
+  const res=await apiFetch('/api/admin/users'); if(!res)return;
   const admins=await res.json();
   document.getElementById('org-admin-count').textContent=admins.length;
   document.getElementById('org-admin-body').innerHTML=admins.length===0?
@@ -2908,7 +2908,7 @@ async function openAddEmployeeModal(){
   const sel=document.getElementById('ef-manager');
   if(sel&&sel.options.length===1){
     try{
-      const res=await apiFetch('/api/admin/workers');
+      const res=await apiFetch('/api/admin/users');
       if(res){const ws=await res.json();ws.forEach(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.name;sel.appendChild(o);});}
     }catch(e){}
   }
@@ -2945,7 +2945,7 @@ async function openAddAdminDrawer(){
   const sel=document.getElementById('af-manager');
   if(sel&&sel.options.length===1){
     try{
-      const res=await apiFetch('/api/admin/workers');
+      const res=await apiFetch('/api/admin/users');
       if(res){const ws=await res.json();ws.forEach(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.name;sel.appendChild(o);});}
     }catch(e){}
   }
