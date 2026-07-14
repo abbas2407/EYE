@@ -7,13 +7,15 @@
 <style>
 /* ── Colour tokens ─────────────────────────────────────────────────────────── */
 :root{
-  --sidebar-bg:#0f1110;
-  --sidebar-border:rgba(255,255,255,.08);
-  --sidebar-text:rgba(255,255,255,.55);
-  --sidebar-text-hover:#ffffff;
-  --sidebar-active-bg:rgba(255,255,255,.07);
-  --sidebar-active-text:#ffffff;
-  --sidebar-active-accent:#22c55e;
+  /* Sidebar — light */
+  --sidebar-bg:#ffffff;
+  --sidebar-border:rgba(0,0,0,.08);
+  --sidebar-text:rgba(17,19,18,.45);
+  --sidebar-text-hover:#111312;
+  --sidebar-active-bg:rgba(17,19,18,.05);
+  --sidebar-active-text:#111312;
+  --sidebar-active-accent:#111312;
+  /* Page */
   --page-bg:#f4f6f5;
   --card-bg:#ffffff;
   --border:#e5e7e6;
@@ -21,17 +23,18 @@
   --text-primary:#111312;
   --text-secondary:#5a6472;
   --text-muted:#9ca3af;
-  --accent:#22c55e;
-  --accent-dark:#16a34a;
+  /* Accent — kept for badges/status dots only */
+  --accent:#111312;
+  --accent-dark:#111312;
   --primary:#111312;
-  --primary-hover:#1e2421;
-  --input-focus:#22c55e;
+  --primary-hover:#2d3030;
+  --input-focus:#111312;
   --row-hover:#f7f9f8;
   --th-bg:#f7f9f8;
   --login-bg-from:#0f1110;
   --login-bg-to:#1a2420;
-  --avatar-bg:#d1fae5;
-  --avatar-text:#065f46;
+  --avatar-bg:#e8ede8;
+  --avatar-text:#374236;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--page-bg);color:var(--text-primary);height:100vh;display:flex;flex-direction:column}
@@ -39,8 +42,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 #sidebar{width:220px;background:var(--sidebar-bg);display:flex;flex-direction:column;flex-shrink:0}
 #content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .brand{padding:20px 16px 16px;border-bottom:1px solid var(--sidebar-border)}
-.brand-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.5px}
-.brand-sub{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.brand-title{font-size:15px;font-weight:700;color:var(--text-primary);letter-spacing:.5px}
+.brand-sub{font-size:9px;color:var(--sidebar-text);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
 nav{padding:12px 8px;flex:1}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:6px;cursor:pointer;color:var(--sidebar-text);font-size:12px;font-weight:500;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px;user-select:none;border-left:3px solid transparent;transition:all .15s}
 .nav-item:hover{background:var(--sidebar-active-bg);color:var(--sidebar-text-hover)}
@@ -218,8 +221,8 @@ textarea{min-height:70px;resize:vertical}
       <div class="nav-item" onclick="showTab('performance')"><i data-feather="award" class="nav-icon"></i> Performance</div>
       <div class="nav-item" onclick="showTab('reports')"><i data-feather="file-text" class="nav-icon"></i> Reports</div>
     </nav>
-    <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.1)">
-      <div style="font-size:10px;color:rgba(255,255,255,.35);text-align:center">v2.0.0</div>
+    <div style="padding:12px 16px;border-top:1px solid var(--sidebar-border)">
+      <div style="font-size:10px;color:var(--sidebar-text);text-align:center">v2.0.0</div>
     </div>
   </div>
 
