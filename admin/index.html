@@ -803,6 +803,9 @@ textarea{min-height:70px;resize:vertical}
           <div style="font-size:13px;font-weight:600;color:#1a1c1a">Clients (<span id="cs-client-count">0</span>)</div>
           <div style="display:flex;gap:8px;align-items:center">
             <input id="cs-client-search" placeholder="Search clients..." oninput="renderClientsTable()" style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
+            <button title="Import CSV" onclick="document.getElementById('client-csv-upload').click()" style="padding:5px 10px;border:1px solid #e3e2e0;border-radius:6px;background:#fff;cursor:pointer;font-size:14px" class="btn btn-secondary btn-sm">⬆</button>
+            <input type="file" id="client-csv-upload" accept=".csv" style="display:none" onchange="importClientsCsv(this)">
+            <button title="Export CSV" onclick="exportClientsCsv()" style="padding:5px 10px;border:1px solid #e3e2e0;border-radius:6px;background:#fff;cursor:pointer;font-size:14px" class="btn btn-secondary btn-sm">⬇</button>
             <button class="btn btn-primary btn-sm" onclick="openCreateClientModal()">+ Create Client</button>
           </div>
         </div>
@@ -823,6 +826,9 @@ textarea{min-height:70px;resize:vertical}
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <input id="cs-sites-search" placeholder="Search sites..." style="padding:6px 12px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:200px;margin:0">
+            <button title="Import CSV" onclick="document.getElementById('site-csv-upload').click()" style="padding:5px 10px;border:1px solid #e3e2e0;border-radius:6px;background:#fff;cursor:pointer;font-size:14px" class="btn btn-secondary btn-sm">⬆</button>
+            <input type="file" id="site-csv-upload" accept=".csv" style="display:none" onchange="importSitesCsv(this)">
+            <button title="Export CSV" onclick="exportSitesCsv()" style="padding:5px 10px;border:1px solid #e3e2e0;border-radius:6px;background:#fff;cursor:pointer;font-size:14px" class="btn btn-secondary btn-sm">⬇</button>
             <button class="btn btn-primary btn-sm" onclick="openCreateSiteModal()">+ Add Site</button>
           </div>
         </div>
@@ -888,14 +894,14 @@ textarea{min-height:70px;resize:vertical}
     <button class="notif-close" onclick="closeNotifDrawer()">✕</button>
   </div>
   <div class="notif-tabs">
-    <button class="ntab active" id="ntab-leaves"    onclick="switchNotifTab('leaves')">Leaves<span class="ntab-badge" id="nb-leaves" style="display:none"></span></button>
-    <button class="ntab"        id="ntab-expenses"  onclick="switchNotifTab('expenses')">Expenses</button>
-    <button class="ntab"        id="ntab-geofence"  onclick="switchNotifTab('geofence')">Geofence<span class="ntab-badge" id="nb-geofence" style="display:none"></span></button>
-    <button class="ntab"        id="ntab-gps"       onclick="switchNotifTab('gps')">GPS</button>
+    <button class="ntab active" id="ntab-attendance" onclick="switchNotifTab('attendance')">Attendance<span class="ntab-badge" id="nb-attendance" style="display:none"></span></button>
+    <button class="ntab"        id="ntab-expenses"   onclick="switchNotifTab('expenses')">Expenses</button>
+    <button class="ntab"        id="ntab-geofence"   onclick="switchNotifTab('geofence')">Geofence<span class="ntab-badge" id="nb-geofence" style="display:none"></span></button>
+    <button class="ntab"        id="ntab-gps"        onclick="switchNotifTab('gps')">GPS<span class="ntab-badge" id="nb-gps" style="display:none"></span></button>
   </div>
   <div class="notif-body">
-    <!-- Leaves -->
-    <div id="npanel-leaves"><div class="notif-empty">Loading…</div></div>
+    <!-- Attendance -->
+    <div id="npanel-attendance"><div class="notif-empty">Loading…</div></div>
     <!-- Expenses -->
     <div id="npanel-expenses" style="display:none">
       <div class="notif-empty">
@@ -3259,6 +3265,89 @@ async function deleteSite(id){
   if(res&&res.ok){clientsSubLoaded={};loadSitesList();}
 }
 
+// ── CSV Export ────────────────────────────────────────────────────────────────
+function toCsv(rows,headers){
+  const escape=v=>{const s=String(v==null?'':v);return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s.replace(/"/g,'""')+'"':s;};
+  return [headers.join(','),...rows.map(r=>headers.map(h=>escape(r[h])).join(','))].join('\r\n');
+}
+function downloadCsv(csv,filename){
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+}
+
+function exportClientsCsv(){
+  if(!allClientsData.length){alert('No clients to export.');return;}
+  const headers=['name','client_id','visibility','contact_name','contact_code','contact_number',
+    'address_line1','address_line2','city','district','state','country','pin_code',
+    'radius','description','email','category'];
+  downloadCsv(toCsv(allClientsData,headers),'clients.csv');
+}
+
+function exportSitesCsv(){
+  if(!allSitesData.length){alert('No sites to export.');return;}
+  const headers=['name','email','site_id','contact_name','contact_code','contact_number',
+    'description','site_type','latitude','longitude','address','radius','city','pin_code'];
+  downloadCsv(toCsv(allSitesData,headers),'sites.csv');
+}
+
+// ── CSV Import ────────────────────────────────────────────────────────────────
+function parseCsv(text){
+  const lines=text.trim().split(/\r?\n/);
+  if(lines.length<2)return[];
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=[];let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+      else if(c===','&&!inQ){vals.push(cur);cur='';}
+      else cur+=c;
+    }
+    vals.push(cur);
+    const obj={};headers.forEach((h,i)=>obj[h]=vals[i]?.trim()||null);
+    return obj;
+  });
+}
+
+async function importClientsCsv(input){
+  const file=input.files[0];if(!file)return;
+  const text=await file.text();
+  const rows=parseCsv(text);
+  if(!rows.length){alert('No valid rows found in CSV.');input.value='';return;}
+  let ok=0,fail=0;
+  for(const row of rows){
+    if(!row.name){fail++;continue;}
+    const res=await apiFetch('/api/admin/clients',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(row)});
+    if(res&&res.ok)ok++;else fail++;
+  }
+  input.value='';
+  alert(`Import done: ${ok} created, ${fail} failed.`);
+  clientsSubLoaded={};
+  loadClientsList();
+}
+
+async function importSitesCsv(input){
+  const file=input.files[0];if(!file)return;
+  const text=await file.text();
+  const rows=parseCsv(text);
+  if(!rows.length){alert('No valid rows found in CSV.');input.value='';return;}
+  let ok=0,fail=0;
+  for(const row of rows){
+    if(!row.name){fail++;continue;}
+    if(row.latitude)row.latitude=parseFloat(row.latitude)||null;
+    if(row.longitude)row.longitude=parseFloat(row.longitude)||null;
+    if(row.radius)row.radius=parseFloat(row.radius)||200;
+    const res=await apiFetch('/api/admin/sites',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(row)});
+    if(res&&res.ok)ok++;else fail++;
+  }
+  input.value='';
+  alert(`Import done: ${ok} created, ${fail} failed.`);
+  clientsSubLoaded={};
+  loadSitesList();
+}
+
 async function loadClientGeofences(){
   const res=await apiFetch('/api/admin/geofence-alerts'); if(!res)return;
   const alerts=await res.json();
@@ -3331,14 +3420,17 @@ async function downloadCSV(type){
 // ═══════════════════════════════════════════════ NOTIFICATION DRAWER ════════
 
 let notifOpen = false;
-let currentNotifTab = 'leaves';
-let notifLeavesData = [], notifGeofenceData = [], notifGPSData = [];
+let currentNotifTab = 'attendance';
+let notifAttendanceData = [], notifGeofenceData = [], notifGPSData = [];
+const notifSeenTabs = new Set();
 
 function openNotifDrawer(){
   document.getElementById('notif-overlay').style.display='block';
   document.getElementById('notif-drawer').classList.add('open');
   notifOpen=true;
   loadNotifData();
+  // Mark the currently active tab as seen when drawer opens
+  markNotifTabSeen(currentNotifTab);
 }
 function closeNotifDrawer(){
   document.getElementById('notif-overlay').style.display='none';
@@ -3346,76 +3438,83 @@ function closeNotifDrawer(){
   notifOpen=false;
 }
 function switchNotifTab(name){
-  ['leaves','expenses','geofence','gps'].forEach(t=>{
+  ['attendance','expenses','geofence','gps'].forEach(t=>{
     document.getElementById(`ntab-${t}`)?.classList.remove('active');
-    document.getElementById(`npanel-${t}`)&&(document.getElementById(`npanel-${t}`).style.display='none');
+    const p=document.getElementById(`npanel-${t}`);
+    if(p)p.style.display='none';
   });
   document.getElementById(`ntab-${name}`)?.classList.add('active');
-  document.getElementById(`npanel-${name}`)&&(document.getElementById(`npanel-${name}`).style.display='block');
+  const panel=document.getElementById(`npanel-${name}`);
+  if(panel)panel.style.display='block';
   currentNotifTab=name;
+  markNotifTabSeen(name);
+}
+
+function markNotifTabSeen(name){
+  notifSeenTabs.add(name);
+  const badge=document.getElementById(`nb-${name}`);
+  if(badge)badge.style.display='none';
+}
+
+// Navigate to a section and close the notification drawer
+function notifNavigate(tab, sub){
+  closeNotifDrawer();
+  showTab(tab);
+  if(sub){
+    setTimeout(()=>{
+      if(tab==='dashboard')showDashSub(sub);
+      else if(tab==='clients')showClientsSub(sub);
+      else if(tab==='attendance')showAttSub(sub);
+    },80);
+  }
 }
 
 async function loadNotifData(){
-  const[leavesRes,geofRes,locRes]=await Promise.all([
-    apiFetch('/api/admin/leaves'),
+  const[attRes,geofRes,locRes]=await Promise.all([
+    apiFetch('/api/admin/attendance'),
     apiFetch('/api/admin/geofence-alerts'),
     apiFetch('/api/admin/live-locations'),
   ]);
-  if(leavesRes){notifLeavesData=await leavesRes.json(); renderNotifLeaves();}
+  if(attRes){notifAttendanceData=await attRes.json(); renderNotifAttendance();}
   if(geofRes){notifGeofenceData=await geofRes.json(); renderNotifGeofence();}
   if(locRes){notifGPSData=await locRes.json(); renderNotifGPS();}
   updateBellBadge();
 }
 
 function updateBellBadge(){
-  const pending=(notifLeavesData||[]).filter(l=>l.status==='pending').length;
+  const attCount=(notifAttendanceData||[]).filter(a=>a.status==='active').length;
   const breaches=(notifGeofenceData||[]).length;
-  const total=pending+breaches;
+  const gpsCount=(notifGPSData||[]).length;
+  const total=attCount+breaches+gpsCount;
   const dot=document.getElementById('bell-dot');
   if(dot)dot.style.display=total>0?'block':'none';
-  const nb1=document.getElementById('nb-leaves');
-  if(nb1){nb1.textContent=pending; nb1.style.display=pending>0?'inline':'none';}
+
+  const nb1=document.getElementById('nb-attendance');
+  if(nb1&&!notifSeenTabs.has('attendance')){nb1.textContent=attCount;nb1.style.display=attCount>0?'inline':'none';}
   const nb2=document.getElementById('nb-geofence');
-  if(nb2){nb2.textContent=breaches; nb2.style.display=breaches>0?'inline':'none';}
+  if(nb2&&!notifSeenTabs.has('geofence')){nb2.textContent=breaches;nb2.style.display=breaches>0?'inline':'none';}
+  const nb3=document.getElementById('nb-gps');
+  if(nb3&&!notifSeenTabs.has('gps')){nb3.textContent=gpsCount>99?'99+':gpsCount;nb3.style.display=gpsCount>0?'inline':'none';}
 }
 
-function renderNotifLeaves(){
-  const panel=document.getElementById('npanel-leaves'); if(!panel)return;
-  const pending=(notifLeavesData||[]).filter(l=>l.status==='pending');
-  if(!pending.length){
-    panel.innerHTML='<div class="notif-empty"><div style="font-size:32px;margin-bottom:12px">✅</div>No pending leave requests</div>';
+function renderNotifAttendance(){
+  const panel=document.getElementById('npanel-attendance'); if(!panel)return;
+  const logs=(notifAttendanceData||[]).slice(0,30);
+  if(!logs.length){
+    panel.innerHTML='<div class="notif-empty"><div style="font-size:32px;margin-bottom:12px">📋</div>No attendance records today</div>';
     return;
   }
-  panel.innerHTML=pending.map(l=>`
-    <div class="notif-item">
-      <div class="notif-icon" style="background:#fef3c7">${leaveTypeIcon(l.leave_type)}</div>
+  panel.innerHTML=logs.map(a=>`
+    <div class="notif-item" onclick="notifNavigate('attendance','punches')" style="cursor:pointer" onmouseover="this.style.background='#f9f8f5'" onmouseout="this.style.background=''">
+      <div class="notif-icon" style="background:${a.status==='active'?'#dcfce7':'#f5f4f1'}">${a.status==='active'?'🟢':'🔴'}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:13px;color:#1a1c1a">${esc(l.user_name)}</div>
-        <div style="font-size:11px;color:#747878;margin-top:2px">
-          <span class="badge badge-yellow">${l.leave_type}</span>
-          <span style="margin-left:6px">${l.start_date} → ${l.end_date} (${l.days}d)</span>
-        </div>
-        ${l.reason?`<div style="font-size:11px;color:#747878;margin-top:4px;font-style:italic">"${esc(l.reason)}"</div>`:''}
-        <div style="display:flex;gap:6px;margin-top:8px">
-          <button class="btn btn-success btn-sm" onclick="notifLeaveAction('${l.id}','approved',this)">✓ Approve</button>
-          <button class="btn btn-danger btn-sm" onclick="notifLeaveAction('${l.id}','rejected',this)">✗ Reject</button>
-        </div>
+        <div style="font-weight:600;font-size:13px;color:#1a1c1a">${esc(a.user_name||'—')}</div>
+        <div style="font-size:11px;color:#747878;margin-top:2px">${a.status==='active'?'Punched In':'Punched Out'}</div>
+        <div style="font-size:10px;color:#c4c7c7;margin-top:2px">${fmtDT(a.punch_in_time)}${a.punch_out_time?' → '+fmtDT(a.punch_out_time):''}</div>
+        ${a.total_hours!=null?`<div style="font-size:10px;color:#747878;margin-top:1px">⏱ ${a.total_hours.toFixed(1)}h</div>`:''}
       </div>
+      <div style="font-size:10px;color:#c4c7c7;align-self:flex-start;margin-top:2px">→</div>
     </div>`).join('');
-}
-
-function leaveTypeIcon(t){
-  return t==='sick'?'🤒':t==='casual'?'🌴':t==='annual'?'✈️':'📋';
-}
-
-async function notifLeaveAction(id,status,btn){
-  btn.disabled=true; btn.textContent='…';
-  const res=await apiFetch(`/api/admin/leaves/${id}`,{method:'PUT',body:JSON.stringify({status})});
-  if(res&&res.ok){
-    notifLeavesData=(notifLeavesData||[]).map(l=>l.id===id?{...l,status}:l);
-    renderNotifLeaves(); updateBellBadge();
-    if(typeof allLeaves!=='undefined')allLeaves=(allLeaves||[]).map(l=>l.id===id?{...l,status}:l);
-  }
 }
 
 function renderNotifGeofence(){
@@ -3426,16 +3525,15 @@ function renderNotifGeofence(){
     return;
   }
   panel.innerHTML=alerts.slice(0,30).map(a=>`
-    <div class="notif-item">
+    <div class="notif-item" onclick="notifNavigate('clients','geofence')" style="cursor:pointer" onmouseover="this.style.background='#f9f8f5'" onmouseout="this.style.background=''">
       <div class="notif-icon" style="background:#fee2e2">🚨</div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:13px;color:#991b1b">${esc(a.user_name)}</div>
         <div style="font-size:11px;color:#747878;margin-top:2px">Left designated area</div>
-        <div style="font-size:11px;color:#747878;margin-top:2px">
-          📍 ${a.latitude?.toFixed(4)}, ${a.longitude?.toFixed(4)}
-        </div>
+        <div style="font-size:11px;color:#747878;margin-top:2px">📍 ${a.latitude?.toFixed(4)}, ${a.longitude?.toFixed(4)}</div>
         <div style="font-size:10px;color:#c4c7c7;margin-top:3px">${fmtDT(a.timestamp)}</div>
       </div>
+      <div style="font-size:10px;color:#c4c7c7;align-self:flex-start;margin-top:2px">→</div>
     </div>`).join('');
 }
 
@@ -3447,7 +3545,6 @@ function renderNotifGPS(){
     return;
   }
   const now=Date.now();
-  // Group: active (ping < 15min), stale (15–60min), offline (>60min or not punched in)
   const active=locs.filter(l=>l.is_punched_in&&l.last_seen&&(now-new Date(l.last_seen).getTime())<15*60000);
   const stale=locs.filter(l=>l.is_punched_in&&l.last_seen&&(now-new Date(l.last_seen).getTime())>=15*60000&&(now-new Date(l.last_seen).getTime())<60*60000);
   const offline=locs.filter(l=>!l.is_punched_in||(l.last_seen&&(now-new Date(l.last_seen).getTime())>=60*60000));
@@ -3455,16 +3552,15 @@ function renderNotifGPS(){
   const section=(title,icon,clr,bg,items)=>items.length===0?'':
     `<div style="padding:10px 20px 4px;font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;font-weight:600;border-bottom:1px solid #f0efec">${title}</div>`+
     items.map(l=>`
-      <div class="notif-item">
+      <div class="notif-item" onclick="notifNavigate('dashboard','timeline')" style="cursor:pointer" onmouseover="this.style.background='#f9f8f5'" onmouseout="this.style.background=''">
         <div class="notif-icon" style="background:${bg}">${icon}</div>
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:13px;color:#1a1c1a">${esc(l.user_name)}</div>
-          <div style="font-size:11px;margin-top:2px;color:${clr};font-weight:500">${
-            l.is_punched_in?'Punched In':'Not Punched In'
-          }</div>
+          <div style="font-size:11px;margin-top:2px;color:${clr};font-weight:500">${l.is_punched_in?'Punched In':'Not Punched In'}</div>
           <div style="font-size:10px;color:#c4c7c7;margin-top:2px">Last ping: ${l.last_seen?fmtDT(l.last_seen):'Unknown'}</div>
           <div style="font-size:10px;color:#747878;margin-top:1px">📍 ${l.latitude?.toFixed(4)}, ${l.longitude?.toFixed(4)}</div>
         </div>
+        <div style="font-size:10px;color:#c4c7c7;align-self:flex-start;margin-top:2px">→</div>
       </div>`).join('');
 
   panel.innerHTML=
