@@ -10,6 +10,8 @@ import { apiFetch, getUserName, getUserRole } from '../api/client';
 interface ProfileScreenProps {
   onSignOut: () => Promise<void>;
   onNavigateToLeave: () => void;
+  isPunchedIn: boolean;
+  attendanceLogId: string | null;
 }
 
 interface AttendanceLog {
@@ -47,7 +49,7 @@ function formatHours(hours?: number): string {
   return `${h}h ${m}m`;
 }
 
-export default function ProfileScreen({ onSignOut, onNavigateToLeave }: ProfileScreenProps) {
+export default function ProfileScreen({ onSignOut, onNavigateToLeave, isPunchedIn, attendanceLogId }: ProfileScreenProps) {
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -93,9 +95,21 @@ export default function ProfileScreen({ onSignOut, onNavigateToLeave }: ProfileS
   }
 
   function handleSignOut() {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+    const msg = isPunchedIn
+      ? 'You are currently punched in. Signing out will automatically punch you out.'
+      : 'Are you sure you want to sign out?';
+    Alert.alert('Sign Out', msg, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: onSignOut },
+      {
+        text: 'Sign Out', style: 'destructive', onPress: async () => {
+          if (isPunchedIn) {
+            try {
+              await apiFetch('/api/attendance/auto-punch-out', { method: 'POST' });
+            } catch {}
+          }
+          await onSignOut();
+        },
+      },
     ]);
   }
 

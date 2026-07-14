@@ -190,6 +190,8 @@ function MainApp() {
         return (
           <ScreenErrorBoundary screenName="Profile">
             <ProfileScreen
+              isPunchedIn={isPunchedIn}
+              attendanceLogId={attendanceLogId}
               onSignOut={async () => {
                 await clearTokens();
                 setIsAuthenticated(false);

@@ -1078,6 +1078,24 @@ def admin_full_reset(admin: User = Depends(require_admin), db: Session = Depends
     db.commit()
     return {"ok": True, "deleted_users": deleted_users}
 
+@app.post("/api/attendance/auto-punch-out")
+def auto_punch_out(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Punch out the current user's active log without requiring selfie/location.
+    Called automatically on sign-out so admin panel reflects the punch-out."""
+    active = db.query(AttendanceLog).filter(
+        AttendanceLog.user_id == current_user.id,
+        AttendanceLog.punch_out_time == None,
+        AttendanceLog.status == "active"
+    ).first()
+    if not active:
+        return {"ok": True, "message": "Not punched in"}
+    now = datetime.utcnow()
+    active.punch_out_time = now
+    active.total_hours = round((now - active.punch_in_time).total_seconds() / 3600, 2)
+    active.status = "completed"
+    db.commit()
+    return {"ok": True, "closed_log_id": active.id}
+
 @app.post("/api/admin/force-punch-out/{user_id}")
 def admin_force_punch_out(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Force-close any open attendance log for a user without requiring selfie/location."""

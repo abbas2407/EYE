@@ -2149,7 +2149,9 @@ function showBulkTaskModal(){
     <div id="bulk-checkboxes" style="background:#f5f4f1;border-radius:6px;padding:12px;max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
       ${workerList.filter(u=>u.role==='field_worker').map(u=>`
         <label style="display:flex;align-items:center;gap:8px;font-size:12px;text-transform:none;letter-spacing:0;color:#1a1c1a;margin:0;cursor:pointer">
-          <input type="checkbox" value="${u.email}"> ${esc(u.name)} <span style="color:#747878">(${u.email})</span>
+          <input type="checkbox" value="${u.email}" style="width:auto;flex-shrink:0;margin:0;accent-color:#695d4a;cursor:pointer">
+          <span style="flex:1;font-weight:500">${esc(u.name)}</span>
+          <span style="color:#747878;font-size:11px">${u.email}</span>
         </label>`).join('')}
     </div>
     <div id="bt-err" style="color:#ba1a1a;font-size:11px;margin-top:8px;display:none"></div>
