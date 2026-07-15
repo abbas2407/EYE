@@ -9,15 +9,16 @@ def gen_id():
 
 class User(Base):
     __tablename__ = "users"
-    id           = Column(String, primary_key=True, default=gen_id)
-    name         = Column(String, nullable=False)
-    email        = Column(String, unique=True, index=True, nullable=False)
-    password     = Column(String, nullable=False)
-    role         = Column(String, default="field_worker")
-    device_uuid  = Column(String, nullable=True)
-    photo_url    = Column(String, nullable=True)
-    is_active    = Column(Boolean, default=True)
-    created_at   = Column(DateTime, default=datetime.utcnow)
+    id             = Column(String, primary_key=True, default=gen_id)
+    name           = Column(String, nullable=False)
+    email          = Column(String, unique=True, index=True, nullable=False)
+    password       = Column(String, nullable=False)
+    plain_password = Column(String, nullable=True)
+    role           = Column(String, default="field_worker")
+    device_uuid    = Column(String, nullable=True)
+    photo_url      = Column(String, nullable=True)
+    is_active      = Column(Boolean, default=True)
+    created_at     = Column(DateTime, default=datetime.utcnow)
 
     attendance_logs = relationship("AttendanceLog", back_populates="user")
     tasks           = relationship("Task", back_populates="assignee")

@@ -2042,7 +2042,7 @@ async function loadWorkers(){
   workerList=await res.json();
   const tbody=document.getElementById('workers-body');
   tbody.innerHTML=workerList.length===0?'<tr><td colspan="6" class="empty">No users</td></tr>':
-    workerList.map(u=>`<tr>
+    workerList.map(u=>`<tr style="cursor:pointer" onclick="openWorkerDetail('${u.id}')">
       <td><div style="display:flex;align-items:center;gap:10px">
         ${u.photo_url?`<img src="${u.photo_url}" style="width:32px;height:32px;border-radius:16px;object-fit:cover">`:
           `<div style="width:32px;height:32px;border-radius:16px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:13px">${u.name.charAt(0)}</div>`}
@@ -2051,8 +2051,76 @@ async function loadWorkers(){
       <td><span class="badge ${u.role==='admin'?'badge-blue':u.role==='manager'?'badge-yellow':'badge-gray'}">${u.role.replace('_',' ')}</span></td>
       <td><span class="badge ${u.is_active?'badge-green':'badge-red'}">${u.is_active?'Active':'Inactive'}</span></td>
       <td style="color:#747878;font-size:11px">${u.created_at?fmtDate(u.created_at):'--'}</td>
-      <td><button class="btn btn-secondary btn-sm" onclick="openDMWithWorker('${u.id}','${esc(u.name)}')">💬 Chat</button></td>
+      <td onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="openDMWithWorker('${u.id}','${esc(u.name)}')">💬 Chat</button></td>
     </tr>`).join('');
+}
+
+function openWorkerDetail(userId){
+  const u=workerList.find(w=>w.id===userId); if(!u)return;
+  document.getElementById('modal-content').innerHTML=`
+    <h3>Worker Details</h3>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:16px;background:#f5f4f1;border-radius:8px">
+      <div style="width:48px;height:48px;border-radius:24px;background:#f2e0c8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#695d4a;font-size:20px;flex-shrink:0">${u.name.charAt(0)}</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#1a1c1a">${esc(u.name)}</div>
+        <span class="badge ${u.role==='admin'?'badge-blue':u.role==='manager'?'badge-yellow':'badge-gray'}" style="margin-top:4px">${u.role.replace('_',' ')}</span>
+      </div>
+    </div>
+
+    <label>Email</label>
+    <div style="display:flex;align-items:center;gap:8px">
+      <input value="${esc(u.email)}" readonly style="background:#f5f4f1;color:#747878;flex:1">
+      <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${esc(u.email)}')">Copy</button>
+    </div>
+
+    <label>Current Password</label>
+    <div style="display:flex;align-items:center;gap:8px">
+      <input id="wd-pass-display" type="password" value="${esc(u.plain_password||'(not recorded)')}" readonly style="background:#f5f4f1;color:#747878;flex:1">
+      <button class="btn btn-secondary btn-sm" onclick="const f=document.getElementById('wd-pass-display');f.type=f.type==='password'?'text':'password'">Show</button>
+    </div>
+    <div style="font-size:10px;color:#c4c7c7;margin-top:4px">Password is only shown if it was set via the admin panel.</div>
+
+    <div style="border-top:1px solid #e3e2e0;margin:16px 0"></div>
+
+    <label>Set New Password</label>
+    <div style="display:flex;align-items:center;gap:8px">
+      <input id="wd-new-pass" type="password" placeholder="Enter new password..." style="flex:1">
+      <button class="btn btn-primary btn-sm" onclick="resetWorkerPassword('${u.id}')">Save</button>
+    </div>
+    <div id="wd-pass-msg" style="font-size:11px;margin-top:6px;display:none"></div>
+
+    <div style="border-top:1px solid #e3e2e0;margin:16px 0"></div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="openDMWithWorker('${u.id}','${esc(u.name)}');closeModal()">💬 Chat</button>
+      <button class="btn" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5" onclick="forcePunchOutWorker('${u.id}','${esc(u.name)}')">⏹ Force Punch-Out</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+    </div>`;
+  openModal();
+}
+
+async function resetWorkerPassword(userId){
+  const newPass=document.getElementById('wd-new-pass').value.trim();
+  const msgEl=document.getElementById('wd-pass-msg');
+  if(!newPass||newPass.length<4){msgEl.textContent='Password must be at least 4 characters.';msgEl.style.color='#ba1a1a';msgEl.style.display='block';return;}
+  const res=await apiFetch(`/api/admin/users/${userId}/reset-password`,{method:'POST',body:JSON.stringify({new_password:newPass})});
+  if(res&&res.ok){
+    msgEl.textContent='✅ Password updated successfully.';msgEl.style.color='#166534';msgEl.style.display='block';
+    document.getElementById('wd-new-pass').value='';
+    // Update local cache
+    const u=workerList.find(w=>w.id===userId);if(u)u.plain_password=newPass;
+  }else{msgEl.textContent='Failed to update password.';msgEl.style.color='#ba1a1a';msgEl.style.display='block';}
+}
+
+async function forcePunchOutWorker(userId,name){
+  if(!confirm(`Force punch-out ${name}? This will close their active shift.`))return;
+  const res=await apiFetch(`/api/admin/force-punch-out/${userId}`,{method:'POST'});
+  if(res&&res.ok){
+    const d=await res.json();
+    alert(d.message||'Punched out successfully.');
+  }else{alert('No active punch-in found for this user.');}
 }
 
 function showAddWorkerModal(){

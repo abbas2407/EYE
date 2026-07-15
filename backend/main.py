@@ -13,6 +13,7 @@ from jose import JWTError
 import httpx, io
 
 from database import get_db, engine, Base
+from sqlalchemy import text
 from models import (User, RefreshToken, AttendanceLog, Task, UploadedFile,
                     LeaveBalance, Leave, ChatRoom, ChatMember, Message, GPSPing, PushToken,
                     Client, Site)
@@ -23,6 +24,15 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 Base.metadata.create_all(bind=engine)
+
+# Add plain_password column if upgrading from older schema
+with engine.connect() as _conn:
+    try:
+        _conn.execute(text("ALTER TABLE users ADD COLUMN plain_password VARCHAR"))
+        _conn.commit()
+    except Exception:
+        pass  # Already exists
+
 seed()
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "/app/data/uploads"))
@@ -636,14 +646,29 @@ def admin_list_users(admin: User = Depends(require_admin), db: Session = Depends
     users = db.query(User).order_by(User.created_at).all()
     return [{"id": u.id, "name": u.name, "email": u.email, "role": u.role,
              "is_active": u.is_active, "photo_url": u.photo_url,
+             "plain_password": u.plain_password,
              "created_at": u.created_at.isoformat() if u.created_at else None} for u in users]
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+def admin_reset_password(user_id: str, req: ResetPasswordRequest,
+                         admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.password = hash_password(req.new_password)
+    user.plain_password = req.new_password
+    db.commit()
+    return {"ok": True}
 
 @app.post("/api/admin/users")
 def admin_create_user(req: CreateUserRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == req.email.lower().strip()).first():
         raise HTTPException(status_code=400, detail="Email already exists")
     user = User(name=req.name, email=req.email.lower().strip(),
-                password=hash_password(req.password), role=req.role)
+                password=hash_password(req.password), plain_password=req.password, role=req.role)
     db.add(user)
     db.commit()
     db.refresh(user)
