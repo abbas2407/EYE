@@ -415,9 +415,9 @@ textarea{min-height:70px;resize:vertical}
           <input type="date" id="tl-date" style="padding:7px 10px;border:1px solid #e3e2e0;border-radius:6px;font-size:12px;width:auto;margin:0"/>
           <button onclick="tl_nextDay()" style="border:1px solid #e3e2e0;background:#fff;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:14px;flex-shrink:0">›</button>
           <button class="btn btn-primary" onclick="loadTimeline()" style="flex-shrink:0">Apply</button>
-          <div style="margin-left:auto;display:flex;gap:8px">
-            <button class="btn btn-secondary btn-sm">All Visits</button>
-            <button class="btn btn-primary btn-sm">▶ Play</button>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <span id="tl-live-badge" style="display:none;background:#dcfce7;color:#166534;font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;letter-spacing:0.8px;text-transform:uppercase">● Live</span>
+            <span id="tl-last-updated" style="font-size:10px;color:#c4c7c7"></span>
           </div>
         </div>
         <!-- Stats strip -->
@@ -1529,8 +1529,8 @@ const DASH_SUBS=['overview','liveloc','timeline','cardview','compliance'];
 let dashSubLoaded={};
 
 function showDashSub(name){
-  // Stop live-location poll when leaving that tab
   if(name!=='liveloc') stopLocPoll();
+  if(name!=='timeline') stopTlPoll();
   DASH_SUBS.forEach(s=>{
     const el=document.getElementById(`dsub-${s}`);
     if(el)el.style.display='none';
@@ -1857,6 +1857,33 @@ function openTimelineFor(uid){
 
 // ═══════════════════════════════════════════════════════ TIMELINE ═══════════
 let tlMap=null, tlMarkers=[], tlPolyline=null, tlWorkers=[];
+let _tlPollActive=false, _tlPollTimer=null;
+
+function _tlIsToday(){
+  const d=document.getElementById('tl-date'); if(!d||!d.value)return false;
+  return d.value===new Date().toISOString().slice(0,10);
+}
+function _tlSetLive(on){
+  const b=document.getElementById('tl-live-badge'); if(b)b.style.display=on?'inline':'none';
+  const u=document.getElementById('tl-last-updated');
+  if(on&&u)u.textContent='Updated '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+}
+async function _tlPollLoop(){
+  if(!_tlPollActive)return;
+  await loadTimeline(true); // silent=true skips loading indicator
+  _tlSetLive(true);
+  if(_tlPollActive)_tlPollTimer=setTimeout(_tlPollLoop,15000);
+}
+function startTlPoll(){
+  _tlPollActive=true;
+  if(!_tlPollTimer)_tlPollTimer=setTimeout(_tlPollLoop,15000);
+}
+function stopTlPoll(){
+  _tlPollActive=false;
+  if(_tlPollTimer){clearTimeout(_tlPollTimer);_tlPollTimer=null;}
+  _tlSetLive(false);
+  const u=document.getElementById('tl-last-updated');if(u)u.textContent='';
+}
 
 async function initTimeline(){
   const today=new Date();
@@ -1883,12 +1910,14 @@ async function initTimeline(){
   }
 }
 
-async function loadTimeline(){
+async function loadTimeline(silent=false){
   const uid=document.getElementById('tl-user-sel')?.value;
   const date=document.getElementById('tl-date')?.value;
   if(!uid||!date)return;
-  document.getElementById('tl-events-list').innerHTML='<div class="loading">Loading timeline...</div>';
-  document.getElementById('tl-stats-row').innerHTML='<div style="padding:12px 20px;font-size:12px;color:#c4c7c7">Loading...</div>';
+  if(!silent){
+    document.getElementById('tl-events-list').innerHTML='<div class="loading">Loading timeline...</div>';
+    document.getElementById('tl-stats-row').innerHTML='<div style="padding:12px 20px;font-size:12px;color:#c4c7c7">Loading...</div>';
+  }
   const res=await apiFetch(`/api/admin/user-timeline?user_id=${encodeURIComponent(uid)}&date=${date}`);
   if(!res)return;
   const data=await res.json();
@@ -1953,6 +1982,10 @@ async function loadTimeline(){
   }else if(tlMap){
     tlMap.setView([20.5937,78.9629],5);
   }
+
+  // Auto-refresh when viewing today
+  if(_tlIsToday()){ if(!silent)startTlPoll(); _tlSetLive(true); }
+  else { stopTlPoll(); }
 }
 
 function tlFocus(lat,lng){if(!lat||!lng||!tlMap)return;tlMap.setView([lat,lng],17);}

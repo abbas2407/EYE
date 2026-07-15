@@ -919,6 +919,79 @@ def user_timeline(user_id: str, date: Optional[str] = None,
             "date":target.isoformat(),"user_id":user_id}
 
 
+@app.get("/api/gps/my-trail")
+def my_trail(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+
+    attendance = (db.query(AttendanceLog)
+                  .filter(AttendanceLog.user_id == current_user.id,
+                          AttendanceLog.punch_in_time >= today_start,
+                          AttendanceLog.punch_in_time < today_end)
+                  .order_by(AttendanceLog.punch_in_time).first())
+
+    pings = (db.query(GPSPing)
+             .filter(GPSPing.user_id == current_user.id,
+                     GPSPing.timestamp >= today_start,
+                     GPSPing.timestamp < today_end)
+             .order_by(GPSPing.timestamp).all())
+
+    def hav(lat1, lon1, lat2, lon2):
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        a = (math.sin(math.radians(lat2-lat1)/2)**2 +
+             math.cos(phi1)*math.cos(phi2)*math.sin(math.radians(lon2-lon1)/2)**2)
+        return 2*6371000*math.asin(math.sqrt(a))
+
+    events = []
+    if attendance:
+        events.append({"type":"punch_in","time":attendance.punch_in_time.isoformat()+"Z",
+                        "label":"Punch In","duration_min":0,"distance_km":0,
+                        "lat":attendance.latitude,"lng":attendance.longitude})
+
+    if len(pings) >= 2:
+        seg_pings, seg_type, segments = [pings[0]], None, []
+        for i in range(1, len(pings)):
+            d = hav(pings[i-1].latitude, pings[i-1].longitude, pings[i].latitude, pings[i].longitude)
+            ntype = "travel" if d > 30 else "halt"
+            if seg_type is None: seg_type = ntype
+            if ntype != seg_type and len(seg_pings) >= 2:
+                segments.append({"type": seg_type, "pings": seg_pings})
+                seg_pings, seg_type = [pings[i-1], pings[i]], ntype
+            else:
+                seg_pings.append(pings[i])
+        if seg_pings: segments.append({"type": seg_type or "halt", "pings": seg_pings})
+        for seg in segments:
+            ps = seg["pings"]
+            if not ps: continue
+            dur = int((ps[-1].timestamp - ps[0].timestamp).total_seconds() / 60)
+            dist = sum(hav(ps[j-1].latitude,ps[j-1].longitude,ps[j].latitude,ps[j].longitude) for j in range(1,len(ps)))
+            mid = ps[len(ps)//2]
+            events.append({"type": seg["type"], "time": ps[0].timestamp.isoformat()+"Z",
+                            "end_time": ps[-1].timestamp.isoformat()+"Z",
+                            "duration_min": dur, "distance_km": round(dist/1000, 2),
+                            "lat": mid.latitude, "lng": mid.longitude,
+                            "label": "Travel" if seg["type"] == "travel" else "Halt"})
+
+    if attendance and attendance.punch_out_time:
+        events.append({"type":"punch_out","time":attendance.punch_out_time.isoformat()+"Z",
+                        "label":"Punch Out","duration_min":0,"distance_km":0,
+                        "lat":attendance.latitude,"lng":attendance.longitude})
+
+    events.sort(key=lambda e: e["time"])
+    total_km = (sum(hav(pings[i-1].latitude,pings[i-1].longitude,pings[i].latitude,pings[i].longitude)
+                    for i in range(1,len(pings)))/1000) if len(pings)>1 else 0
+
+    return {
+        "pings": [{"lat": p.latitude, "lng": p.longitude, "time": p.timestamp.isoformat()+"Z"} for p in pings],
+        "events": events,
+        "stats": {
+            "gps_distance_km": round(total_km, 2),
+            "total_pings": len(pings),
+            "punch_in": attendance.punch_in_time.isoformat()+"Z" if attendance else None,
+            "punch_out": attendance.punch_out_time.isoformat()+"Z" if attendance and attendance.punch_out_time else None,
+        }
+    }
+
 @app.get("/api/admin/daily-hours")
 def daily_hours(days: int = 30, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     from collections import defaultdict

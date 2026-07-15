@@ -141,8 +141,8 @@ export default function ScheduleScreen({
           </Text>
         </View>
 
-        {/* Punch Status Banner */}
-        <View style={{ marginHorizontal: 20, marginVertical: 12 }}>
+        {/* Punch Status Banner — only shown when viewing today */}
+        {selectedDayIndex === todayIndex && <View style={{ marginHorizontal: 20, marginVertical: 12 }}>
           {isPunchSyncing ? (
             <View style={{
               backgroundColor: '#f5f4f1', borderRadius: 8, padding: 16,
@@ -215,7 +215,7 @@ export default function ScheduleScreen({
               </Text>
             </TouchableOpacity>
           )}
-        </View>
+        </View>}
 
         {/* Date strip */}
         <ScrollView

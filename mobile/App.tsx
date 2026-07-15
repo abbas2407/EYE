@@ -54,6 +54,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import DailySummaryScreen from './src/screens/DailySummaryScreen';
 import LeaveScreen from './src/screens/LeaveScreen';
+import TrailScreen from './src/screens/TrailScreen';
 import PunchModal from './src/components/PunchModal';
 
 import {
@@ -70,7 +71,7 @@ Notifications.setNotificationHandler({
 });
 
 type Tab = 'SCHEDULE' | 'MAP' | 'TASKS' | 'CHAT' | 'PROFILE';
-type Screen = 'MAIN' | 'DAILY_SUMMARY' | 'LEAVE';
+type Screen = 'MAIN' | 'DAILY_SUMMARY' | 'LEAVE' | 'TRAIL';
 
 function MainApp() {
   const insets = useSafeAreaInsets();
@@ -150,7 +151,7 @@ function MainApp() {
   if (screen === 'DAILY_SUMMARY') {
     return (
       <View style={{ flex: 1, backgroundColor: '#faf9f6' }}>
-        <DailySummaryScreen onBack={() => setScreen('MAIN')} />
+        <DailySummaryScreen onBack={() => setScreen('MAIN')} onViewTrail={() => setScreen('TRAIL')} />
       </View>
     );
   }
@@ -159,6 +160,14 @@ function MainApp() {
     return (
       <View style={{ flex: 1, backgroundColor: '#faf9f6' }}>
         <LeaveScreen onBack={() => setScreen('MAIN')} />
+      </View>
+    );
+  }
+
+  if (screen === 'TRAIL') {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#faf9f6' }}>
+        <TrailScreen onBack={() => setScreen('DAILY_SUMMARY')} />
       </View>
     );
   }

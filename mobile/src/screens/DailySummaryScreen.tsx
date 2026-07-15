@@ -9,6 +9,7 @@ import { apiFetch } from '../api/client';
 
 interface DailySummaryScreenProps {
   onBack: () => void;
+  onViewTrail: () => void;
 }
 
 interface TaskItem {
@@ -53,7 +54,7 @@ function formatDate(dateStr: string) {
   } catch { return dateStr; }
 }
 
-export default function DailySummaryScreen({ onBack }: DailySummaryScreenProps) {
+export default function DailySummaryScreen({ onBack, onViewTrail }: DailySummaryScreenProps) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -160,6 +161,19 @@ export default function DailySummaryScreen({ onBack }: DailySummaryScreenProps) 
                 ))}
               </View>
             </View>
+
+            {/* Trail button */}
+            <TouchableOpacity
+              onPress={onViewTrail}
+              style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: '#1a1c1a', borderRadius: 8, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+            >
+              <Ionicons name="navigate-outline" size={20} color="#f2e0c8" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff', fontFamily: 'DM-Sans' }}>View My Trail Today</Text>
+                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: 'DM-Sans', marginTop: 1 }}>GPS route, halts & activity timeline · Live</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#f2e0c8" />
+            </TouchableOpacity>
 
             {/* Tasks */}
             <View style={{ marginHorizontal: 20, marginBottom: 32 }}>
