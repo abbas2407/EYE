@@ -391,6 +391,7 @@ textarea{min-height:70px;resize:vertical}
             <button class="filt-btn" id="loc-filt-out" onclick="setLocFilter(this,'out')">Punched Out</button>
           </div>
           <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <span id="loc-last-updated" style="font-size:10px;color:#c4c7c7"></span>
             <button class="btn btn-secondary btn-sm" id="loc-refresh-btn" onclick="refreshLiveLocView()">↻ Refresh</button>
           </div>
         </div>
@@ -1684,32 +1685,45 @@ async function loadHoursChart(){
 }
 
 // ═══════════════════════════════════════════════════════ LIVE LOCATION ═══════
-let locMap=null, locMarkers=[], locAllData=[], locFilterMode='all', locPollInterval=null, locMapInitialized=false;
+let locMap=null, locMarkers=[], locAllData=[], locFilterMode='all', locMapInitialized=false;
+let _locPollActive=false, _locPollTimer=null;
 
-// CartoDB Voyager tiles — Google Maps style, free, no API key
 const CARTO_TILES='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 const CARTO_ATTR='© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>';
 
+function setLocLastUpdated(){
+  const el=document.getElementById('loc-last-updated');
+  if(el)el.textContent='Updated '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+}
+
+async function _fetchAndRenderLoc(isFirstLoad){
+  try{
+    const res=await apiFetch('/api/admin/live-locations');
+    if(!res||!res.ok)return;
+    locAllData=await res.json();
+    renderLocList();
+    if(isFirstLoad)renderLocMap(); else updateLocMarkers();
+    setLocLastUpdated();
+  }catch{}
+}
+
+// Self-rescheduling loop — survives errors, always fires next tick
+async function _locPollLoop(){
+  if(!_locPollActive)return;
+  await _fetchAndRenderLoc(false);
+  if(_locPollActive) _locPollTimer=setTimeout(_locPollLoop,15000);
+}
+
 async function loadLiveLocView(){
-  const res=await apiFetch('/api/admin/live-locations');
-  if(!res)return;
-  locAllData=await res.json();
-  renderLocList();
-  renderLocMap();
-  // Start auto-poll when tab is opened; stop when tab is left
-  if(!locPollInterval){
-    locPollInterval=setInterval(async()=>{
-      const r=await apiFetch('/api/admin/live-locations');
-      if(!r)return;
-      locAllData=await r.json();
-      renderLocList();
-      updateLocMarkers(); // update in-place, no zoom reset
-    },30000);
-  }
+  _locPollActive=true;
+  await _fetchAndRenderLoc(true);
+  // Start poll only if not already running
+  if(!_locPollTimer) _locPollTimer=setTimeout(_locPollLoop,15000);
 }
 
 function stopLocPoll(){
-  if(locPollInterval){clearInterval(locPollInterval);locPollInterval=null;}
+  _locPollActive=false;
+  if(_locPollTimer){clearTimeout(_locPollTimer);_locPollTimer=null;}
 }
 
 function setLocFilter(btn,mode){
