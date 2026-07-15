@@ -1528,6 +1528,8 @@ const DASH_SUBS=['overview','liveloc','timeline','cardview','compliance'];
 let dashSubLoaded={};
 
 function showDashSub(name){
+  // Stop live-location poll when leaving that tab
+  if(name!=='liveloc') stopLocPoll();
   DASH_SUBS.forEach(s=>{
     const el=document.getElementById(`dsub-${s}`);
     if(el)el.style.display='none';
@@ -1682,7 +1684,7 @@ async function loadHoursChart(){
 }
 
 // ═══════════════════════════════════════════════════════ LIVE LOCATION ═══════
-let locMap=null, locMarkers=[], locAllData=[], locFilterMode='all';
+let locMap=null, locMarkers=[], locAllData=[], locFilterMode='all', locPollInterval=null, locMapInitialized=false;
 
 // CartoDB Voyager tiles — Google Maps style, free, no API key
 const CARTO_TILES='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
@@ -1694,6 +1696,20 @@ async function loadLiveLocView(){
   locAllData=await res.json();
   renderLocList();
   renderLocMap();
+  // Start auto-poll when tab is opened; stop when tab is left
+  if(!locPollInterval){
+    locPollInterval=setInterval(async()=>{
+      const r=await apiFetch('/api/admin/live-locations');
+      if(!r)return;
+      locAllData=await r.json();
+      renderLocList();
+      updateLocMarkers(); // update in-place, no zoom reset
+    },30000);
+  }
+}
+
+function stopLocPoll(){
+  if(locPollInterval){clearInterval(locPollInterval);locPollInterval=null;}
 }
 
 function setLocFilter(btn,mode){
@@ -1740,6 +1756,17 @@ function renderLocList(){
     </div>`).join('');
 }
 
+function makeLocPopup(loc){
+  return `<div style="min-width:165px;font-family:sans-serif;padding:2px 0">
+    <div style="font-weight:700;font-size:13px;color:#1a1c1a">${esc(loc.user_name)}</div>
+    <div style="font-size:11px;color:#747878;margin-top:2px">${esc(loc.user_email)}</div>
+    <div style="margin-top:8px;font-size:11px;color:${loc.is_punched_in?'#166534':'#9ca3af'};font-weight:600">${loc.is_punched_in?'● Punched In':'○ Punched Out'}</div>
+    ${loc.punch_in_time?`<div style="font-size:10px;color:#747878;margin-top:2px">In: ${fmtDT(loc.punch_in_time)}</div>`:''}
+    <div style="font-size:10px;color:#c4c7c7;margin-top:2px">Last ping: ${fmtDT(loc.last_seen)}</div>
+    <div style="font-size:10px;color:#1a6ef2;margin-top:2px;font-weight:600">Distance today: ${loc.km_today>=1?loc.km_today.toFixed(1)+' km':Math.round(loc.km_today*1000)+' m'}</div>
+  </div>`;
+}
+
 function renderLocMap(){
   const mapEl=document.getElementById('loc-map'); if(!mapEl)return;
   const valid=locAllData.filter(l=>l.latitude&&l.longitude);
@@ -1748,7 +1775,7 @@ function renderLocMap(){
     L.tileLayer(CARTO_TILES,{attribution:CARTO_ATTR,maxZoom:19}).addTo(locMap);
   }
   locMarkers.forEach(m=>m.remove()); locMarkers=[];
-  if(!valid.length){locMap.setView([20.5937,78.9629],5);return;}
+  if(!valid.length){locMap.setView([20.5937,78.9629],5);locMapInitialized=false;return;}
   const bounds=[];
   valid.forEach(loc=>{
     bounds.push([loc.latitude,loc.longitude]);
@@ -1757,19 +1784,45 @@ function renderLocMap(){
       html:`<div style="width:42px;height:42px;border-radius:21px;background:${pin};border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:16px;box-shadow:0 2px 10px rgba(0,0,0,.35);cursor:pointer">${loc.user_name.charAt(0).toUpperCase()}</div>`,
       iconSize:[42,42],iconAnchor:[21,21],popupAnchor:[0,-25]});
     const m=L.marker([loc.latitude,loc.longitude],{icon}).addTo(locMap)
-      .bindPopup(`<div style="min-width:165px;font-family:sans-serif;padding:2px 0">
-        <div style="font-weight:700;font-size:13px;color:#1a1c1a">${esc(loc.user_name)}</div>
-        <div style="font-size:11px;color:#747878;margin-top:2px">${esc(loc.user_email)}</div>
-        <div style="margin-top:8px;font-size:11px;color:${loc.is_punched_in?'#166534':'#9ca3af'};font-weight:600">${loc.is_punched_in?'● Punched In':'○ Punched Out'}</div>
-        ${loc.punch_in_time?`<div style="font-size:10px;color:#747878;margin-top:2px">In: ${fmtDT(loc.punch_in_time)}</div>`:''}
-        <div style="font-size:10px;color:#c4c7c7;margin-top:2px">Last ping: ${fmtDT(loc.last_seen)}</div>
-        <div style="font-size:10px;color:#1a6ef2;margin-top:2px;font-weight:600">Distance today: ${loc.km_today>=1?loc.km_today.toFixed(1)+' km':Math.round(loc.km_today*1000)+' m'}</div>
-      </div>`);
+      .bindPopup(makeLocPopup(loc));
     m._wid=loc.user_id;
     locMarkers.push(m);
   });
-  if(valid.length===1)locMap.setView(bounds[0],15);
-  else locMap.fitBounds(bounds,{padding:[50,50]});
+  // Only fit bounds on the first load — subsequent refreshes keep user's zoom/pan
+  if(!locMapInitialized){
+    if(valid.length===1)locMap.setView(bounds[0],15);
+    else locMap.fitBounds(bounds,{padding:[50,50]});
+    locMapInitialized=true;
+  }
+  setTimeout(()=>locMap&&locMap.invalidateSize(),150);
+}
+
+// Update marker positions in-place without touching zoom or pan
+function updateLocMarkers(){
+  if(!locMap)return;
+  const valid=locAllData.filter(l=>l.latitude&&l.longitude);
+  // Remove markers for workers no longer in the list
+  locMarkers=locMarkers.filter(m=>{
+    if(!valid.find(l=>l.user_id===m._wid)){m.remove();return false;}
+    return true;
+  });
+  valid.forEach(loc=>{
+    const existing=locMarkers.find(m=>m._wid===loc.user_id);
+    const pin=loc.is_punched_in?'#1a1c1a':'#9ca3af';
+    const icon=L.divIcon({className:'',
+      html:`<div style="width:42px;height:42px;border-radius:21px;background:${pin};border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:16px;box-shadow:0 2px 10px rgba(0,0,0,.35);cursor:pointer">${loc.user_name.charAt(0).toUpperCase()}</div>`,
+      iconSize:[42,42],iconAnchor:[21,21],popupAnchor:[0,-25]});
+    if(existing){
+      existing.setLatLng([loc.latitude,loc.longitude]);
+      existing.setIcon(icon);
+      existing.setPopupContent(makeLocPopup(loc));
+    } else {
+      const m=L.marker([loc.latitude,loc.longitude],{icon}).addTo(locMap)
+        .bindPopup(makeLocPopup(loc));
+      m._wid=loc.user_id;
+      locMarkers.push(m);
+    }
+  });
 }
 
 function focusLocWorker(uid){
@@ -2950,8 +3003,14 @@ function loadOrgTeams(){
 async function refreshLiveLocView(){
   const btn=document.getElementById('loc-refresh-btn');
   if(btn){btn.textContent='↻ Refreshing…';btn.disabled=true;}
-  await loadLiveLocView();
-  if(locMap)setTimeout(()=>locMap.invalidateSize(),100);
+  try{
+    const res=await apiFetch('/api/admin/live-locations');
+    if(res){
+      locAllData=await res.json();
+      renderLocList();
+      updateLocMarkers(); // move markers in-place, keep zoom/pan
+    }
+  }catch{}
   if(btn){btn.textContent='↻ Refresh';btn.disabled=false;}
 }
 
