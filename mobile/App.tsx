@@ -41,7 +41,7 @@ class ScreenErrorBoundary extends Component<
 }
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Font from 'expo-font';
+import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -312,21 +312,17 @@ function MainApp() {
 }
 
 export default function App() {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [fontsLoaded] = useFonts({
+    'DM-Sans': require('./assets/fonts/DMSans-Regular.ttf'),
+    'DM-Sans-Medium': require('./assets/fonts/DMSans-Medium.ttf'),
+    'PlayfairDisplay-Bold': require('./assets/fonts/PlayfairDisplay-Bold.ttf'),
+  });
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
-      await Font.loadAsync({
-        'DM-Sans': require('./assets/fonts/DMSans-Regular.ttf'),
-        'DM-Sans-Medium': require('./assets/fonts/DMSans-Medium.ttf'),
-        'PlayfairDisplay-Bold': require('./assets/fonts/PlayfairDisplay-Bold.ttf'),
-      }).catch(() => {});
-
-      setFontsLoaded(true);
-
       const token = await getAccessToken();
       const role = await getUserRole();
       if (token) {
