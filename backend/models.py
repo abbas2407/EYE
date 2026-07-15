@@ -106,11 +106,12 @@ class ChatRoom(Base):
 
 class ChatMember(Base):
     __tablename__ = "chat_members"
-    id      = Column(String, primary_key=True, default=gen_id)
-    room_id = Column(String, ForeignKey("chat_rooms.id"), nullable=False)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    room    = relationship("ChatRoom", back_populates="members")
-    user    = relationship("User")
+    id           = Column(String, primary_key=True, default=gen_id)
+    room_id      = Column(String, ForeignKey("chat_rooms.id"), nullable=False)
+    user_id      = Column(String, ForeignKey("users.id"), nullable=False)
+    last_read_at = Column(DateTime, nullable=True)
+    room         = relationship("ChatRoom", back_populates="members")
+    user         = relationship("User")
 
 class Message(Base):
     __tablename__ = "messages"

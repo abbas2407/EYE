@@ -1436,27 +1436,13 @@ let lastChatVisit = new Date(0).toISOString();
 let unreadPollInterval = null;
 
 // ── Chat unread tracking (persisted in localStorage) ─────────────────────────
-// seenIncoming[roomId] = incoming_count at the time admin last opened that room
-let seenIncoming = {};
-function loadSeenIncoming(){
-  try{const s=localStorage.getItem('fp_chat_seen');if(s)seenIncoming=JSON.parse(s);}catch{}
-}
-function saveSeenIncoming(){
-  try{localStorage.setItem('fp_chat_seen',JSON.stringify(seenIncoming));}catch{}
-}
-function getRoomUnread(room){
-  if(seenIncoming[room.id]==null){
-    // First ever view of this room — treat all existing messages as seen, no false badge
-    seenIncoming[room.id]=room.incoming_count||0;
-    saveSeenIncoming();
-    return 0;
-  }
-  return Math.max(0,(room.incoming_count||0)-seenIncoming[room.id]);
-}
+// Unread count is now computed server-side via last_read_at
+function getRoomUnread(room){ return room.unread_count||0; }
 function markRoomSeen(room){
-  seenIncoming[room.id]=room.incoming_count||0;
-  saveSeenIncoming();
+  // Tell the server we've read this room so unread_count resets
+  apiFetch(`/api/chat/rooms/${room.id}/mark-read`,{method:'POST'}).catch(()=>{});
 }
+function loadSeenIncoming(){} // kept for call-site compatibility
 function fmtUnreadBadge(n){
   if(n<=0)return'';
   if(n===1)return'1';
@@ -1747,6 +1733,10 @@ function renderLocList(){
         <span>${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}</span>
         <span style="color:#c4c7c7;margin-left:4px">${fmtDT(loc.last_seen)}</span>
       </div>
+      <div style="font-size:11px;color:#1a6ef2;margin-top:4px;display:flex;align-items:center;gap:4px;font-weight:600">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1a6ef2" stroke-width="2.5"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        ${loc.km_today>=1?loc.km_today.toFixed(1)+' km today':Math.round(loc.km_today*1000)+' m today'}
+      </div>
     </div>`).join('');
 }
 
@@ -1773,6 +1763,7 @@ function renderLocMap(){
         <div style="margin-top:8px;font-size:11px;color:${loc.is_punched_in?'#166534':'#9ca3af'};font-weight:600">${loc.is_punched_in?'● Punched In':'○ Punched Out'}</div>
         ${loc.punch_in_time?`<div style="font-size:10px;color:#747878;margin-top:2px">In: ${fmtDT(loc.punch_in_time)}</div>`:''}
         <div style="font-size:10px;color:#c4c7c7;margin-top:2px">Last ping: ${fmtDT(loc.last_seen)}</div>
+        <div style="font-size:10px;color:#1a6ef2;margin-top:2px;font-weight:600">Distance today: ${loc.km_today>=1?loc.km_today.toFixed(1)+' km':Math.round(loc.km_today*1000)+' m'}</div>
       </div>`);
     m._wid=loc.user_id;
     locMarkers.push(m);
@@ -3746,6 +3737,7 @@ function renderNotifGPS(){
           <div style="font-size:11px;margin-top:2px;color:${clr};font-weight:500">${l.is_punched_in?'Punched In':'Not Punched In'}</div>
           <div style="font-size:10px;color:#c4c7c7;margin-top:2px">Last ping: ${l.last_seen?fmtDT(l.last_seen):'Unknown'}</div>
           <div style="font-size:10px;color:#747878;margin-top:1px">📍 ${l.latitude?.toFixed(4)}, ${l.longitude?.toFixed(4)}</div>
+          ${l.km_today!=null?`<div style="font-size:10px;color:#1a6ef2;margin-top:1px;font-weight:600">🛣 ${l.km_today>=1?l.km_today.toFixed(1)+' km today':Math.round(l.km_today*1000)+' m today'}</div>`:''}
         </div>
         <div style="font-size:10px;color:#c4c7c7;align-self:flex-start;margin-top:2px">→</div>
       </div>`).join('');

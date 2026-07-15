@@ -25,13 +25,17 @@ log = logging.getLogger(__name__)
 
 Base.metadata.create_all(bind=engine)
 
-# Add plain_password column if upgrading from older schema
+# Schema migrations for older databases
 with engine.connect() as _conn:
-    try:
-        _conn.execute(text("ALTER TABLE users ADD COLUMN plain_password VARCHAR"))
-        _conn.commit()
-    except Exception:
-        pass  # Already exists
+    for _sql in [
+        "ALTER TABLE users ADD COLUMN plain_password VARCHAR",
+        "ALTER TABLE chat_members ADD COLUMN last_read_at DATETIME",
+    ]:
+        try:
+            _conn.execute(text(_sql))
+            _conn.commit()
+        except Exception:
+            pass  # Column already exists
 
 seed()
 
@@ -419,6 +423,16 @@ def daily_summary(current_user: User = Depends(get_current_user), db: Session = 
                                    Task.scheduled_time >= today_start,
                                    Task.scheduled_time < today_end).all()
     total_hours = sum(l.total_hours or 0 for l in today_logs if l.status == "completed")
+    # Total distance from GPS pings today
+    today_pings = (db.query(GPSPing)
+                   .filter(GPSPing.user_id == current_user.id,
+                           GPSPing.timestamp >= today_start,
+                           GPSPing.timestamp < today_end)
+                   .order_by(GPSPing.timestamp).all())
+    km_today = 0.0
+    for i in range(1, len(today_pings)):
+        p1, p2 = today_pings[i - 1], today_pings[i]
+        km_today += haversine_m(p1.latitude, p1.longitude, p2.latitude, p2.longitude) / 1000
     return {
         "date": today_start.date().isoformat(),
         "is_punched_in": active_log is not None,
@@ -428,6 +442,7 @@ def daily_summary(current_user: User = Depends(get_current_user), db: Session = 
         "total_shifts": len(today_logs),
         "tasks_today": len(tasks),
         "tasks_completed_today": sum(1 for t in tasks if t.status == "completed"),
+        "km_today": round(km_today, 2),
         "tasks": [{"id": t.id, "title": t.title, "status": t.status, "location": t.location,
                    "scheduled_time": t.scheduled_time.isoformat() if t.scheduled_time else None}
                   for t in tasks],
@@ -499,7 +514,6 @@ def get_rooms(current_user: User = Depends(get_current_user), db: Session = Depe
         room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
         if not room:
             continue
-        # For DM rooms show the OTHER person's name, not the combined "A & B" string
         if room.room_type == "direct":
             other = (db.query(ChatMember)
                      .filter(ChatMember.room_id == room.id, ChatMember.user_id != current_user.id)
@@ -509,17 +523,29 @@ def get_rooms(current_user: User = Depends(get_current_user), db: Session = Depe
             display_name = room.name
         last_msg = (db.query(Message).filter(Message.room_id == room.id)
                     .order_by(Message.created_at.desc()).first())
-        incoming_count = (db.query(Message)
-                          .filter(Message.room_id == room.id, Message.sender_id != current_user.id)
-                          .count())
+        # Unread count: messages from others that arrived after user last read this room
+        last_read = m.last_read_at or datetime(1970, 1, 1)
+        unread = (db.query(Message)
+                  .filter(Message.room_id == room.id,
+                          Message.sender_id != current_user.id,
+                          Message.created_at > last_read)
+                  .count())
         rooms.append({
             "id": room.id, "name": display_name, "room_type": room.room_type,
             "last_message": last_msg.content[:60] if last_msg else None,
             "last_message_time": last_msg.created_at.isoformat() + "Z" if last_msg else None,
             "last_sender": last_msg.sender.name if last_msg else None,
-            "incoming_count": incoming_count,
+            "unread_count": unread,
         })
     return rooms
+
+@app.post("/api/chat/rooms/{room_id}/mark-read")
+def mark_room_read(room_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    member = db.query(ChatMember).filter(ChatMember.room_id == room_id, ChatMember.user_id == current_user.id).first()
+    if member:
+        member.last_read_at = datetime.utcnow()
+        db.commit()
+    return {"ok": True}
 
 @app.get("/api/chat/messages/{room_id}")
 def get_messages(room_id: str, limit: int = 50, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -774,6 +800,8 @@ def admin_performance(admin: User = Depends(require_admin), db: Session = Depend
 @app.get("/api/admin/live-locations")
 def admin_live_locations(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     workers = db.query(User).filter(User.role == "field_worker").all()
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
     result = []
     for w in workers:
         ping = (db.query(GPSPing).filter(GPSPing.user_id == w.id)
@@ -781,12 +809,22 @@ def admin_live_locations(admin: User = Depends(require_admin), db: Session = Dep
         active = db.query(AttendanceLog).filter(AttendanceLog.user_id == w.id,
                                                   AttendanceLog.status == "active").first()
         if ping:
+            today_pings = (db.query(GPSPing)
+                           .filter(GPSPing.user_id == w.id,
+                                   GPSPing.timestamp >= today_start,
+                                   GPSPing.timestamp < today_end)
+                           .order_by(GPSPing.timestamp).all())
+            km_today = 0.0
+            for i in range(1, len(today_pings)):
+                p1, p2 = today_pings[i - 1], today_pings[i]
+                km_today += haversine_m(p1.latitude, p1.longitude, p2.latitude, p2.longitude) / 1000
             result.append({
                 "user_id": w.id, "user_name": w.name, "user_email": w.email,
                 "latitude": ping.latitude, "longitude": ping.longitude,
                 "last_seen": ping.timestamp.isoformat() + "Z",
                 "is_punched_in": active is not None,
                 "punch_in_time": active.punch_in_time.isoformat() + "Z" if active else None,
+                "km_today": round(km_today, 2),
             })
     return result
 

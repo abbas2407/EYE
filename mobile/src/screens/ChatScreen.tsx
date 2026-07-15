@@ -14,6 +14,7 @@ interface Room {
   last_message?: string;
   last_message_time?: string;
   last_sender?: string;
+  unread_count?: number;
 }
 
 interface ChatMessage {
@@ -89,6 +90,8 @@ function ChatRoomView({ room, onBack }: { room: Room; onBack: () => void }) {
   }, [room.id]);
 
   useEffect(() => {
+    // Mark room as read when opened
+    apiFetch(`/api/chat/rooms/${room.id}/mark-read`, { method: 'POST' }).catch(() => {});
     fetchMessages();
     pollRef.current = setInterval(fetchMessages, 5000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
@@ -412,31 +415,48 @@ export default function ChatScreen() {
 }
 
 function RoomRow({ room, onPress }: { room: Room; onPress: () => void }) {
+  const hasUnread = (room.unread_count ?? 0) > 0;
+  const unreadLabel = !hasUnread ? '' :
+    room.unread_count === 1 ? '1' : `${room.unread_count}+ messages`;
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={{ backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 6, borderRadius: 10, padding: 14, borderWidth: 0.5, borderColor: '#e3e2e0', flexDirection: 'row', alignItems: 'center', gap: 12 }}
+      style={{ backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 6, borderRadius: 10, padding: 14, borderWidth: hasUnread ? 1 : 0.5, borderColor: hasUnread ? '#1a1c1a' : '#e3e2e0', flexDirection: 'row', alignItems: 'center', gap: 12 }}
     >
       <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#f2e0c8', justifyContent: 'center', alignItems: 'center' }}>
         <Ionicons name={room.room_type === 'group' ? 'people' : 'person'} size={20} color="#695d4a" />
       </View>
       <View style={{ flex: 1, overflow: 'hidden' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a1c1a', fontFamily: 'DM-Sans' }} numberOfLines={1}>
+          <Text style={{ fontSize: 14, fontWeight: hasUnread ? '700' : '600', color: '#1a1c1a', fontFamily: 'DM-Sans' }} numberOfLines={1}>
             {room.name}
           </Text>
-          {room.last_message_time && (
-            <Text style={{ fontSize: 10, color: '#c4c7c7', fontFamily: 'DM-Sans', marginLeft: 8, flexShrink: 0 }}>
-              {formatRoomTime(room.last_message_time)}
-            </Text>
-          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {room.last_message_time && (
+              <Text style={{ fontSize: 10, color: hasUnread ? '#695d4a' : '#c4c7c7', fontFamily: 'DM-Sans' }}>
+                {formatRoomTime(room.last_message_time)}
+              </Text>
+            )}
+            {hasUnread && (
+              <View style={{ backgroundColor: '#1a1c1a', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 }}>
+                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>
+                  {(room.unread_count ?? 0) > 9 ? '9+' : String(room.unread_count)}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
         {room.last_message ? (
-          <Text style={{ fontSize: 12, color: '#747878', fontFamily: 'DM-Sans', marginTop: 2 }} numberOfLines={1}>
+          <Text style={{ fontSize: 12, color: hasUnread ? '#1a1c1a' : '#747878', fontFamily: 'DM-Sans', fontWeight: hasUnread ? '600' : '400', marginTop: 2 }} numberOfLines={1}>
             {room.last_sender ? `${room.last_sender}: ` : ''}{room.last_message}
           </Text>
         ) : (
           <Text style={{ fontSize: 12, color: '#c4c7c7', fontFamily: 'DM-Sans', marginTop: 2 }}>No messages yet</Text>
+        )}
+        {hasUnread && room.unread_count! > 1 && (
+          <Text style={{ fontSize: 10, color: '#695d4a', fontFamily: 'DM-Sans', marginTop: 2 }}>
+            {unreadLabel}
+          </Text>
         )}
       </View>
     </TouchableOpacity>

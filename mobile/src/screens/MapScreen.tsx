@@ -92,6 +92,8 @@ export default function MapScreen() {
   const destinationRef = useRef<{ lat: number; lng: number; name: string } | null>(null);
   const navActiveRef = useRef(false);
   const arrivedRef = useRef(false);
+  const routeCoordsRef = useRef<{ latitude: number; longitude: number }[]>([]);
+  const rerouteCooldownRef = useRef(false);
 
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [destination, setDestination] = useState<{ lat: number; lng: number; name: string } | null>(null);
@@ -110,11 +112,13 @@ export default function MapScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [arrived, setArrived] = useState(false);
   const [completionInfo, setCompletionInfo] = useState<{ distance: number; duration: number } | null>(null);
+  const [isRerouting, setIsRerouting] = useState(false);
 
   // Keep refs in sync so location callback doesn't close over stale state
   useEffect(() => { destinationRef.current = destination; }, [destination]);
   useEffect(() => { navActiveRef.current = navActive; }, [navActive]);
   useEffect(() => { arrivedRef.current = arrived; }, [arrived]);
+  useEffect(() => { routeCoordsRef.current = routeCoords; }, [routeCoords]);
 
   // Elapsed timer
   useEffect(() => {
@@ -170,6 +174,27 @@ export default function MapScreen() {
           setDistanceCovered(prev => prev + delta);
         }
         prevNavLocRef.current = newLoc;
+
+        // Off-route detection: find nearest point on current route
+        const route = routeCoordsRef.current;
+        if (route.length > 1 && !rerouteCooldownRef.current) {
+          let minDist = Infinity;
+          for (const pt of route) {
+            const d = haversineKm(newLoc.lat, newLoc.lng, pt.latitude, pt.longitude);
+            if (d < minDist) minDist = d;
+          }
+          if (minDist > 0.2) {
+            // More than 200m off-route — recalculate
+            rerouteCooldownRef.current = true;
+            setIsRerouting(true);
+            const dest = destinationRef.current!;
+            fetchRoute(newLoc, dest).finally(() => {
+              setIsRerouting(false);
+              // Allow reroute again after 60s
+              setTimeout(() => { rerouteCooldownRef.current = false; }, 60000);
+            });
+          }
+        }
 
         // Update remaining
         const dest = destinationRef.current;
@@ -417,6 +442,12 @@ export default function MapScreen() {
           paddingBottom: 16, paddingHorizontal: 20,
           elevation: 100, zIndex: 100,
         }}>
+          {isRerouting && (
+            <View style={{ backgroundColor: '#f59e0b', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', fontFamily: 'DM-Sans' }}>Re-routing...</Text>
+            </View>
+          )}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
               <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1.5, fontFamily: 'DM-Sans' }}>

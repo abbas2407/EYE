@@ -130,9 +130,7 @@ function MainApp() {
         const res = await apiFetch('/api/chat/rooms');
         if (!res?.ok) return;
         const rooms: any[] = await res.json();
-        const count = rooms.filter(r =>
-          r.last_message_time && r.last_message_time > lastChatVisitRef.current
-        ).length;
+        const count = rooms.reduce((sum: number, r: any) => sum + (r.unread_count || 0), 0);
         setChatUnread(count);
       } catch {}
     }

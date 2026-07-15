@@ -27,6 +27,7 @@ interface Summary {
   total_shifts: number;
   tasks_today: number;
   tasks_completed_today: number;
+  km_today: number;
   tasks: TaskItem[];
 }
 
@@ -71,6 +72,7 @@ export default function DailySummaryScreen({ onBack }: DailySummaryScreenProps) 
     { label: 'Hours Today', value: summary.total_hours_today ? `${summary.total_hours_today.toFixed(1)}h` : '0h', icon: 'time-outline' },
     { label: 'Tasks Done', value: `${summary.tasks_completed_today}/${summary.tasks_today}`, icon: 'checkmark-circle-outline' },
     { label: 'Shifts', value: summary.total_shifts.toString(), icon: 'calendar-outline' },
+    { label: 'Distance', value: summary.km_today ? (summary.km_today >= 1 ? `${summary.km_today.toFixed(1)} km` : `${Math.round(summary.km_today * 1000)} m`) : '0 m', icon: 'navigate-outline' },
   ] : [];
 
   return (
