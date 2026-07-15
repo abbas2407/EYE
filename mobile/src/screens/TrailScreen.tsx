@@ -9,6 +9,33 @@ interface TrailScreenProps {
   onBack: () => void;
 }
 
+async function osrmMatch(pings: Ping[]): Promise<{ latitude: number; longitude: number }[] | null> {
+  if (pings.length < 2) return null;
+  try {
+    const CHUNK = 100;
+    const all: { latitude: number; longitude: number }[] = [];
+    for (let i = 0; i < pings.length; i += CHUNK - 1) {
+      const chunk = pings.slice(i, i + CHUNK);
+      if (chunk.length < 2) break;
+      const coords = chunk.map(p => `${p.lng},${p.lat}`).join(';');
+      const radiuses = chunk.map(() => '100').join(';');
+      const url = `https://router.project-osrm.org/match/v1/driving/${coords}?overview=full&geometries=geojson&radiuses=${radiuses}&gaps=ignore&annotations=false`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.code === 'Ok' && data.matchings?.length) {
+        data.matchings.forEach((m: any) =>
+          m.geometry.coordinates.forEach(([lng, lat]: number[]) =>
+            all.push({ latitude: lat, longitude: lng })
+          )
+        );
+      } else {
+        chunk.forEach(p => all.push({ latitude: p.lat, longitude: p.lng }));
+      }
+    }
+    return all.length > 1 ? all : null;
+  } catch { return null; }
+}
+
 interface Ping { lat: number; lng: number; time: string; }
 interface TrailEvent {
   type: 'punch_in' | 'punch_out' | 'travel' | 'halt';
@@ -50,23 +77,33 @@ export default function TrailScreen({ onBack }: TrailScreenProps) {
   const [events, setEvents] = useState<TrailEvent[]>([]);
   const [stats, setStats] = useState<TrailStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roadCoords, setRoadCoords] = useState<{ latitude: number; longitude: number }[] | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(true);
+  const lastPingCountRef = useRef(0);
 
   const fetchTrail = useCallback(async () => {
     try {
       const res = await apiFetch('/api/gps/my-trail');
       if (!res?.ok) return;
       const data = await res.json();
-      setPings(data.pings ?? []);
+      const newPings: Ping[] = data.pings ?? [];
+      setPings(newPings);
       setEvents(data.events ?? []);
       setStats(data.stats ?? null);
-      // Fit map to trail after first load
-      if (data.pings?.length > 1 && mapRef.current) {
+      // Fit map on first load
+      if (newPings.length > 1 && mapRef.current && lastPingCountRef.current === 0) {
         mapRef.current.fitToCoordinates(
-          data.pings.map((p: Ping) => ({ latitude: p.lat, longitude: p.lng })),
+          newPings.map((p: Ping) => ({ latitude: p.lat, longitude: p.lng })),
           { edgePadding: { top: 60, right: 40, bottom: 60, left: 40 }, animated: true }
         );
+      }
+      // Re-run OSRM only when ping count changes (new GPS points arrived)
+      if (newPings.length !== lastPingCountRef.current && newPings.length >= 2) {
+        lastPingCountRef.current = newPings.length;
+        osrmMatch(newPings).then(matched => {
+          if (matched) setRoadCoords(matched);
+        });
       }
     } catch {}
     finally { setLoading(false); }
@@ -90,7 +127,8 @@ export default function TrailScreen({ onBack }: TrailScreenProps) {
     };
   }, []);
 
-  const routeCoords = pings.map(p => ({ latitude: p.lat, longitude: p.lng }));
+  const rawCoords = pings.map(p => ({ latitude: p.lat, longitude: p.lng }));
+  const routeCoords = roadCoords ?? rawCoords;
   const haltEvents = events.filter(e => e.type === 'halt' && e.lat && e.lng);
 
   return (
@@ -125,14 +163,14 @@ export default function TrailScreen({ onBack }: TrailScreenProps) {
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
           {/* Map */}
           <View style={{ height: 280, marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', borderWidth: 0.5, borderColor: '#e3e2e0' }}>
-            {routeCoords.length > 0 ? (
+            {rawCoords.length > 0 ? (
               <MapView
                 ref={mapRef}
                 provider={PROVIDER_GOOGLE}
                 style={{ flex: 1 }}
                 initialRegion={{
-                  latitude: routeCoords[0]?.latitude ?? 17.385,
-                  longitude: routeCoords[0]?.longitude ?? 78.4867,
+                  latitude: rawCoords[0]?.latitude ?? 17.385,
+                  longitude: rawCoords[0]?.longitude ?? 78.4867,
                   latitudeDelta: 0.05,
                   longitudeDelta: 0.05,
                 }}
@@ -141,16 +179,23 @@ export default function TrailScreen({ onBack }: TrailScreenProps) {
                 scrollEnabled
                 zoomEnabled
               >
-                {/* White outline for contrast */}
-                <Polyline coordinates={routeCoords} strokeColor="#ffffff" strokeWidth={7} />
-                {/* Orange route line */}
-                <Polyline coordinates={routeCoords} strokeColor="#FF6D00" strokeWidth={4} />
-                {/* Start marker — green */}
-                <Marker coordinate={routeCoords[0]} anchor={{ x: 0.5, y: 0.5 }}>
+                {/* Raw grey dashed line shown before OSRM completes */}
+                {!roadCoords && rawCoords.length >= 2 && (
+                  <Polyline coordinates={rawCoords} strokeColor="#c4c7c7" strokeWidth={3} lineDashPattern={[6, 4]} />
+                )}
+                {/* Road-snapped orange route */}
+                {routeCoords.length >= 2 && roadCoords && (
+                  <>
+                    <Polyline coordinates={routeCoords} strokeColor="#ffffff" strokeWidth={7} />
+                    <Polyline coordinates={routeCoords} strokeColor="#FF6D00" strokeWidth={4} />
+                  </>
+                )}
+                {/* Start marker — green (always at first raw ping) */}
+                <Marker coordinate={rawCoords[0]} anchor={{ x: 0.5, y: 0.5 }}>
                   <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#22c55e', borderWidth: 2.5, borderColor: '#fff' }} />
                 </Marker>
-                {/* End / current position — red */}
-                <Marker coordinate={routeCoords[routeCoords.length - 1]} anchor={{ x: 0.5, y: 0.5 }}>
+                {/* End / current position — red (always at last raw ping) */}
+                <Marker coordinate={rawCoords[rawCoords.length - 1]} anchor={{ x: 0.5, y: 0.5 }}>
                   <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#ef4444', borderWidth: 2.5, borderColor: '#fff' }} />
                 </Marker>
                 {/* Halt markers — blue */}
