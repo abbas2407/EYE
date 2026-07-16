@@ -6,7 +6,7 @@ services:
     container_name: fieldpulse-api
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8001:8000"
+      - "8001:8000"
     environment:
       - DB_PATH=/app/data/fieldpulse.db
       - UPLOAD_DIR=/app/data/uploads
@@ -28,7 +28,7 @@ services:
     container_name: fieldpulse-admin
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:80"
+      - "8080:80"
     depends_on:
       - fieldpulse-api
 
