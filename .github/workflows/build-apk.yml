@@ -45,13 +45,67 @@ jobs:
         working-directory: mobile/android
         run: chmod +x gradlew
 
-      - name: Remove Sonatype snapshots repo (consistently returns 504)
-        working-directory: mobile/android
+      - name: Remove Sonatype snapshots repo from all Gradle files
+        working-directory: mobile
         run: |
-          find . -name "*.gradle" | xargs grep -l "sonatype" 2>/dev/null | while read f; do
-            sed -i '/sonatype/Id' "$f"
-            echo "Patched: $f"
-          done
+          python3 << 'EOF'
+          import os, re
+
+          def remove_sonatype(content):
+              # Remove maven { ... } blocks that reference sonatype (single and multi-line)
+              return re.sub(
+                  r'[ \t]*maven\s*\{[^{}]*sonatype[^{}]*\}\n?',
+                  '',
+                  content,
+                  flags=re.IGNORECASE | re.DOTALL
+              )
+
+          search_dirs = [
+              'android',
+              'node_modules/@react-native/gradle-plugin',
+          ]
+
+          for search_dir in search_dirs:
+              for root, dirs, files in os.walk(search_dir):
+                  dirs[:] = [d for d in dirs if d not in ('.git', 'build', '.gradle')]
+                  for filename in files:
+                      if filename.endswith('.gradle') or filename.endswith('.gradle.kts'):
+                          path = os.path.join(root, filename)
+                          try:
+                              with open(path, 'r', encoding='utf-8') as f:
+                                  content = f.read()
+                              cleaned = remove_sonatype(content)
+                              if cleaned != content:
+                                  with open(path, 'w', encoding='utf-8') as f:
+                                      f.write(cleaned)
+                                  print(f'Patched: {path}')
+                          except Exception as e:
+                              print(f'Skip {path}: {e}')
+          EOF
+
+      - name: Block Sonatype via Gradle init script (fallback)
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/no-sonatype.gradle << 'INITEOF'
+          def blockSonatype = { repos ->
+            try {
+              repos.removeIf { repo ->
+                repo instanceof org.gradle.api.artifacts.repositories.MavenArtifactRepository &&
+                repo.url.toString().contains("sonatype")
+              }
+            } catch (Exception ignored) {}
+          }
+          settingsEvaluated { settings ->
+            blockSonatype(settings.pluginManagement.repositories)
+            try { blockSonatype(settings.dependencyResolutionManagement.repositories) } catch (Exception ignored) {}
+          }
+          allprojects {
+            afterEvaluate { project ->
+              blockSonatype(project.buildscript.repositories)
+              blockSonatype(project.repositories)
+            }
+          }
+          INITEOF
 
       - name: Configure Gradle caching
         uses: gradle/actions/setup-gradle@v3
