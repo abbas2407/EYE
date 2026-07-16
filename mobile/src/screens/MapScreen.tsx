@@ -278,17 +278,17 @@ export default function MapScreen() {
       { latitude: dest.lat, longitude: dest.lng },
     ];
     try {
-      // OSRM: free, no API key, follows real roads (coords are lng,lat order)
-      const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${dest.lng},${dest.lat}?overview=full&geometries=polyline`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.code === 'Ok' && data.routes?.length) {
-        setRouteCoords(decodePolyline(data.routes[0].geometry));
-        setDistanceKm(data.routes[0].distance / 1000);
-        setEtaMinutes(Math.ceil(data.routes[0].duration / 60));
-      } else {
-        setRouteCoords(straight);
+      const res = await apiFetch(`/api/places/directions?origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}`);
+      if (res?.ok) {
+        const data = await res.json();
+        if (data.routes?.length) {
+          setRouteCoords(decodePolyline(data.routes[0].overview_polyline.points));
+          setDistanceKm(data.routes[0].legs[0].distance.value / 1000);
+          setEtaMinutes(Math.ceil(data.routes[0].legs[0].duration.value / 60));
+          return;
+        }
       }
+      setRouteCoords(straight);
     } catch {
       setRouteCoords(straight);
     }

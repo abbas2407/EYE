@@ -3406,7 +3406,8 @@ function setClientMapPin(lat,lng){
   clientModalMap.setView([lat,lng],15);
   // Reverse geocode via backend (Geoapify)
   apiFetch(`/api/places/reverse-geocode?lat=${lat}&lon=${lng}`)
-    .then(d=>{
+    .then(r=>r&&r.json()).then(d=>{
+      if(!d)return;
       const set=(id,v)=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v||'';};
       set('cf-city',d.city||'');
       set('cf-district',d.state||'');
@@ -3427,7 +3428,8 @@ async function runClientSearch(val){
   const res=document.getElementById('cf-search-results');
   res.style.display='block';res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">Searching…</div>';
   try{
-    const data=await apiFetch(`/api/places/autocomplete?input=${encodeURIComponent(val)}`);
+    const r=await apiFetch(`/api/places/autocomplete?input=${encodeURIComponent(val)}`);
+    const data=r?await r.json():{};
     const preds=data.predictions||[];
     if(!preds.length){res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">No results</div>';return;}
     res.innerHTML=preds.map((d,i)=>`<div onclick="selectClientSearchResult(${d.lat},${d.lon},'${esc(d.description).replace(/'/g,"\\'")}')"
@@ -3521,7 +3523,8 @@ function setSiteMapPin(lat,lng){
   siteModalMarker=L.marker([lat,lng]).addTo(siteModalMap);
   siteModalMap.setView([lat,lng],15);
   apiFetch(`/api/places/reverse-geocode?lat=${lat}&lon=${lng}`)
-    .then(d=>{
+    .then(r=>r&&r.json()).then(d=>{
+      if(!d)return;
       const set=(id,v)=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v||'';};
       set('sf-city',d.city||'');
       set('sf-pin',d.postcode||'');
@@ -3540,7 +3543,8 @@ async function runSiteSearch(val){
   const res=document.getElementById('sf-search-results');
   res.style.display='block';res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">Searching…</div>';
   try{
-    const data=await apiFetch(`/api/places/autocomplete?input=${encodeURIComponent(val)}`);
+    const r=await apiFetch(`/api/places/autocomplete?input=${encodeURIComponent(val)}`);
+    const data=r?await r.json():{};
     const preds=data.predictions||[];
     if(!preds.length){res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">No results</div>';return;}
     res.innerHTML=preds.map(d=>`<div onclick="selectSiteSearchResult(${d.lat},${d.lon},'${esc(d.description).replace(/'/g,"\\'")}')"
