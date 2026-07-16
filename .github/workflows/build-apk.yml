@@ -45,6 +45,19 @@ jobs:
         working-directory: mobile/android
         run: chmod +x gradlew
 
+      - name: Remove Sonatype snapshots repo (consistently returns 504)
+        working-directory: mobile/android
+        run: |
+          find . -name "*.gradle" | xargs grep -l "sonatype" 2>/dev/null | while read f; do
+            sed -i '/sonatype/Id' "$f"
+            echo "Patched: $f"
+          done
+
+      - name: Configure Gradle caching
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: false
+
       - name: Build Release APK
         working-directory: mobile/android
         run: ./gradlew assembleRelease --no-daemon --max-workers=2
