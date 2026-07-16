@@ -12,6 +12,7 @@ services:
       - UPLOAD_DIR=/app/data/uploads
       - BASE_URL=https://fp.cyberlink.co.in
       - JWT_SECRET=fieldpulse-jwt-secret-2024-cyberlink
+      - GEOAPIFY_KEY=58776059a2734444a13b6f1a862b765a
     volumes:
       - fieldpulse_data:/app/data
     healthcheck:

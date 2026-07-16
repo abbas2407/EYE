@@ -53,6 +53,7 @@ UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "/app/data/uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 BASE_URL = os.getenv("BASE_URL", "http://167.233.90.245:8000")
 GOOGLE_MAPS_API_KEY = "AIzaSyAJHF-B2ulEDrxStgKH4NS7szhFdjErnos"
+GEOAPIFY_KEY = os.getenv("GEOAPIFY_KEY", "58776059a2734444a13b6f1a862b765a")
 
 app = FastAPI(title="FieldPulse API", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
@@ -622,51 +623,103 @@ async def upload_file(file: UploadFile = File(...),
     return {"url": url, "file_url": url, "filename": filename}
 
 
-# ── Places Proxy (Nominatim/OSM — no key restrictions) ────────────────────────
-_OSM_HEADERS = {"User-Agent": "FieldPulse-App/2.0 (admin@fieldpulse.in)"}
+# ── Places Proxy (Geoapify) ───────────────────────────────────────────────────
+_GEO_BASE = "https://api.geoapify.com/v1"
+
+def _encode_polyline(coords: list) -> str:
+    """Encode [(lat, lng), ...] list to Google-compatible polyline string."""
+    result = []
+    prev_lat = prev_lng = 0
+    for lat, lng in coords:
+        for cur, prev in [(round(lat * 1e5), prev_lat), (round(lng * 1e5), prev_lng)]:
+            delta = cur - prev
+            delta = ~(delta << 1) if delta < 0 else delta << 1
+            while delta >= 0x20:
+                result.append(chr((0x20 | (delta & 0x1f)) + 63))
+                delta >>= 5
+            result.append(chr(delta + 63))
+        prev_lat, prev_lng = round(lat * 1e5), round(lng * 1e5)
+    return "".join(result)
 
 @app.get("/api/places/autocomplete")
 async def places_autocomplete(input: str, current_user: User = Depends(get_current_user)):
-    async with httpx.AsyncClient(timeout=8.0, headers=_OSM_HEADERS) as client:
-        res = await client.get(
-            "https://nominatim.openstreetmap.org/search",
-            params={"q": input, "format": "json", "limit": 5,
-                    "countrycodes": "in", "addressdetails": 0},
-        )
-    results = res.json() if res.status_code == 200 else []
-    predictions = [
-        {"place_id": str(r["place_id"]),
-         "description": r["display_name"],
-         "lat": float(r["lat"]),
-         "lon": float(r["lon"])}
-        for r in results
-    ]
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            res = await client.get(
+                f"{_GEO_BASE}/geocode/search",
+                params={"text": input, "limit": 5, "lang": "en",
+                        "filter": "countrycode:in", "apiKey": GEOAPIFY_KEY},
+            )
+        features = res.json().get("features", []) if res.status_code == 200 else []
+        predictions = [
+            {"place_id": f["properties"].get("place_id", ""),
+             "description": f["properties"].get("formatted", ""),
+             "lat": f["properties"].get("lat", 0.0),
+             "lon": f["properties"].get("lon", 0.0)}
+            for f in features
+        ]
+    except Exception as e:
+        log.warning(f"Geoapify autocomplete failed: {e}")
+        predictions = []
     return {"predictions": predictions, "status": "OK"}
+
+@app.get("/api/places/reverse-geocode")
+async def places_reverse_geocode(lat: float, lon: float, current_user: User = Depends(get_current_user)):
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            res = await client.get(
+                f"{_GEO_BASE}/geocode/reverse",
+                params={"lat": lat, "lon": lon, "apiKey": GEOAPIFY_KEY},
+            )
+        features = res.json().get("features", []) if res.status_code == 200 else []
+        if features:
+            props = features[0]["properties"]
+            return {
+                "address": props.get("formatted", ""),
+                "street": props.get("street", ""),
+                "city": props.get("city", props.get("county", "")),
+                "state": props.get("state", ""),
+                "country": props.get("country", ""),
+                "postcode": props.get("postcode", ""),
+            }
+    except Exception as e:
+        log.warning(f"Geoapify reverse geocode failed: {e}")
+    return {"address": "", "city": "", "state": "", "country": ""}
 
 @app.get("/api/places/directions")
 async def places_directions(origin: str, destination: str, current_user: User = Depends(get_current_user)):
-    # OSRM public API for routing (open-source, no key)
-    # origin/destination are "lat,lon" strings
     try:
         olat, olon = origin.split(",")
         dlat, dlon = destination.split(",")
-        async with httpx.AsyncClient(timeout=10.0, headers=_OSM_HEADERS) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.get(
-                f"https://router.project-osrm.org/route/v1/driving/{olon},{olat};{dlon},{dlat}",
-                params={"overview": "full", "geometries": "polyline", "steps": "false"},
+                f"{_GEO_BASE}/routing",
+                params={"waypoints": f"{olat},{olon}|{dlat},{dlon}",
+                        "mode": "drive", "apiKey": GEOAPIFY_KEY},
             )
         data = res.json()
-        if data.get("code") == "Ok" and data.get("routes"):
-            route = data["routes"][0]
+        features = data.get("features", [])
+        if features:
+            feat = features[0]
+            props = feat.get("properties", {})
+            geom = feat.get("geometry", {})
+            # Flatten MultiLineString or LineString coordinates (GeoJSON: [lon, lat])
+            raw = geom.get("coordinates", [])
+            if geom.get("type") == "MultiLineString":
+                all_coords = [c for seg in raw for c in seg]
+            else:
+                all_coords = raw
+            # Swap to (lat, lon) for polyline encoding
+            latlon = [(c[1], c[0]) for c in all_coords]
             return {
                 "routes": [{
-                    "overview_polyline": {"points": route["geometry"]},
-                    "legs": [{"distance": {"value": int(route["distance"])},
-                              "duration": {"value": int(route["duration"])}}],
+                    "overview_polyline": {"points": _encode_polyline(latlon)},
+                    "legs": [{"distance": {"value": int(props.get("distance", 0))},
+                              "duration": {"value": int(props.get("time", 0))}}],
                 }]
             }
     except Exception as e:
-        log.warning(f"OSRM routing failed: {e}")
+        log.warning(f"Geoapify routing failed: {e}")
     return {"routes": []}
 
 

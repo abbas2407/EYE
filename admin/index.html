@@ -3404,17 +3404,16 @@ function setClientMapPin(lat,lng){
   if(clientModalMarker)clientModalMap.removeLayer(clientModalMarker);
   clientModalMarker=L.marker([lat,lng]).addTo(clientModalMap);
   clientModalMap.setView([lat,lng],15);
-  // Reverse geocode
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-    .then(r=>r.json()).then(d=>{
-      const a=d.address||{};
+  // Reverse geocode via backend (Geoapify)
+  apiFetch(`/api/places/reverse-geocode?lat=${lat}&lon=${lng}`)
+    .then(d=>{
       const set=(id,v)=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v||'';};
-      set('cf-city',a.city||a.town||a.village||a.suburb||'');
-      set('cf-district',a.county||a.district||'');
-      set('cf-state',a.state||'');
-      set('cf-country',a.country||'');
-      set('cf-pincode',a.postcode||'');
-      set('cf-addr1',d.display_name?d.display_name.split(',')[0]:'');
+      set('cf-city',d.city||'');
+      set('cf-district',d.state||'');
+      set('cf-state',d.state||'');
+      set('cf-country',d.country||'');
+      set('cf-pincode',d.postcode||'');
+      set('cf-addr1',d.street||(d.address||'').split(',')[0]||'');
     }).catch(()=>{});
 }
 
@@ -3428,12 +3427,12 @@ async function runClientSearch(val){
   const res=document.getElementById('cf-search-results');
   res.style.display='block';res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">Searching…</div>';
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=5`);
-    const data=await r.json();
-    if(!data.length){res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">No results</div>';return;}
-    res.innerHTML=data.map((d,i)=>`<div onclick="selectClientSearchResult(${d.lat},${d.lon},'${esc(d.display_name).replace(/'/g,"\\'")}')"
+    const data=await apiFetch(`/api/places/autocomplete?input=${encodeURIComponent(val)}`);
+    const preds=data.predictions||[];
+    if(!preds.length){res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">No results</div>';return;}
+    res.innerHTML=preds.map((d,i)=>`<div onclick="selectClientSearchResult(${d.lat},${d.lon},'${esc(d.description).replace(/'/g,"\\'")}')"
       style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f0f0f0"
-      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${esc(d.display_name)}</div>`).join('');
+      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${esc(d.description)}</div>`).join('');
   }catch(e){res.innerHTML='<div style="padding:8px 12px;color:#ba1a1a;font-size:12px">Search failed</div>';}
 }
 function selectClientSearchResult(lat,lng,label){
@@ -3521,14 +3520,13 @@ function setSiteMapPin(lat,lng){
   if(siteModalMarker)siteModalMap.removeLayer(siteModalMarker);
   siteModalMarker=L.marker([lat,lng]).addTo(siteModalMap);
   siteModalMap.setView([lat,lng],15);
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-    .then(r=>r.json()).then(d=>{
-      const a=d.address||{};
+  apiFetch(`/api/places/reverse-geocode?lat=${lat}&lon=${lng}`)
+    .then(d=>{
       const set=(id,v)=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v||'';};
-      set('sf-city',a.city||a.town||a.village||a.suburb||'');
-      set('sf-pin',a.postcode||'');
-      if(!document.getElementById('sf-addr').value&&d.display_name)
-        document.getElementById('sf-addr').value=d.display_name.split(',').slice(0,3).join(', ');
+      set('sf-city',d.city||'');
+      set('sf-pin',d.postcode||'');
+      if(!document.getElementById('sf-addr').value&&d.address)
+        document.getElementById('sf-addr').value=d.address.split(',').slice(0,3).join(', ');
     }).catch(()=>{});
 }
 
@@ -3542,12 +3540,12 @@ async function runSiteSearch(val){
   const res=document.getElementById('sf-search-results');
   res.style.display='block';res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">Searching…</div>';
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=5`);
-    const data=await r.json();
-    if(!data.length){res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">No results</div>';return;}
-    res.innerHTML=data.map(d=>`<div onclick="selectSiteSearchResult(${d.lat},${d.lon},'${esc(d.display_name).replace(/'/g,"\\'")}')"
+    const data=await apiFetch(`/api/places/autocomplete?input=${encodeURIComponent(val)}`);
+    const preds=data.predictions||[];
+    if(!preds.length){res.innerHTML='<div style="padding:8px 12px;color:#747878;font-size:12px">No results</div>';return;}
+    res.innerHTML=preds.map(d=>`<div onclick="selectSiteSearchResult(${d.lat},${d.lon},'${esc(d.description).replace(/'/g,"\\'")}')"
       style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f0f0f0"
-      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${esc(d.display_name)}</div>`).join('');
+      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${esc(d.description)}</div>`).join('');
   }catch(e){res.innerHTML='<div style="padding:8px 12px;color:#ba1a1a;font-size:12px">Search failed</div>';}
 }
 function selectSiteSearchResult(lat,lng,label){
