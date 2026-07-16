@@ -1494,7 +1494,7 @@ async function doLogin(){
     document.getElementById('admin-name').textContent=adminName;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
-    showTab('dashboard'); startUnreadPoll(); startNotifPoll();
+    const _h=location.hash.slice(1);showTab(TABS.includes(_h)?_h:'dashboard');startUnreadPoll();startNotifPoll();
   }catch{errEl.textContent='Unable to connect to server.';errEl.style.display='block';}
 }
 function doLogout(){localStorage.removeItem('fp_token');localStorage.removeItem('fp_admin_name');token=null;location.reload();}
@@ -1510,6 +1510,7 @@ const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',organization:'Organiza
   leaves:'Leave Requests',chat:'Chat',clients:'Clients & Sites',performance:'Performance',reports:'Reports'};
 
 function showTab(name){
+  history.replaceState(null,'','#'+name);
   document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',TABS[i]===name));
   document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
   const el=document.getElementById(`tab-${name}`);
@@ -1966,7 +1967,6 @@ async function loadTimeline(silent=false){
     }).join('');
   }
 
-  // Draw route — snap to roads via OSRM map-matching, fall back to raw pings
   tlMarkers.forEach(m=>m.remove()); tlMarkers=[];
   if(tlPolyline){tlPolyline.remove();tlPolyline=null;}
   if(data.pings.length>0&&tlMap){
@@ -1974,24 +1974,11 @@ async function loadTimeline(silent=false){
     const mkDot=(clr)=>L.divIcon({className:'',
       html:`<div style="width:14px;height:14px;border-radius:7px;background:${clr};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)"></div>`,
       iconSize:[14,14],iconAnchor:[7,7]});
+    tlMap.fitBounds(rawCoords,{padding:[35,35]});
+    L.polyline(rawCoords,{color:'#ffffff',weight:8,opacity:0.9}).addTo(tlMap);
+    tlPolyline=L.polyline(rawCoords,{color:'#FF9500',weight:5,opacity:0.95}).addTo(tlMap);
     tlMarkers.push(L.marker(rawCoords[0],{icon:mkDot('#22c55e')}).addTo(tlMap));
     if(rawCoords.length>1)tlMarkers.push(L.marker(rawCoords[rawCoords.length-1],{icon:mkDot('#ef4444')}).addTo(tlMap));
-    tlMap.fitBounds(rawCoords,{padding:[35,35]});
-    // Draw raw pings immediately as thin grey line
-    tlPolyline=L.polyline(rawCoords,{color:'#c4c7c7',weight:3,opacity:0.5,dashArray:'6,4'}).addTo(tlMap);
-    // Async: snap to roads and replace with orange road-following line
-    osrmMatchCoords(data.pings).then(roadCoords=>{
-      if(tlPolyline){tlPolyline.remove();tlPolyline=null;}
-      const finalCoords=roadCoords||rawCoords;
-      // White outline for contrast
-      L.polyline(finalCoords,{color:'#ffffff',weight:8,opacity:0.9}).addTo(tlMap);
-      tlPolyline=L.polyline(finalCoords,{color:'#FF9500',weight:5,opacity:0.95}).addTo(tlMap);
-      // Re-raise markers so they're on top
-      tlMarkers.forEach(m=>m.remove());
-      tlMarkers=[];
-      tlMarkers.push(L.marker(rawCoords[0],{icon:mkDot('#22c55e')}).addTo(tlMap));
-      if(rawCoords.length>1)tlMarkers.push(L.marker(rawCoords[rawCoords.length-1],{icon:mkDot('#ef4444')}).addTo(tlMap));
-    });
   }else if(tlMap){
     tlMap.setView([20.5937,78.9629],5);
   }
@@ -2003,34 +1990,6 @@ async function loadTimeline(silent=false){
 
 function tlFocus(lat,lng){if(!lat||!lng||!tlMap)return;tlMap.setView([lat,lng],17);}
 
-// OSRM map-matching: snap sparse GPS pings onto actual roads
-// Uses chunks of ≤100 points and stitches results together
-async function osrmMatchCoords(pings){
-  if(!pings||pings.length<2)return null;
-  try{
-    // Split into chunks of 100
-    const CHUNK=100;
-    const allCoords=[];
-    for(let i=0;i<pings.length;i+=CHUNK-1){
-      const chunk=pings.slice(i,i+CHUNK);
-      if(chunk.length<2)break;
-      const coords=chunk.map(p=>`${p.lng},${p.lat}`).join(';');
-      const radiuses=chunk.map(()=>'100').join(';'); // 100m radius handles sparse GPS
-      const url=`https://router.project-osrm.org/match/v1/driving/${coords}?overview=full&geometries=geojson&radiuses=${radiuses}&gaps=ignore&annotations=false`;
-      const res=await fetch(url);
-      const data=await res.json();
-      if(data.code==='Ok'&&data.matchings?.length){
-        data.matchings.forEach(m=>{
-          m.geometry.coordinates.forEach(([lng,lat])=>allCoords.push([lat,lng]));
-        });
-      } else {
-        // Chunk failed — fall back to raw pings for this chunk
-        chunk.forEach(p=>allCoords.push([p.lat,p.lng]));
-      }
-    }
-    return allCoords.length>1?allCoords:null;
-  }catch{return null;}
-}
 function tl_prevDay(){
   const d=document.getElementById('tl-date'); if(!d||!d.value)return;
   const nd=new Date(d.value); nd.setDate(nd.getDate()-1);
@@ -3922,7 +3881,7 @@ if(token){
   document.getElementById('admin-name').textContent=adminName;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
-  showTab('dashboard');
+  const _h=location.hash.slice(1);showTab(TABS.includes(_h)?_h:'dashboard');
   startUnreadPoll();
   startNotifPoll();
 }
