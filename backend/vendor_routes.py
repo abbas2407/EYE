@@ -10,7 +10,8 @@ from jose import JWTError
 
 from database import get_db
 from auth import hash_password, verify_password, decode_token, create_token
-from models import User, AttendanceLog, GPSPing, Task, Message, ChatRoom, ChatMember
+from models import (User, AttendanceLog, GPSPing, Task, Message, ChatRoom, ChatMember,
+                    Leave, LeaveBalance, PushToken, RefreshToken, Client, Site)
 from vendor_models import (
     Company, VendorAdmin, Plan, Invoice, Payment, PromoCode,
     Announcement, SupportTicket, TicketReply, AuditLog,
@@ -377,10 +378,25 @@ def delete_company(company_id: str, request: Request,
     if not c:
         raise HTTPException(404, "Company not found")
     name = c.name
+    # Cascade: delete all operational data for this company's users
+    user_ids = [r[0] for r in db.query(User.id).filter(User.company_id == company_id).all()]
+    if user_ids:
+        db.query(ChatMember).filter(ChatMember.user_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(Message).filter(Message.sender_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(GPSPing).filter(GPSPing.user_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(AttendanceLog).filter(AttendanceLog.user_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(LeaveBalance).filter(LeaveBalance.user_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(Leave).filter(Leave.user_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(PushToken).filter(PushToken.user_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(RefreshToken).filter(RefreshToken.user_id.in_(user_ids)).delete(synchronize_session=False)
+        db.query(Task).filter(Task.company_id == company_id).delete(synchronize_session=False)
+        db.query(Client).filter(Client.company_id == company_id).delete(synchronize_session=False)
+        db.query(Site).filter(Site.company_id == company_id).delete(synchronize_session=False)
+        db.query(User).filter(User.company_id == company_id).delete(synchronize_session=False)
     db.delete(c)
     db.commit()
     _audit(db, v, "delete_company", "company", company_id, {"name": name}, request.client.host)
-    return {"ok": True}
+    return {"ok": True, "deleted_users": len(user_ids)}
 
 
 @router.post("/companies/{company_id}/extend")
@@ -414,6 +430,10 @@ def suspend_company(company_id: str, body: SuspendIn, request: Request,
     c.is_suspended = True
     c.suspension_reason = body.reason
     c.updated_at = datetime.utcnow()
+    # Deactivate all company users so they can't log in
+    db.query(User).filter(User.company_id == company_id).update(
+        {"is_active": False}, synchronize_session=False
+    )
     db.commit()
     _audit(db, v, "suspend_company", "company", c.id, {"reason": body.reason}, request.client.host)
     return _company_dict(c, db)
@@ -429,6 +449,10 @@ def activate_company(company_id: str, request: Request,
     c.is_active = True
     c.suspension_reason = None
     c.updated_at = datetime.utcnow()
+    # Re-enable all company users
+    db.query(User).filter(User.company_id == company_id).update(
+        {"is_active": True}, synchronize_session=False
+    )
     db.commit()
     _audit(db, v, "activate_company", "company", c.id, {}, request.client.host)
     return _company_dict(c, db)
@@ -932,6 +956,19 @@ def impersonate_user(user_id: str, request: Request,
     token = create_token({"sub": u.id, "role": u.role, "impersonated_by": v.id})
     _audit(db, v, "impersonate_user", "user", user_id, {"email": u.email}, request.client.host)
     return {"access_token": token, "user": {"id": u.id, "name": u.name, "email": u.email, "role": u.role}}
+
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: str, request: Request,
+                db: Session = Depends(get_db), v: VendorAdmin = Depends(get_vendor)):
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(404, "User not found")
+    email = u.email
+    db.delete(u)
+    db.commit()
+    _audit(db, v, "delete_user", "user", user_id, {"email": email}, request.client.host)
+    return {"ok": True}
 
 
 # ── Announcements ─────────────────────────────────────────────────────────────
