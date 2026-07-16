@@ -19,6 +19,8 @@ from models import (User, RefreshToken, AttendanceLog, Task, UploadedFile,
                     Client, Site)
 from auth import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from seed import seed
+import vendor_models
+from vendor_routes import router as vendor_router
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -48,6 +50,7 @@ app = FastAPI(title="FieldPulse API", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+app.include_router(vendor_router)
 
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────

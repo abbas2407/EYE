@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FieldPulse — Vendor Panel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,'Palatino Linotype',Palatino,serif;background:#f4f5f7;color:#1a1a2e;min-height:100vh;display:flex}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit}
+
+/* ─── Sidebar ─────────────────────────────────── */
+#sidebar{width:220px;min-height:100vh;background:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.brand{padding:20px 18px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px}
+.brand-dot{width:32px;height:32px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-dot svg{width:18px;height:18px}
+.brand-name{font-size:14px;font-weight:700;color:#1a1a2e;line-height:1.2}
+.brand-sub{font-size:10px;color:#6b7280;letter-spacing:.5px;font-style:italic}
+nav{flex:1;padding:12px 0;overflow-y:auto}
+.nav-section{padding:8px 16px 4px;font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:13px;color:#4b5563;cursor:pointer;border-left:3px solid transparent;transition:all .15s}
+.nav-item:hover{background:#f9fafb;color:#2563eb}
+.nav-item.active{background:#eff6ff;color:#2563eb;border-left-color:#2563eb;font-weight:600}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+.sidebar-footer{padding:14px 18px;border-top:1px solid #f0f0f0;font-size:11px;color:#9ca3af}
+.sidebar-footer strong{display:block;color:#374151;font-size:12px;margin-bottom:2px}
+
+/* ─── Main ────────────────────────────────────── */
+#main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:16px;font-weight:700;color:#1a1a2e}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;font-size:13px;font-weight:600;border:none;transition:all .15s;cursor:pointer}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-secondary{background:#f3f4f6;color:#374151;border:1px solid #e5e7eb}
+.btn-secondary:hover{background:#e9ecf0}
+.btn-danger{background:#fee2e2;color:#dc2626}
+.btn-danger:hover{background:#fecaca}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:5px}
+.content{padding:24px 28px;flex:1}
+.page{display:none}
+.page.active{display:block}
+
+/* ─── Cards / stats ──────────────────────────── */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px}
+.stat-card .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-card .value{font-size:26px;font-weight:700;color:#1a1a2e;line-height:1}
+.stat-card .sub{font-size:11px;color:#9ca3af;margin-top:4px}
+.stat-card.blue .value{color:#2563eb}
+.stat-card.green .value{color:#16a34a}
+.stat-card.amber .value{color:#d97706}
+.stat-card.red .value{color:#dc2626}
+
+/* ─── Table ──────────────────────────────────── */
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:10px}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between}
+.card-header h3{font-size:14px;font-weight:700}
+.card-body{padding:0}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;padding:10px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb}
+td{padding:11px 16px;font-size:13px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+.pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.pill-trial{background:#eff6ff;color:#2563eb}
+.pill-active{background:#dcfce7;color:#16a34a}
+.pill-expired{background:#fee2e2;color:#dc2626}
+.pill-suspended{background:#fef3c7;color:#92400e}
+.pill-grace{background:#fce7f3;color:#9d174d}
+.pill-starter{background:#f0fdf4;color:#15803d}
+.pill-pro{background:#eff6ff;color:#1d4ed8}
+.pill-enterprise{background:#faf5ff;color:#6d28d9}
+
+/* ─── Search bar ─────────────────────────────── */
+.search-row{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.search-input{padding:8px 12px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;width:220px}
+.search-input:focus{outline:none;border-color:#2563eb}
+select.filter-select{padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer}
+select.filter-select:focus{outline:none;border-color:#2563eb}
+
+/* ─── Slide panel ────────────────────────────── */
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200}
+#overlay.open{display:block}
+#panel{position:fixed;top:0;right:-520px;width:500px;height:100vh;background:#fff;z-index:201;transition:right .25s ease;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.12)}
+#panel.open{right:0}
+.panel-header{padding:20px 24px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
+.panel-header h2{font-size:16px;font-weight:700}
+.close-btn{background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1}
+.close-btn:hover{color:#374151}
+.panel-body{padding:24px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#2563eb}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.section-title{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f9fafb}
+.toggle-row label{font-size:13px;color:#374151}
+.toggle{position:relative;width:36px;height:20px}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#d1d5db;border-radius:20px;cursor:pointer;transition:.2s}
+.slider:before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:#2563eb}
+input:checked+.slider:before{transform:translateX(16px)}
+.panel-footer{padding:16px 24px;border-top:1px solid #f0f0f0;display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;background:#fff}
+
+/* ─── Detail view ─────────────────────────────── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.detail-item label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
+.detail-item span{font-size:13px;color:#1a1a2e;font-weight:500}
+.progress-bar{background:#e5e7eb;border-radius:4px;height:6px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;background:#2563eb;border-radius:4px;transition:width .4s}
+.tab-bar{display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:20px}
+.tab-btn{padding:9px 16px;font-size:13px;font-weight:600;color:#6b7280;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;transition:.15s}
+.tab-btn.active{color:#2563eb;border-bottom-color:#2563eb}
+.note-item{padding:10px 0;border-bottom:1px solid #f5f5f5}
+.note-item:last-child{border-bottom:none}
+.note-meta{font-size:11px;color:#9ca3af;margin-top:3px}
+
+/* ─── Login ──────────────────────────────────── */
+#login-page{display:none;position:fixed;inset:0;background:#f4f5f7;align-items:center;justify-content:center;z-index:999}
+#login-page.active{display:flex}
+.login-box{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:40px;width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.login-logo-dot{width:40px;height:40px;background:#2563eb;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.login-logo-dot svg{width:22px;height:22px}
+.login-title{font-size:20px;font-weight:700;color:#1a1a2e}
+.login-sub{font-size:12px;color:#6b7280;font-style:italic}
+.login-form .form-group{margin-bottom:14px}
+.login-form input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit}
+.login-form input:focus{outline:none;border-color:#2563eb}
+.login-error{color:#dc2626;font-size:12px;margin-top:8px;display:none}
+.login-error.show{display:block}
+
+/* ─── Misc ───────────────────────────────────── */
+.empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:10px;background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:0 5px}
+.action-row{display:flex;gap:6px;align-items:center}
+.text-muted{color:#9ca3af;font-size:12px}
+.tag{display:inline-flex;padding:2px 7px;border-radius:4px;background:#f0f0f0;color:#555;font-size:11px;margin:1px}
+.feature-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+.dot-on{background:#22c55e}
+.dot-off{background:#d1d5db}
+
+/* ─── Audit / log entries ─────────────────────── */
+.log-item{padding:10px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:14px;align-items:flex-start}
+.log-item:last-child{border-bottom:none}
+.log-icon{width:28px;height:28px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.log-icon svg{width:13px;height:13px;color:#2563eb}
+.log-action{font-size:13px;font-weight:600;color:#1a1a2e}
+.log-detail{font-size:11px;color:#6b7280;margin-top:2px}
+.log-time{font-size:11px;color:#9ca3af;margin-left:auto;white-space:nowrap;padding-top:2px}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-page" class="active">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-dot">
+        <svg fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <div>
+        <div class="login-title">FieldPulse</div>
+        <div class="login-sub">Vendor Control Panel</div>
+      </div>
+    </div>
+    <div class="login-form">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="vendor@fieldpulse.com"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••"/>
+      </div>
+      <div class="login-error" id="login-error">Invalid credentials. Please try again.</div>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px;padding:10px" onclick="doLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div class="brand">
+    <div class="brand-dot">
+      <svg fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">FieldPulse</div>
+      <div class="brand-sub">Vendor Panel</div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-section">Companies</div>
+    <div class="nav-item" onclick="showPage('companies')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-10h2m4 0h2m-8 4h2m4 0h2"/></svg>
+      Companies
+    </div>
+    <div class="nav-item" onclick="showPage('analytics')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analytics
+    </div>
+    <div class="nav-section">Billing</div>
+    <div class="nav-item" onclick="showPage('billing')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Invoices & Payments
+    </div>
+    <div class="nav-item" onclick="showPage('plans')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Plans
+    </div>
+    <div class="nav-item" onclick="showPage('promo')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+      Promo Codes
+    </div>
+    <div class="nav-section">Operations</div>
+    <div class="nav-item" onclick="showPage('users')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg>
+      Users
+    </div>
+    <div class="nav-item" onclick="showPage('comms')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      Communications
+    </div>
+    <div class="nav-item" onclick="showPage('tickets')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+      Support Tickets
+    </div>
+    <div class="nav-section">Reports</div>
+    <div class="nav-item" onclick="showPage('reports')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      Reports & Exports
+    </div>
+    <div class="nav-item" onclick="showPage('audit')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      Audit Log
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <strong id="vendor-name-sidebar">Vendor Admin</strong>
+    <span style="cursor:pointer;color:#2563eb" onclick="logout()">Sign out</span>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-right">
+      <button class="btn btn-secondary btn-sm" onclick="refreshCurrent()">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-strip" id="dash-stats">
+        <div class="stat-card blue"><div class="label">Total Companies</div><div class="value" id="ds-total">—</div><div class="sub">Registered tenants</div></div>
+        <div class="stat-card green"><div class="label">Active</div><div class="value" id="ds-active">—</div><div class="sub">Paying customers</div></div>
+        <div class="stat-card amber"><div class="label">Trial</div><div class="value" id="ds-trial">—</div><div class="sub">Demo period</div></div>
+        <div class="stat-card red"><div class="label">Expiring Soon</div><div class="value" id="ds-expiring">—</div><div class="sub">Within 7 days</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-header"><h3>Expiring Soon</h3></div>
+          <div class="card-body" id="expiring-list"><div class="empty">Loading...</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Revenue Overview</h3></div>
+          <div class="card-body" style="padding:20px" id="revenue-block">
+            <div class="empty">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Companies -->
+    <div class="page" id="page-companies">
+      <div class="search-row">
+        <input class="search-input" id="co-search" placeholder="Search companies..." oninput="filterCompanies()"/>
+        <select class="filter-select" id="co-status-filter" onchange="filterCompanies()">
+          <option value="">All Status</option>
+          <option value="trial">Trial</option>
+          <option value="active">Active</option>
+          <option value="expired">Expired</option>
+          <option value="suspended">Suspended</option>
+          <option value="grace">Grace</option>
+        </select>
+        <select class="filter-select" id="co-plan-filter" onchange="filterCompanies()">
+          <option value="">All Plans</option>
+          <option value="trial">Trial</option>
+          <option value="starter">Starter</option>
+          <option value="pro">Pro</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openAddCompany()">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Company
+        </button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr>
+            <th><input type="checkbox" id="select-all" onchange="toggleSelectAll(this)"/></th>
+            <th>Company</th><th>Plan</th><th>Status</th><th>Days Left</th>
+            <th>Users</th><th>Features</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="companies-tbody"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <div id="co-bulk-bar" style="display:none;gap:8px;align-items:center" class="action-row">
+          <span class="text-muted" id="bulk-count">0 selected</span>
+          <button class="btn btn-secondary btn-sm" onclick="bulkAction('extend30')">Extend 30d</button>
+          <button class="btn btn-secondary btn-sm" onclick="bulkAction('activate')">Activate</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkAction('suspend')">Suspend</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkAction('delete')">Delete</button>
+        </div>
+        <div></div>
+        <span class="text-muted" id="co-count"></span>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="page" id="page-analytics">
+      <div class="stats-strip" id="analytics-stats">
+        <div class="stat-card"><div class="label">Total Users</div><div class="value" id="an-users">—</div></div>
+        <div class="stat-card"><div class="label">Punches Today</div><div class="value" id="an-punches">—</div></div>
+        <div class="stat-card amber"><div class="label">Open Tickets</div><div class="value" id="an-tickets">—</div></div>
+        <div class="stat-card red"><div class="label">Dormant Cos</div><div class="value" id="an-dormant">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Usage per Company</h3></div>
+        <table>
+          <thead><tr>
+            <th>Company</th><th>Plan</th><th>Status</th><th>Active Users</th>
+            <th>Punches/Mo</th><th>GPS Pings</th><th>Last Activity</th><th>Dormant</th>
+          </tr></thead>
+          <tbody id="analytics-tbody"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Billing -->
+    <div class="page" id="page-billing">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchBillingTab('invoices',this)">Invoices</button>
+        <button class="tab-btn" onclick="switchBillingTab('payments',this)">Payments</button>
+        <button class="tab-btn" onclick="switchBillingTab('revenue',this)">Revenue</button>
+      </div>
+      <div id="billing-tab-invoices">
+        <div class="search-row">
+          <select class="filter-select" id="inv-status-filter" onchange="loadInvoices()">
+            <option value="">All Status</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="paid">Paid</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="openPanel('add-invoice')">New Invoice</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr><th>Invoice #</th><th>Company</th><th>Plan</th><th>Amount</th><th>Period</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="invoices-tbody"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="billing-tab-payments" style="display:none">
+        <div class="search-row">
+          <button class="btn btn-primary btn-sm" onclick="openPanel('add-payment')">Record Payment</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr><th>Date</th><th>Company</th><th>Amount</th><th>Method</th><th>Reference</th><th>Invoice</th></tr></thead>
+            <tbody id="payments-tbody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="billing-tab-revenue" style="display:none">
+        <div id="revenue-stats" style="padding:24px 0"></div>
+      </div>
+    </div>
+
+    <!-- Plans -->
+    <div class="page" id="page-plans">
+      <div class="search-row">
+        <button class="btn btn-primary btn-sm" onclick="openPanel('add-plan')">New Plan</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Name</th><th>Display Name</th><th>Price/Month</th><th>Max Users</th><th>Features</th><th>Active</th></tr></thead>
+          <tbody id="plans-tbody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Promo Codes -->
+    <div class="page" id="page-promo">
+      <div class="search-row">
+        <button class="btn btn-primary btn-sm" onclick="openPanel('add-promo')">New Promo Code</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Code</th><th>Discount</th><th>Used / Max</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="promo-tbody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="page" id="page-users">
+      <div class="search-row">
+        <input class="search-input" id="user-search" placeholder="Search users..." oninput="loadUsers()"/>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="users-tbody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Communications -->
+    <div class="page" id="page-comms">
+      <div class="search-row">
+        <button class="btn btn-primary btn-sm" onclick="openPanel('add-announcement')">New Announcement</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Announcements</h3></div>
+        <table>
+          <thead><tr><th>Title</th><th>Target</th><th>Sent By</th><th>Sent At</th><th>Actions</th></tr></thead>
+          <tbody id="comms-tbody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Support Tickets -->
+    <div class="page" id="page-tickets">
+      <div class="search-row">
+        <select class="filter-select" id="ticket-status-filter" onchange="loadTickets()">
+          <option value="">All Status</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="resolved">Resolved</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Company</th><th>Title</th><th>Priority</th><th>Status</th><th>Replies</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="tickets-tbody"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Reports -->
+    <div class="page" id="page-reports">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+        <div class="card" style="padding:20px">
+          <h3 style="font-size:14px;margin-bottom:8px">Expiring Companies</h3>
+          <p class="text-muted" style="margin-bottom:14px">Companies expiring within 30 days</p>
+          <button class="btn btn-secondary btn-sm" onclick="loadExpiringReport()">View Report</button>
+          <div id="expiring-report" style="margin-top:12px"></div>
+        </div>
+        <div class="card" style="padding:20px">
+          <h3 style="font-size:14px;margin-bottom:8px">Churn Report</h3>
+          <p class="text-muted" style="margin-bottom:14px">Expired / churned companies</p>
+          <button class="btn btn-secondary btn-sm" onclick="loadChurnReport()">View Report</button>
+          <div id="churn-report" style="margin-top:12px"></div>
+        </div>
+        <div class="card" style="padding:20px">
+          <h3 style="font-size:14px;margin-bottom:8px">Export Data</h3>
+          <p class="text-muted" style="margin-bottom:14px">Download CSV exports</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="exportCSV('companies')">Companies CSV</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportCSV('revenue')">Revenue CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Log -->
+    <div class="page" id="page-audit">
+      <div class="search-row">
+        <select class="filter-select" id="audit-resource-filter" onchange="loadAudit()">
+          <option value="">All Resources</option>
+          <option value="company">Company</option>
+          <option value="invoice">Invoice</option>
+          <option value="payment">Payment</option>
+          <option value="user">User</option>
+          <option value="announcement">Announcement</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0 16px" id="audit-list">
+          <div class="empty">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Overlay + slide panel -->
+<div id="overlay" onclick="closePanel()"></div>
+<div id="panel">
+  <div class="panel-header">
+    <h2 id="panel-title">Add Company</h2>
+    <button class="close-btn" onclick="closePanel()">&#x2715;</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<script>
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://127.0.0.1:8001'
+  : 'http://167.233.90.245:8001';
+
+let TOKEN = localStorage.getItem('vp_token') || '';
+let vendorName = localStorage.getItem('vp_name') || '';
+let allCompanies = [];
+let currentPanel = '';
+let editingCompanyId = null;
+
+const titles = {
+  dashboard:'Dashboard',companies:'Companies',analytics:'Analytics',
+  billing:'Invoices & Payments',plans:'Plans',promo:'Promo Codes',
+  users:'Users',comms:'Communications',tickets:'Support Tickets',
+  reports:'Reports & Exports',audit:'Audit Log'
+};
+
+async function api(method, path, body) {
+  const r = await fetch(API + path, {
+    method, headers: { 'Content-Type': 'application/json', ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {})
+  });
+  if (r.status === 401) { logout(); return null; }
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.detail || 'Request failed');
+  }
+  const ct = r.headers.get('content-type') || '';
+  if (ct.includes('text/csv')) return r.blob();
+  return r.json();
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-password').value;
+  try {
+    const res = await api('POST', '/api/vendor/auth/login', { email, password: pw });
+    TOKEN = res.access_token;
+    vendorName = res.vendor.name;
+    localStorage.setItem('vp_token', TOKEN);
+    localStorage.setItem('vp_name', vendorName);
+    document.getElementById('vendor-name-sidebar').textContent = vendorName;
+    document.getElementById('login-page').classList.remove('active');
+    showPage('dashboard');
+  } catch(e) {
+    document.getElementById('login-error').classList.add('show');
+  }
+}
+
+function logout() {
+  TOKEN = ''; localStorage.removeItem('vp_token'); localStorage.removeItem('vp_name');
+  document.getElementById('login-page').classList.add('active');
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const items = document.querySelectorAll('.nav-item');
+  items.forEach(i => { if (i.textContent.trim().toLowerCase().includes(name.replace('-',' ').split(' ')[0])) i.classList.add('active'); });
+  document.getElementById('page-title').textContent = titles[name] || name;
+  const loaders = { dashboard: loadDashboard, companies: loadCompanies, analytics: loadAnalytics,
+    billing: loadBilling, plans: loadPlans, promo: loadPromo, users: loadUsers,
+    comms: loadComms, tickets: loadTickets, reports: ()=>{}, audit: loadAudit };
+  if (loaders[name]) loaders[name]();
+}
+
+function refreshCurrent() {
+  const active = document.querySelector('.nav-item.active');
+  const map = { 'Dashboard': 'dashboard', 'Companies': 'companies', 'Analytics': 'analytics',
+    'Invoices & Payments': 'billing', 'Plans': 'plans', 'Promo Codes': 'promo',
+    'Users': 'users', 'Communications': 'comms', 'Support Tickets': 'tickets',
+    'Reports & Exports': 'reports', 'Audit Log': 'audit' };
+  if (active) showPage(map[active.textContent.trim()] || 'dashboard');
+}
+
+// ─── Dashboard ─────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [dash, rev] = await Promise.all([
+      api('GET', '/api/vendor/analytics/dashboard'),
+      api('GET', '/api/vendor/revenue'),
+    ]);
+    document.getElementById('ds-total').textContent = dash.total_companies;
+    document.getElementById('ds-active').textContent = dash.statuses.active || 0;
+    document.getElementById('ds-trial').textContent = dash.statuses.trial || 0;
+    document.getElementById('ds-expiring').textContent = dash.expiring_soon.length;
+
+    const expList = document.getElementById('expiring-list');
+    if (!dash.expiring_soon.length) { expList.innerHTML = '<div class="empty">No companies expiring soon</div>'; }
+    else {
+      expList.innerHTML = '<table style="width:100%"><thead><tr><th>Company</th><th>Plan</th><th>Days Left</th></tr></thead><tbody>' +
+        dash.expiring_soon.map(c => `<tr>
+          <td>${esc(c.name)}</td>
+          <td><span class="pill pill-${c.plan}">${c.plan}</span></td>
+          <td><span style="font-weight:700;color:${c.days_left<=3?'#dc2626':'#d97706'}">${c.days_left}d</span></td>
+        </tr>`).join('') + '</tbody></table>';
+    }
+
+    document.getElementById('revenue-block').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div><div class="label">MRR</div><div style="font-size:22px;font-weight:700;color:#16a34a">₹${rev.mrr.toLocaleString()}</div></div>
+        <div><div class="label">ARR</div><div style="font-size:22px;font-weight:700;color:#2563eb">₹${rev.arr.toLocaleString()}</div></div>
+        <div><div class="label">This Month</div><div style="font-size:16px;font-weight:600">₹${rev.month_revenue.toLocaleString()}</div></div>
+        <div><div class="label">Total</div><div style="font-size:16px;font-weight:600">₹${rev.total_revenue.toLocaleString()}</div></div>
+      </div>`;
+  } catch(e) { console.error(e); }
+}
+
+// ─── Companies ─────────────────────────────────────────────────────────────
+async function loadCompanies() {
+  try {
+    allCompanies = await api('GET', '/api/vendor/companies');
+    renderCompanies(allCompanies);
+  } catch(e) { console.error(e); }
+}
+
+function filterCompanies() {
+  const q = document.getElementById('co-search').value.toLowerCase();
+  const st = document.getElementById('co-status-filter').value;
+  const pl = document.getElementById('co-plan-filter').value;
+  let list = allCompanies;
+  if (q) list = list.filter(c => c.name.toLowerCase().includes(q) || (c.contact_email||'').toLowerCase().includes(q));
+  if (st) list = list.filter(c => c.status === st);
+  if (pl) list = list.filter(c => c.plan === pl);
+  renderCompanies(list);
+}
+
+function renderCompanies(list) {
+  const tbody = document.getElementById('companies-tbody');
+  document.getElementById('co-count').textContent = list.length + ' companies';
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">No companies found</td></tr>'; return; }
+  tbody.innerHTML = list.map(c => `<tr>
+    <td><input type="checkbox" class="co-cb" value="${c.id}" onchange="updateBulkBar()"/></td>
+    <td>
+      <div style="font-weight:600">${esc(c.name)}</div>
+      <div class="text-muted">${esc(c.contact_email||'')}</div>
+    </td>
+    <td><span class="pill pill-${c.plan}">${c.plan}</span></td>
+    <td><span class="pill pill-${c.status}">${c.status}</span></td>
+    <td>${c.days_left === 9999 ? '&#8734;' : c.days_left + 'd'}</td>
+    <td>${c.user_count}</td>
+    <td>
+      <span class="feature-dot ${c.feature_gps?'dot-on':'dot-off'}"></span>GPS
+      <span class="feature-dot ${c.feature_chat?'dot-on':'dot-off'}" style="margin-left:4px"></span>Chat
+    </td>
+    <td>
+      <div class="action-row">
+        <button class="btn btn-secondary btn-xs" onclick="viewCompany('${c.id}')">View</button>
+        <button class="btn btn-secondary btn-xs" onclick="openEditCompany('${c.id}')">Edit</button>
+        <button class="btn btn-xs" style="background:#eff6ff;color:#2563eb" onclick="extendCompany('${c.id}')">+30d</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteCompany('${c.id}','${esc(c.name)}')">Del</button>
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+function toggleSelectAll(cb) {
+  document.querySelectorAll('.co-cb').forEach(c => c.checked = cb.checked);
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const checked = [...document.querySelectorAll('.co-cb:checked')];
+  const bar = document.getElementById('co-bulk-bar');
+  bar.style.display = checked.length ? 'flex' : 'none';
+  document.getElementById('bulk-count').textContent = checked.length + ' selected';
+}
+
+function getSelectedIds() {
+  return [...document.querySelectorAll('.co-cb:checked')].map(c => c.value);
+}
+
+async function bulkAction(action) {
+  const ids = getSelectedIds();
+  if (!ids.length) return;
+  if (!confirm(`Apply "${action}" to ${ids.length} companies?`)) return;
+  try {
+    await api('POST', '/api/vendor/companies/bulk-action', { company_ids: ids, action });
+    loadCompanies();
+  } catch(e) { alert(e.message); }
+}
+
+async function extendCompany(id) {
+  try { await api('POST', `/api/vendor/companies/${id}/extend`, { days: 30 }); loadCompanies(); }
+  catch(e) { alert(e.message); }
+}
+
+async function deleteCompany(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  try { await api('DELETE', `/api/vendor/companies/${id}`); loadCompanies(); }
+  catch(e) { alert(e.message); }
+}
+
+function openAddCompany() {
+  editingCompanyId = null;
+  currentPanel = 'add-company';
+  document.getElementById('panel-title').textContent = 'Add Company';
+  document.getElementById('panel-body').innerHTML = companyForm({});
+  openPanel();
+}
+
+async function openEditCompany(id) {
+  const c = allCompanies.find(x => x.id === id);
+  if (!c) return;
+  editingCompanyId = id;
+  currentPanel = 'edit-company';
+  document.getElementById('panel-title').textContent = 'Edit Company';
+  document.getElementById('panel-body').innerHTML = companyForm(c);
+  openPanel();
+}
+
+function companyForm(c) {
+  return `
+  <div class="section-title">Basic Info</div>
+  <div class="form-group"><label>Company Name *</label><input id="cf-name" value="${esc(c.name||'')}"/></div>
+  <div class="form-row">
+    <div class="form-group"><label>Contact Name</label><input id="cf-contact-name" value="${esc(c.contact_name||'')}"/></div>
+    <div class="form-group"><label>Contact Email</label><input id="cf-contact-email" value="${esc(c.contact_email||'')}"/></div>
+  </div>
+  <div class="form-group"><label>Contact Phone</label><input id="cf-contact-phone" value="${esc(c.contact_phone||'')}"/></div>
+  ${!editingCompanyId ? `<div class="form-group"><label>Initial Admin Password</label><input type="password" id="cf-initial-password" placeholder="Leave blank to skip"/></div>` : ''}
+  <div class="section-title">Plan & Billing</div>
+  <div class="form-row">
+    <div class="form-group"><label>Plan</label>
+      <select id="cf-plan">
+        <option value="trial" ${c.plan==='trial'?'selected':''}>Trial</option>
+        <option value="starter" ${c.plan==='starter'?'selected':''}>Starter</option>
+        <option value="pro" ${c.plan==='pro'?'selected':''}>Pro</option>
+        <option value="enterprise" ${c.plan==='enterprise'?'selected':''}>Enterprise</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Max Users</label><input type="number" id="cf-max-users" value="${c.max_users||10}"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Trial Days (new)</label><input type="number" id="cf-trial-days" value="15"/></div>
+    <div class="form-group"><label>Grace Days</label><input type="number" id="cf-grace-days" value="${c.grace_days||3}"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Expires At (non-trial)</label><input type="date" id="cf-expires-at" value="${c.expires_at ? c.expires_at.split('T')[0] : ''}"/></div>
+    <div class="form-group"><label>Discount %</label><input type="number" id="cf-discount" value="${c.discount_percent||0}" step="0.1"/></div>
+  </div>
+  <div class="section-title">Features</div>
+  ${toggleField('cf-gps','GPS Tracking',c.feature_gps!==false)}
+  ${toggleField('cf-chat','Chat',c.feature_chat!==false)}
+  ${toggleField('cf-leave','Leave Management',c.feature_leave!==false)}
+  ${toggleField('cf-reports','Reports',c.feature_reports!==false)}
+  <div class="section-title">Security</div>
+  ${toggleField('cf-2fa','Require 2FA',c.require_2fa)}
+  ${toggleField('cf-autorenew','Auto Renew',c.auto_renew)}
+  <div class="section-title">Working Hours</div>
+  <div class="form-row">
+    <div class="form-group"><label>Start</label><input type="time" id="cf-wh-start" value="${c.working_hours_start||'09:00'}"/></div>
+    <div class="form-group"><label>End</label><input type="time" id="cf-wh-end" value="${c.working_hours_end||'18:00'}"/></div>
+  </div>
+  <div class="form-group"><label>GPS Ping Interval (seconds)</label><input type="number" id="cf-gps-interval" value="${c.gps_ping_interval||30}"/></div>
+  <div class="panel-footer">
+    <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveCompany()">Save</button>
+  </div>`;
+}
+
+function toggleField(id, label, checked) {
+  return `<div class="toggle-row">
+    <label>${label}</label>
+    <label class="toggle"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''}><span class="slider"></span></label>
+  </div>`;
+}
+
+async function saveCompany() {
+  const body = {
+    name: v('cf-name'), contact_name: v('cf-contact-name'), contact_email: v('cf-contact-email'),
+    contact_phone: v('cf-contact-phone'), plan: v('cf-plan'), max_users: +v('cf-max-users'),
+    grace_days: +v('cf-grace-days'), discount_percent: +v('cf-discount'),
+    expires_at: v('cf-expires-at') || null,
+    feature_gps: chk('cf-gps'), feature_chat: chk('cf-chat'),
+    feature_leave: chk('cf-leave'), feature_reports: chk('cf-reports'),
+    require_2fa: chk('cf-2fa'), auto_renew: chk('cf-autorenew'),
+    working_hours_start: v('cf-wh-start'), working_hours_end: v('cf-wh-end'),
+    gps_ping_interval: +v('cf-gps-interval'),
+  };
+  if (!editingCompanyId) body.trial_days = +v('cf-trial-days');
+  const pw = document.getElementById('cf-initial-password');
+  if (pw) body.initial_password = pw.value || undefined;
+  try {
+    if (editingCompanyId) await api('PUT', `/api/vendor/companies/${editingCompanyId}`, body);
+    else await api('POST', '/api/vendor/companies', body);
+    closePanel(); loadCompanies();
+  } catch(e) { alert(e.message); }
+}
+
+async function viewCompany(id) {
+  try {
+    const data = await api('GET', `/api/vendor/companies/${id}/stats`);
+    const c = data.company;
+    document.getElementById('panel-title').textContent = c.name;
+    document.getElementById('panel-body').innerHTML = `
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchViewTab('overview',this)">Overview</button>
+        <button class="tab-btn" onclick="switchViewTab('notes',this)">Notes</button>
+        <button class="tab-btn" onclick="switchViewTab('actions',this)">Actions</button>
+      </div>
+      <div id="vt-overview">
+        <div class="detail-grid">
+          <div class="detail-item"><label>Plan</label><span><span class="pill pill-${c.plan}">${c.plan}</span></span></div>
+          <div class="detail-item"><label>Status</label><span><span class="pill pill-${c.status}">${c.status}</span></span></div>
+          <div class="detail-item"><label>Contact</label><span>${esc(c.contact_name||'—')}</span></div>
+          <div class="detail-item"><label>Email</label><span>${esc(c.contact_email||'—')}</span></div>
+          <div class="detail-item"><label>Days Left</label><span style="font-weight:700">${c.days_left===9999?'Unlimited':c.days_left+'d'}</span></div>
+          <div class="detail-item"><label>Max Users</label><span>${c.max_users}</span></div>
+        </div>
+        <div class="section-title">Usage</div>
+        <div class="detail-grid">
+          <div class="detail-item"><label>Total Users</label><span>${data.total_users}</span></div>
+          <div class="detail-item"><label>Punches This Month</label><span>${data.punches_this_month}</span></div>
+          <div class="detail-item"><label>GPS Pings Today</label><span>${data.gps_pings_today}</span></div>
+          <div class="detail-item"><label>Tasks Total</label><span>${data.tasks_total}</span></div>
+          <div class="detail-item"><label>Invoices</label><span>${data.invoices_count}</span></div>
+          <div class="detail-item"><label>Payments Total</label><span>₹${data.payments_total.toLocaleString()}</span></div>
+        </div>
+        <div class="section-title">Onboarding</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${(c.onboarding_score/3*100).toFixed(0)}%"></div></div>
+        <div style="margin-top:6px;font-size:12px;color:#6b7280">${c.onboarding_score}/3 steps complete</div>
+      </div>
+      <div id="vt-notes" style="display:none">
+        <div id="notes-list">${renderNotes(data.notes)}</div>
+        <div style="margin-top:12px">
+          <textarea id="new-note" class="search-input" style="width:100%;height:60px" placeholder="Add a CRM note..."></textarea>
+          <button class="btn btn-primary btn-sm" style="margin-top:6px" onclick="addNote('${id}')">Add Note</button>
+        </div>
+      </div>
+      <div id="vt-actions" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-secondary" onclick="extendCompany('${id}')">Extend 30 Days</button>
+          <button class="btn btn-secondary" onclick="seedDemo('${id}')">Seed Demo Data</button>
+          <button class="btn btn-secondary" style="color:#dc2626" onclick="suspendCompany('${id}')">Suspend Company</button>
+          <button class="btn btn-secondary" style="color:#16a34a" onclick="activateCompany('${id}')">Activate Company</button>
+          <button class="btn btn-secondary" onclick="cloneCompany('${id}')">Clone Company</button>
+        </div>
+      </div>
+    `;
+    openPanel();
+  } catch(e) { alert(e.message); }
+}
+
+function renderNotes(notes) {
+  if (!notes.length) return '<div class="empty">No notes yet</div>';
+  return notes.map(n => `<div class="note-item">
+    <div>${esc(n.note)}</div>
+    <div class="note-meta">${esc(n.created_by)} · ${fmtDate(n.created_at)}</div>
+  </div>`).join('');
+}
+
+function switchViewTab(name, btn) {
+  ['overview','notes','actions'].forEach(t => { const el = document.getElementById('vt-'+t); if(el) el.style.display = t===name?'block':'none'; });
+  document.querySelectorAll('#panel .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function addNote(companyId) {
+  const note = document.getElementById('new-note').value.trim();
+  if (!note) return;
+  try {
+    const n = await api('POST', `/api/vendor/companies/${companyId}/notes`, { note });
+    document.getElementById('notes-list').innerHTML += `<div class="note-item"><div>${esc(n.note)}</div><div class="note-meta">${esc(n.created_by)} · just now</div></div>`;
+    document.getElementById('new-note').value = '';
+  } catch(e) { alert(e.message); }
+}
+
+async function suspendCompany(id) {
+  const reason = prompt('Suspension reason (optional):');
+  try { await api('POST', `/api/vendor/companies/${id}/suspend`, { reason: reason||'' }); closePanel(); loadCompanies(); }
+  catch(e) { alert(e.message); }
+}
+
+async function activateCompany(id) {
+  try { await api('POST', `/api/vendor/companies/${id}/activate`); closePanel(); loadCompanies(); }
+  catch(e) { alert(e.message); }
+}
+
+async function seedDemo(id) {
+  try { const r = await api('POST', `/api/vendor/companies/${id}/seed-demo`); alert(`Demo seeded. Users created: ${r.users_created}`); }
+  catch(e) { alert(e.message); }
+}
+
+async function cloneCompany(id) {
+  if (!confirm('Clone this company as a new trial?')) return;
+  try { await api('POST', `/api/vendor/companies/${id}/clone`); closePanel(); loadCompanies(); }
+  catch(e) { alert(e.message); }
+}
+
+// ─── Analytics ─────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const [dash, usage, dormant] = await Promise.all([
+      api('GET', '/api/vendor/analytics/dashboard'),
+      api('GET', '/api/vendor/analytics/usage'),
+      api('GET', '/api/vendor/analytics/dormant'),
+    ]);
+    document.getElementById('an-users').textContent = dash.total_users;
+    document.getElementById('an-punches').textContent = dash.punches_today;
+    document.getElementById('an-tickets').textContent = dash.open_tickets;
+    document.getElementById('an-dormant').textContent = dormant.length;
+    const tbody = document.getElementById('analytics-tbody');
+    tbody.innerHTML = usage.map(c => `<tr>
+      <td><span style="font-weight:600">${esc(c.name)}</span></td>
+      <td><span class="pill pill-${c.plan}">${c.plan}</span></td>
+      <td><span class="pill pill-${c.status}">${c.status}</span></td>
+      <td>${c.active_users}</td>
+      <td>${c.punches_month}</td>
+      <td>${c.gps_pings_month}</td>
+      <td class="text-muted">${c.last_activity ? fmtDate(c.last_activity) : 'Never'}</td>
+      <td>${c.is_dormant ? '<span class="pill" style="background:#fee2e2;color:#dc2626">Dormant</span>' : ''}</td>
+    </tr>`).join('') || '<tr><td colspan="8" class="empty">No data</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+// ─── Billing ────────────────────────────────────────────────────────────────
+let billingActiveTab = 'invoices';
+
+function loadBilling() {
+  if (billingActiveTab === 'invoices') loadInvoices();
+  else if (billingActiveTab === 'payments') loadPayments();
+  else loadRevenue();
+}
+
+function switchBillingTab(name, btn) {
+  billingActiveTab = name;
+  ['invoices','payments','revenue'].forEach(t => {
+    const el = document.getElementById('billing-tab-'+t);
+    if(el) el.style.display = t===name ? 'block' : 'none';
+  });
+  document.querySelectorAll('#page-billing .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadBilling();
+}
+
+async function loadInvoices() {
+  const status = document.getElementById('inv-status-filter')?.value || '';
+  try {
+    const data = await api('GET', '/api/vendor/invoices' + (status ? '?status='+status : ''));
+    const tbody = document.getElementById('invoices-tbody');
+    tbody.innerHTML = data.map(i => `<tr>
+      <td style="font-weight:600">${esc(i.invoice_number)}</td>
+      <td>${esc(i.company_name)}</td>
+      <td><span class="pill pill-${i.plan}">${i.plan}</span></td>
+      <td style="font-weight:600">₹${i.final_amount.toLocaleString()}</td>
+      <td class="text-muted">${fmtDate(i.period_start)} – ${fmtDate(i.period_end)}</td>
+      <td><span class="pill ${i.status==='paid'?'pill-active':i.status==='unpaid'?'pill-trial':'pill-expired'}">${i.status}</span></td>
+      <td><div class="action-row">
+        ${i.status!=='paid' ? `<button class="btn btn-xs" style="background:#dcfce7;color:#16a34a" onclick="markPaid('${i.id}')">Mark Paid</button>` : ''}
+        <button class="btn btn-danger btn-xs" onclick="deleteInvoice('${i.id}')">Del</button>
+      </div></td>
+    </tr>`).join('') || '<tr><td colspan="7" class="empty">No invoices</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+async function markPaid(id) {
+  try { await api('POST', `/api/vendor/invoices/${id}/mark-paid`); loadInvoices(); }
+  catch(e) { alert(e.message); }
+}
+
+async function deleteInvoice(id) {
+  if (!confirm('Delete invoice?')) return;
+  try { await api('DELETE', `/api/vendor/invoices/${id}`); loadInvoices(); }
+  catch(e) { alert(e.message); }
+}
+
+async function loadPayments() {
+  try {
+    const data = await api('GET', '/api/vendor/payments');
+    const tbody = document.getElementById('payments-tbody');
+    tbody.innerHTML = data.map(p => `<tr>
+      <td class="text-muted">${fmtDate(p.paid_at)}</td>
+      <td>${esc(p.company_name)}</td>
+      <td style="font-weight:600">₹${p.amount.toLocaleString()}</td>
+      <td>${p.method || '—'}</td>
+      <td class="text-muted">${p.reference || '—'}</td>
+      <td class="text-muted">${p.invoice_id ? p.invoice_id.slice(0,8)+'…' : '—'}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty">No payments</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+async function loadRevenue() {
+  try {
+    const r = await api('GET', '/api/vendor/revenue');
+    document.getElementById('revenue-stats').innerHTML = `
+      <div class="stats-strip">
+        <div class="stat-card green"><div class="label">MRR</div><div class="value">₹${r.mrr.toLocaleString()}</div></div>
+        <div class="stat-card blue"><div class="label">ARR</div><div class="value">₹${r.arr.toLocaleString()}</div></div>
+        <div class="stat-card"><div class="label">This Month</div><div class="value">₹${r.month_revenue.toLocaleString()}</div></div>
+        <div class="stat-card"><div class="label">All Time</div><div class="value">₹${r.total_revenue.toLocaleString()}</div></div>
+      </div>
+      <div class="card" style="margin-top:16px;padding:20px">
+        <h3 style="font-size:14px;margin-bottom:16px">Monthly Revenue (Last 12 Months)</h3>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:100px">
+          ${r.monthly_chart.map(m => {
+            const max = Math.max(...r.monthly_chart.map(x=>x.amount),1);
+            const h = Math.round((m.amount/max)*80);
+            return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+              <div style="height:${h}px;background:#2563eb;border-radius:3px 3px 0 0;width:100%;min-height:3px"></div>
+              <div style="font-size:9px;color:#9ca3af;transform:rotate(-45deg);transform-origin:top left;white-space:nowrap">${m.month.slice(5)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  } catch(e) { console.error(e); }
+}
+
+// ─── Plans ──────────────────────────────────────────────────────────────────
+async function loadPlans() {
+  try {
+    const data = await api('GET', '/api/vendor/plans');
+    const tbody = document.getElementById('plans-tbody');
+    tbody.innerHTML = data.map(p => `<tr>
+      <td style="font-weight:600">${esc(p.name)}</td>
+      <td>${esc(p.display_name)}</td>
+      <td>₹${p.price_monthly.toLocaleString()}/mo</td>
+      <td>${p.max_users}</td>
+      <td>${['gps','chat','leave','reports'].map(f => `<span class="feature-dot ${p['feature_'+f]?'dot-on':'dot-off'}"></span>${f}`).join(' ')}</td>
+      <td>${p.is_active ? '<span class="pill pill-active">Active</span>' : '<span class="pill pill-expired">Inactive</span>'}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty">No plans configured</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+// ─── Promo ──────────────────────────────────────────────────────────────────
+async function loadPromo() {
+  try {
+    const data = await api('GET', '/api/vendor/promo-codes');
+    const tbody = document.getElementById('promo-tbody');
+    tbody.innerHTML = data.map(p => `<tr>
+      <td style="font-weight:600;font-family:monospace">${esc(p.code)}</td>
+      <td>${p.discount_percent}%</td>
+      <td>${p.used_count} / ${p.max_uses || '∞'}</td>
+      <td class="text-muted">${p.expires_at ? fmtDate(p.expires_at) : 'No expiry'}</td>
+      <td><span class="pill ${p.is_active?'pill-active':'pill-expired'}">${p.is_active?'Active':'Inactive'}</span></td>
+      <td><button class="btn btn-danger btn-xs" onclick="deletePromo('${p.id}')">Delete</button></td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty">No promo codes</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+async function deletePromo(id) {
+  if (!confirm('Delete promo code?')) return;
+  try { await api('DELETE', `/api/vendor/promo-codes/${id}`); loadPromo(); }
+  catch(e) { alert(e.message); }
+}
+
+// ─── Users ──────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const q = document.getElementById('user-search')?.value || '';
+  try {
+    const data = await api('GET', '/api/vendor/users' + (q ? '?q='+encodeURIComponent(q) : ''));
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = data.map(u => `<tr>
+      <td style="font-weight:600">${esc(u.name)}</td>
+      <td class="text-muted">${esc(u.email)}</td>
+      <td><span class="pill pill-${u.role==='admin'?'pro':'trial'}">${u.role}</span></td>
+      <td><span class="pill ${u.is_active?'pill-active':'pill-expired'}">${u.is_active?'Active':'Blocked'}</span></td>
+      <td class="text-muted">${fmtDate(u.created_at)}</td>
+      <td><div class="action-row">
+        <button class="btn btn-xs ${u.is_active?'btn-danger':''}" style="${!u.is_active?'background:#dcfce7;color:#16a34a':''}" onclick="blockUser('${u.id}')">
+          ${u.is_active?'Block':'Unblock'}
+        </button>
+        <button class="btn btn-secondary btn-xs" onclick="forceReset('${u.id}')">Reset PW</button>
+        <button class="btn btn-xs" style="background:#eff6ff;color:#2563eb" onclick="impersonate('${u.id}')">Login As</button>
+      </div></td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty">No users</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+async function blockUser(id) {
+  try { await api('POST', `/api/vendor/users/${id}/block`); loadUsers(); }
+  catch(e) { alert(e.message); }
+}
+
+async function forceReset(id) {
+  if (!confirm('Force password reset for this user?')) return;
+  try {
+    const r = await api('POST', `/api/vendor/users/${id}/force-reset`);
+    alert(`Temporary password: ${r.temp_password}`);
+  } catch(e) { alert(e.message); }
+}
+
+async function impersonate(id) {
+  if (!confirm('Generate impersonation token for this user?')) return;
+  try {
+    const r = await api('POST', `/api/vendor/users/${id}/impersonate`);
+    prompt('Impersonation token (copy to use in admin panel):', r.access_token);
+  } catch(e) { alert(e.message); }
+}
+
+// ─── Communications ─────────────────────────────────────────────────────────
+async function loadComms() {
+  try {
+    const data = await api('GET', '/api/vendor/announcements');
+    const tbody = document.getElementById('comms-tbody');
+    tbody.innerHTML = data.map(a => `<tr>
+      <td style="font-weight:600">${esc(a.title)}</td>
+      <td><span class="pill pill-${a.target==='all'?'active':'trial'}">${a.target}</span></td>
+      <td class="text-muted">${esc(a.sent_by||'—')}</td>
+      <td class="text-muted">${fmtDate(a.sent_at)}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="deleteAnn('${a.id}')">Delete</button></td>
+    </tr>`).join('') || '<tr><td colspan="5" class="empty">No announcements</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+async function deleteAnn(id) {
+  if (!confirm('Delete announcement?')) return;
+  try { await api('DELETE', `/api/vendor/announcements/${id}`); loadComms(); }
+  catch(e) { alert(e.message); }
+}
+
+// ─── Tickets ────────────────────────────────────────────────────────────────
+async function loadTickets() {
+  const status = document.getElementById('ticket-status-filter')?.value || '';
+  try {
+    const data = await api('GET', '/api/vendor/tickets' + (status ? '?status='+status : ''));
+    const tbody = document.getElementById('tickets-tbody');
+    tbody.innerHTML = data.map(t => `<tr>
+      <td class="text-muted">${esc(t.company_name)}</td>
+      <td style="font-weight:600">${esc(t.title)}</td>
+      <td><span class="pill ${t.priority==='urgent'?'pill-expired':t.priority==='high'?'pill-suspended':'pill-trial'}">${t.priority}</span></td>
+      <td><span class="pill ${t.status==='open'?'pill-trial':t.status==='resolved'?'pill-active':'pill-suspended'}">${t.status}</span></td>
+      <td>${t.reply_count}</td>
+      <td class="text-muted">${fmtDate(t.created_at)}</td>
+      <td><button class="btn btn-secondary btn-xs" onclick="viewTicket('${t.id}')">View</button></td>
+    </tr>`).join('') || '<tr><td colspan="7" class="empty">No tickets</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+async function viewTicket(id) {
+  try {
+    const t = await api('GET', `/api/vendor/tickets/${id}`);
+    document.getElementById('panel-title').textContent = 'Ticket: ' + t.title;
+    document.getElementById('panel-body').innerHTML = `
+      <div style="margin-bottom:12px"><span class="pill pill-${t.status}">${t.status}</span> <span class="pill pill-${t.priority==='urgent'?'expired':'trial'}">${t.priority}</span></div>
+      <p style="font-size:13px;color:#374151;margin-bottom:16px">${esc(t.description)}</p>
+      <div class="section-title">Replies</div>
+      <div id="ticket-replies" style="max-height:300px;overflow-y:auto">
+        ${t.replies.map(r => `<div class="note-item" style="${r.is_vendor?'background:#eff6ff;border-radius:6px;padding:8px':''}">
+          <div style="font-size:12px;font-weight:600;color:${r.is_vendor?'#2563eb':'#374151'}">${r.is_vendor?'Vendor Admin':'Customer'}</div>
+          <div style="font-size:13px;margin-top:2px">${esc(r.message)}</div>
+          <div class="note-meta">${fmtDate(r.created_at)}</div>
+        </div>`).join('') || '<div class="empty">No replies yet</div>'}
+      </div>
+      <div style="margin-top:14px">
+        <textarea id="ticket-reply" class="search-input" style="width:100%;height:70px" placeholder="Type reply..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-primary btn-sm" onclick="replyTicket('${id}')">Send Reply</button>
+          <button class="btn btn-secondary btn-sm" onclick="closeTicket('${id}')">Close Ticket</button>
+        </div>
+      </div>`;
+    openPanel();
+  } catch(e) { alert(e.message); }
+}
+
+async function replyTicket(id) {
+  const msg = document.getElementById('ticket-reply').value.trim();
+  if (!msg) return;
+  try {
+    await api('POST', `/api/vendor/tickets/${id}/reply`, { message: msg });
+    viewTicket(id);
+    loadTickets();
+  } catch(e) { alert(e.message); }
+}
+
+async function closeTicket(id) {
+  try { await api('PUT', `/api/vendor/tickets/${id}`, { status: 'closed' }); closePanel(); loadTickets(); }
+  catch(e) { alert(e.message); }
+}
+
+// ─── Reports ────────────────────────────────────────────────────────────────
+async function loadExpiringReport() {
+  try {
+    const data = await api('GET', '/api/vendor/reports/expiring?days=30');
+    document.getElementById('expiring-report').innerHTML = data.length
+      ? data.map(c => `<div class="note-item"><strong>${esc(c.name)}</strong> <span class="pill pill-${c.plan}">${c.plan}</span> — ${c.days_left}d left</div>`).join('')
+      : '<div class="empty">None expiring soon</div>';
+  } catch(e) { alert(e.message); }
+}
+
+async function loadChurnReport() {
+  try {
+    const data = await api('GET', '/api/vendor/reports/churn');
+    document.getElementById('churn-report').innerHTML = data.length
+      ? data.map(c => `<div class="note-item"><strong>${esc(c.name)}</strong> — expired ${c.expired_at ? fmtDate(c.expired_at) : '?'}</div>`).join('')
+      : '<div class="empty">No churned companies</div>';
+  } catch(e) { alert(e.message); }
+}
+
+async function exportCSV(type) {
+  try {
+    const blob = await api('GET', `/api/vendor/reports/export-${type}`);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = type + '.csv'; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { alert(e.message); }
+}
+
+// ─── Audit ──────────────────────────────────────────────────────────────────
+async function loadAudit() {
+  const resource = document.getElementById('audit-resource-filter')?.value || '';
+  try {
+    const data = await api('GET', '/api/vendor/audit-logs?limit=100' + (resource ? '&resource='+resource : ''));
+    const container = document.getElementById('audit-list');
+    container.innerHTML = data.map(l => `<div class="log-item">
+      <div class="log-icon"><svg fill="none" viewBox="0 0 24 24" stroke="#2563eb" stroke-width="2"><path d="M9 12l2 2 4-4"/></svg></div>
+      <div>
+        <div class="log-action">${esc(l.action.replace(/_/g,' '))}</div>
+        <div class="log-detail">${esc(l.resource||'')} ${l.resource_id ? '#'+l.resource_id.slice(0,8) : ''} · ${esc(l.vendor_name)}</div>
+      </div>
+      <div class="log-time">${fmtDate(l.created_at)}</div>
+    </div>`).join('') || '<div class="empty">No audit logs</div>';
+  } catch(e) { console.error(e); }
+}
+
+// ─── Panel forms ────────────────────────────────────────────────────────────
+function openPanel(panelName) {
+  if (panelName === 'add-invoice') {
+    document.getElementById('panel-title').textContent = 'New Invoice';
+    document.getElementById('panel-body').innerHTML = `
+      <div class="form-group"><label>Company</label>
+        <select id="inv-company">${allCompanies.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Plan</label><select id="inv-plan">
+        <option value="starter">Starter</option><option value="pro">Pro</option><option value="enterprise">Enterprise</option>
+      </select></div>
+      <div class="form-group"><label>Amount (₹)</label><input type="number" id="inv-amount" placeholder="0"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Period Start</label><input type="date" id="inv-start"/></div>
+        <div class="form-group"><label>Period End</label><input type="date" id="inv-end"/></div>
+      </div>
+      <div class="form-group"><label>Notes</label><textarea id="inv-notes"></textarea></div>
+      <div class="panel-footer">
+        <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveInvoice()">Create Invoice</button>
+      </div>`;
+  } else if (panelName === 'add-payment') {
+    document.getElementById('panel-title').textContent = 'Record Payment';
+    document.getElementById('panel-body').innerHTML = `
+      <div class="form-group"><label>Company</label>
+        <select id="pay-company">${allCompanies.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Amount (₹)</label><input type="number" id="pay-amount"/></div>
+      <div class="form-group"><label>Method</label><select id="pay-method">
+        <option value="cash">Cash</option><option value="upi">UPI</option>
+        <option value="bank">Bank Transfer</option><option value="card">Card</option>
+      </select></div>
+      <div class="form-group"><label>Reference</label><input id="pay-ref" placeholder="Transaction ID / UTR"/></div>
+      <div class="panel-footer">
+        <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        <button class="btn btn-primary" onclick="savePayment()">Record</button>
+      </div>`;
+  } else if (panelName === 'add-announcement') {
+    document.getElementById('panel-title').textContent = 'New Announcement';
+    document.getElementById('panel-body').innerHTML = `
+      <div class="form-group"><label>Title</label><input id="ann-title"/></div>
+      <div class="form-group"><label>Message</label><textarea id="ann-message" style="min-height:100px"></textarea></div>
+      <div class="form-group"><label>Target</label><select id="ann-target">
+        <option value="all">All Companies</option><option value="specific">Specific</option>
+      </select></div>
+      <div class="panel-footer">
+        <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAnnouncement()">Send</button>
+      </div>`;
+  } else if (panelName === 'add-promo') {
+    document.getElementById('panel-title').textContent = 'New Promo Code';
+    document.getElementById('panel-body').innerHTML = `
+      <div class="form-group"><label>Code</label><input id="promo-code" placeholder="SUMMER20" style="text-transform:uppercase"/></div>
+      <div class="form-group"><label>Discount %</label><input type="number" id="promo-discount" placeholder="20"/></div>
+      <div class="form-group"><label>Max Uses (blank = unlimited)</label><input type="number" id="promo-maxuses"/></div>
+      <div class="form-group"><label>Expires At (optional)</label><input type="date" id="promo-expires"/></div>
+      <div class="panel-footer">
+        <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        <button class="btn btn-primary" onclick="savePromo()">Create</button>
+      </div>`;
+  } else if (panelName === 'add-plan') {
+    document.getElementById('panel-title').textContent = 'New Plan';
+    document.getElementById('panel-body').innerHTML = `
+      <div class="form-group"><label>Name (internal)</label><input id="plan-name" placeholder="pro"/></div>
+      <div class="form-group"><label>Display Name</label><input id="plan-display" placeholder="Pro Plan"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Price/Month (₹)</label><input type="number" id="plan-price"/></div>
+        <div class="form-group"><label>Max Users</label><input type="number" id="plan-maxusers" value="25"/></div>
+      </div>
+      ${toggleField('plan-gps','GPS Tracking',true)}
+      ${toggleField('plan-chat','Chat',true)}
+      ${toggleField('plan-leave','Leave Management',true)}
+      ${toggleField('plan-reports','Reports',true)}
+      <div class="panel-footer">
+        <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        <button class="btn btn-primary" onclick="savePlan()">Create Plan</button>
+      </div>`;
+  }
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+  currentPanel = ''; editingCompanyId = null;
+}
+
+async function saveInvoice() {
+  try {
+    await api('POST', '/api/vendor/invoices', {
+      company_id: v('inv-company'), plan: v('inv-plan'),
+      amount: +v('inv-amount'),
+      period_start: v('inv-start') + 'T00:00:00',
+      period_end: v('inv-end') + 'T00:00:00',
+      notes: v('inv-notes') || null,
+    });
+    closePanel(); loadInvoices();
+  } catch(e) { alert(e.message); }
+}
+
+async function savePayment() {
+  try {
+    await api('POST', '/api/vendor/payments', {
+      company_id: v('pay-company'), amount: +v('pay-amount'),
+      method: v('pay-method'), reference: v('pay-ref') || null,
+    });
+    closePanel(); loadPayments();
+  } catch(e) { alert(e.message); }
+}
+
+async function saveAnnouncement() {
+  try {
+    await api('POST', '/api/vendor/announcements', {
+      title: v('ann-title'), message: v('ann-message'), target: v('ann-target'),
+    });
+    closePanel(); loadComms();
+  } catch(e) { alert(e.message); }
+}
+
+async function savePromo() {
+  try {
+    await api('POST', '/api/vendor/promo-codes', {
+      code: v('promo-code'), discount_percent: +v('promo-discount'),
+      max_uses: v('promo-maxuses') ? +v('promo-maxuses') : null,
+      expires_at: v('promo-expires') ? v('promo-expires')+'T00:00:00' : null,
+    });
+    closePanel(); loadPromo();
+  } catch(e) { alert(e.message); }
+}
+
+async function savePlan() {
+  try {
+    await api('POST', '/api/vendor/plans', {
+      name: v('plan-name'), display_name: v('plan-display'),
+      price_monthly: +v('plan-price'), max_users: +v('plan-maxusers'),
+      feature_gps: chk('plan-gps'), feature_chat: chk('plan-chat'),
+      feature_leave: chk('plan-leave'), feature_reports: chk('plan-reports'),
+    });
+    closePanel(); loadPlans();
+  } catch(e) { alert(e.message); }
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function chk(id) { const el = document.getElementById(id); return el ? el.checked : false; }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ─── Init ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  if (TOKEN) {
+    document.getElementById('vendor-name-sidebar').textContent = vendorName;
+    document.getElementById('login-page').classList.remove('active');
+    showPage('dashboard');
+    loadCompanies();
+  }
+});
+</script>
+</body>
+</html>
