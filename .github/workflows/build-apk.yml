@@ -35,6 +35,48 @@ jobs:
       - name: Install Expo CLI
         run: npm install -g @expo/cli@latest
 
+      - name: Block Sonatype via Gradle init script (runs before everything)
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/no-sonatype.gradle << 'INITEOF'
+          // Remove sonatype from every repository list in every project/settings
+          // Uses repositories.all{} which intercepts repos added at any time
+          def sonatypeFilter = { repos ->
+            repos.all { repo ->
+              if (repo instanceof MavenArtifactRepository &&
+                  repo.url.toString().toLowerCase().contains("sonatype")) {
+                repos.remove(repo)
+              }
+            }
+          }
+
+          gradle.settingsEvaluated { settings ->
+            sonatypeFilter(settings.pluginManagement.repositories)
+            try {
+              sonatypeFilter(settings.dependencyResolutionManagement.repositories)
+            } catch (Exception ignored) {}
+          }
+
+          gradle.allprojects { proj ->
+            proj.buildscript.repositories { handler ->
+              handler.all { repo ->
+                if (repo instanceof MavenArtifactRepository &&
+                    repo.url.toString().toLowerCase().contains("sonatype")) {
+                  handler.remove(repo)
+                }
+              }
+            }
+            proj.repositories { handler ->
+              handler.all { repo ->
+                if (repo instanceof MavenArtifactRepository &&
+                    repo.url.toString().toLowerCase().contains("sonatype")) {
+                  handler.remove(repo)
+                }
+              }
+            }
+          }
+          INITEOF
+
       - name: Generate Android project
         working-directory: mobile
         run: npx expo prebuild --platform android --clean --no-install
@@ -45,24 +87,33 @@ jobs:
         working-directory: mobile/android
         run: chmod +x gradlew
 
-      - name: Remove Sonatype snapshots repo from all Gradle files
+      - name: Remove Sonatype from Gradle files (belt-and-suspenders)
         working-directory: mobile
         run: |
           python3 << 'EOF'
           import os, re
 
           def remove_sonatype(content):
-              # Remove maven { ... } blocks that reference sonatype (single and multi-line)
-              return re.sub(
+              # Single-line: maven { url "https://...sonatype..." }
+              content = re.sub(
                   r'[ \t]*maven\s*\{[^{}]*sonatype[^{}]*\}\n?',
                   '',
                   content,
                   flags=re.IGNORECASE | re.DOTALL
               )
+              # Just a URL line inside a maven block
+              content = re.sub(
+                  r'[ \t]*url\s*["\']?https?://[^"\']*sonatype[^"\']*["\']?\n?',
+                  '',
+                  content,
+                  flags=re.IGNORECASE
+              )
+              return content
 
           search_dirs = [
               'android',
               'node_modules/@react-native/gradle-plugin',
+              'node_modules/react-native/android',
           ]
 
           for search_dir in search_dirs:
@@ -81,31 +132,20 @@ jobs:
                                   print(f'Patched: {path}')
                           except Exception as e:
                               print(f'Skip {path}: {e}')
-          EOF
 
-      - name: Block Sonatype via Gradle init script (fallback)
-        run: |
-          mkdir -p ~/.gradle/init.d
-          cat > ~/.gradle/init.d/no-sonatype.gradle << 'INITEOF'
-          def blockSonatype = { repos ->
-            try {
-              repos.removeIf { repo ->
-                repo instanceof org.gradle.api.artifacts.repositories.MavenArtifactRepository &&
-                repo.url.toString().contains("sonatype")
-              }
-            } catch (Exception ignored) {}
-          }
-          settingsEvaluated { settings ->
-            blockSonatype(settings.pluginManagement.repositories)
-            try { blockSonatype(settings.dependencyResolutionManagement.repositories) } catch (Exception ignored) {}
-          }
-          allprojects {
-            afterEvaluate { project ->
-              blockSonatype(project.buildscript.repositories)
-              blockSonatype(project.repositories)
-            }
-          }
-          INITEOF
+          # Verify
+          print("\n=== Remaining sonatype refs ===")
+          import subprocess
+          for d in search_dirs:
+              r = subprocess.run(
+                  ['grep', '-r', 'sonatype', d, '--include=*.gradle', '--include=*.gradle.kts', '-l'],
+                  capture_output=True, text=True
+              )
+              if r.stdout.strip():
+                  print(f"STILL FOUND in {d}:\n{r.stdout}")
+              else:
+                  print(f"Clean: {d}")
+          EOF
 
       - name: Configure Gradle caching
         uses: gradle/actions/setup-gradle@v3
