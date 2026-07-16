@@ -10,7 +10,7 @@ from jose import JWTError
 
 from database import get_db
 from auth import hash_password, verify_password, decode_token, create_token
-from models import User, AttendanceLog, GPSPing, Task, Message
+from models import User, AttendanceLog, GPSPing, Task, Message, ChatRoom, ChatMember
 from vendor_models import (
     Company, VendorAdmin, Plan, Invoice, Payment, PromoCode,
     Announcement, SupportTicket, TicketReply, AuditLog,
@@ -328,8 +328,17 @@ def create_company(body: CompanyIn, request: Request, db: Session = Depends(get_
                 password=hash_password(body.initial_password),
                 plain_password=body.initial_password,
                 role="admin",
+                company_id=c.id,
             )
             db.add(admin_user)
+            db.commit()
+            db.refresh(admin_user)
+            # Create a default group chat room for this company
+            room = ChatRoom(name=f"{c.name} General", room_type="group")
+            db.add(room)
+            db.commit()
+            db.refresh(room)
+            db.add(ChatMember(room_id=room.id, user_id=admin_user.id))
             db.commit()
 
     _audit(db, v, "create_company", "company", c.id, {"name": c.name}, request.client.host)
@@ -502,7 +511,8 @@ def seed_demo(company_id: str, request: Request,
         if not db.query(User).filter(User.email == u["email"]).first():
             db.add(User(name=u["name"], email=u["email"],
                         password=hash_password("Demo@1234"),
-                        plain_password="Demo@1234", role=u["role"]))
+                        plain_password="Demo@1234", role=u["role"],
+                        company_id=company_id))
             created += 1
     db.commit()
     c.onboarding_admin_logged_in = True
@@ -864,6 +874,26 @@ def list_all_users(q: Optional[str] = None, db: Session = Depends(get_db), v: Ve
         "role": u.role, "is_active": u.is_active,
         "created_at": u.created_at.isoformat(),
     } for u in users]
+
+
+@router.post("/users")
+def create_user(body: dict, request: Request, db: Session = Depends(get_db), v: VendorAdmin = Depends(get_vendor)):
+    if db.query(User).filter(User.email == body.get("email")).first():
+        raise HTTPException(400, "Email already exists")
+    u = User(
+        name=body.get("name"),
+        email=body.get("email"),
+        password=hash_password(body.get("password")),
+        plain_password=body.get("password"),
+        role=body.get("role", "field_worker"),
+        company_id=body.get("company_id", "default"),
+        is_active=True,
+    )
+    db.add(u)
+    db.commit()
+    db.refresh(u)
+    _audit(db, v, "create_user", "user", u.id, {"email": u.email, "role": u.role}, request.client.host)
+    return {"id": u.id, "name": u.name, "email": u.email, "role": u.role, "is_active": u.is_active, "created_at": u.created_at.isoformat()}
 
 
 @router.post("/users/{user_id}/block")

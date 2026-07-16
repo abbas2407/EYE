@@ -18,6 +18,7 @@ class User(Base):
     device_uuid    = Column(String, nullable=True)
     photo_url      = Column(String, nullable=True)
     is_active      = Column(Boolean, default=True)
+    company_id     = Column(String, nullable=True, default="default")
     created_at     = Column(DateTime, default=datetime.utcnow)
 
     attendance_logs = relationship("AttendanceLog", back_populates="user")
@@ -51,6 +52,7 @@ class AttendanceLog(Base):
 class Task(Base):
     __tablename__ = "tasks"
     id             = Column(String, primary_key=True, default=gen_id)
+    company_id     = Column(String, nullable=True, default="default")
     title          = Column(String, nullable=False)
     description    = Column(Text, nullable=True)
     location       = Column(String, nullable=True)
@@ -148,6 +150,7 @@ class PushToken(Base):
 class Client(Base):
     __tablename__ = "clients"
     id              = Column(String, primary_key=True, default=gen_id)
+    company_id      = Column(String, nullable=True, default="default")
     name            = Column(String, nullable=False)
     client_id       = Column(String, nullable=True)
     visibility      = Column(String, default="Everyone")
@@ -174,6 +177,7 @@ class Client(Base):
 class Site(Base):
     __tablename__ = "sites"
     id              = Column(String, primary_key=True, default=gen_id)
+    company_id      = Column(String, nullable=True, default="default")
     name            = Column(String, nullable=False)
     email           = Column(String, nullable=True)
     site_id         = Column(String, nullable=True)

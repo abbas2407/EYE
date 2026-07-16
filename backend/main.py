@@ -32,12 +32,20 @@ with engine.connect() as _conn:
     for _sql in [
         "ALTER TABLE users ADD COLUMN plain_password VARCHAR",
         "ALTER TABLE chat_members ADD COLUMN last_read_at DATETIME",
+        "ALTER TABLE users ADD COLUMN company_id VARCHAR DEFAULT 'default'",
+        "UPDATE users SET company_id = 'default' WHERE company_id IS NULL",
+        "ALTER TABLE tasks ADD COLUMN company_id VARCHAR DEFAULT 'default'",
+        "UPDATE tasks SET company_id = 'default' WHERE company_id IS NULL",
+        "ALTER TABLE clients ADD COLUMN company_id VARCHAR DEFAULT 'default'",
+        "UPDATE clients SET company_id = 'default' WHERE company_id IS NULL",
+        "ALTER TABLE sites ADD COLUMN company_id VARCHAR DEFAULT 'default'",
+        "UPDATE sites SET company_id = 'default' WHERE company_id IS NULL",
     ]:
         try:
             _conn.execute(text(_sql))
             _conn.commit()
         except Exception:
-            pass  # Column already exists
+            pass  # Column already exists or update found no rows
 
 seed()
 
@@ -90,8 +98,11 @@ async def send_push(tokens: list, title: str, body: str, data: dict = {}):
     except Exception as e:
         log.warning(f"Push notification failed: {e}")
 
-def get_admin_tokens(db: Session) -> list:
-    admins = db.query(User).filter(User.role.in_(["admin", "manager"])).all()
+def get_admin_tokens(db: Session, company_id: str = "default") -> list:
+    admins = db.query(User).filter(
+        User.role.in_(["admin", "manager"]),
+        User.company_id == company_id
+    ).all()
     tokens = []
     for a in admins:
         for pt in a.push_tokens:
@@ -351,7 +362,7 @@ async def punch_in(req: PunchInRequest, background: BackgroundTasks,
     db.commit()
     db.refresh(entry)
 
-    admin_tokens = get_admin_tokens(db)
+    admin_tokens = get_admin_tokens(db, current_user.company_id or "default")
     time_str = now.strftime("%I:%M %p")
     background.add_task(send_push, admin_tokens, "🟢 Punch In",
                         f"{current_user.name} punched in at {time_str}",
@@ -377,7 +388,7 @@ async def punch_out(req: PunchOutRequest, background: BackgroundTasks,
         entry.selfie_url = req.selfie_url
     db.commit()
 
-    admin_tokens = get_admin_tokens(db)
+    admin_tokens = get_admin_tokens(db, current_user.company_id or "default")
     background.add_task(send_push, admin_tokens, "🔴 Punch Out",
                         f"{current_user.name} punched out — {total_hours:.1f}h worked",
                         {"type": "punch_out", "user_id": current_user.id})
@@ -662,17 +673,20 @@ async def places_directions(origin: str, destination: str, current_user: User = 
 # ── Admin Routes ──────────────────────────────────────────────────────────────
 @app.get("/api/admin/stats")
 def admin_stats(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
     return {
-        "total_workers": db.query(User).filter(User.role == "field_worker").count(),
-        "total_tasks": db.query(Task).count(),
-        "completed_tasks": db.query(Task).filter(Task.status == "completed").count(),
-        "active_shifts": db.query(AttendanceLog).filter(AttendanceLog.status == "active").count(),
-        "pending_leaves": db.query(Leave).filter(Leave.status == "pending").count(),
+        "total_workers": db.query(User).filter(User.role == "field_worker", User.company_id == cid).count(),
+        "total_tasks": db.query(Task).filter(Task.company_id == cid).count(),
+        "completed_tasks": db.query(Task).filter(Task.company_id == cid, Task.status == "completed").count(),
+        "active_shifts": db.query(AttendanceLog).filter(AttendanceLog.user_id.in_(cuid), AttendanceLog.status == "active").count(),
+        "pending_leaves": db.query(Leave).filter(Leave.user_id.in_(cuid), Leave.status == "pending").count(),
     }
 
 @app.get("/api/admin/users")
 def admin_list_users(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    users = db.query(User).order_by(User.created_at).all()
+    cid = admin.company_id or "default"
+    users = db.query(User).filter(User.company_id == cid).order_by(User.created_at).all()
     return [{"id": u.id, "name": u.name, "email": u.email, "role": u.role,
              "is_active": u.is_active, "photo_url": u.photo_url,
              "plain_password": u.plain_password,
@@ -684,7 +698,8 @@ class ResetPasswordRequest(BaseModel):
 @app.post("/api/admin/users/{user_id}/reset-password")
 def admin_reset_password(user_id: str, req: ResetPasswordRequest,
                          admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+    cid = admin.company_id or "default"
+    user = db.query(User).filter(User.id == user_id, User.company_id == cid).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.password = hash_password(req.new_password)
@@ -696,23 +711,28 @@ def admin_reset_password(user_id: str, req: ResetPasswordRequest,
 def admin_create_user(req: CreateUserRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == req.email.lower().strip()).first():
         raise HTTPException(status_code=400, detail="Email already exists")
+    cid = admin.company_id or "default"
     user = User(name=req.name, email=req.email.lower().strip(),
-                password=hash_password(req.password), plain_password=req.password, role=req.role)
+                password=hash_password(req.password), plain_password=req.password,
+                role=req.role, company_id=cid)
     db.add(user)
     db.commit()
     db.refresh(user)
     if req.role == "field_worker":
         db.add(LeaveBalance(user_id=user.id))
-        # Add to general chat room
-        room = db.query(ChatRoom).first()
-        if room:
-            db.add(ChatMember(room_id=room.id, user_id=user.id))
+        # Add to the admin's company group chat room
+        admin_mem = (db.query(ChatMember).join(ChatRoom)
+                     .filter(ChatMember.user_id == admin.id, ChatRoom.room_type == "group")
+                     .first())
+        if admin_mem:
+            db.add(ChatMember(room_id=admin_mem.room_id, user_id=user.id))
         db.commit()
     return {"id": user.id, "name": user.name, "email": user.email, "role": user.role}
 
 @app.get("/api/admin/tasks")
 def admin_list_tasks(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    tasks = db.query(Task).order_by(Task.created_at.desc()).all()
+    cid = admin.company_id or "default"
+    tasks = db.query(Task).filter(Task.company_id == cid).order_by(Task.created_at.desc()).all()
     return [{"id": t.id, "title": t.title, "location": t.location, "status": t.status,
              "client_name": t.client_name, "assignee_name": t.assignee.name if t.assignee else None,
              "assignee_email": t.assignee.email if t.assignee else None,
@@ -721,9 +741,13 @@ def admin_list_tasks(admin: User = Depends(require_admin), db: Session = Depends
 @app.post("/api/admin/tasks")
 async def admin_create_task(req: CreateTaskRequest, background: BackgroundTasks,
                              admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    cid = admin.company_id or "default"
     assignee = None
     if req.assignee_email:
-        assignee = db.query(User).filter(User.email == req.assignee_email.lower().strip()).first()
+        assignee = db.query(User).filter(
+            User.email == req.assignee_email.lower().strip(),
+            User.company_id == cid
+        ).first()
     sched = None
     if req.scheduled_time:
         try:
@@ -733,7 +757,7 @@ async def admin_create_task(req: CreateTaskRequest, background: BackgroundTasks,
     task = Task(title=req.title, description=req.description, location=req.location,
                 client_name=req.client_name, assignee_id=assignee.id if assignee else None,
                 latitude=req.latitude, longitude=req.longitude,
-                scheduled_time=sched, status="pending")
+                scheduled_time=sched, status="pending", company_id=cid)
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -747,6 +771,7 @@ async def admin_create_task(req: CreateTaskRequest, background: BackgroundTasks,
 @app.post("/api/admin/bulk-tasks")
 async def bulk_assign_tasks(req: BulkTaskRequest, background: BackgroundTasks,
                              admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    cid = admin.company_id or "default"
     sched = None
     if req.scheduled_time:
         try:
@@ -755,12 +780,15 @@ async def bulk_assign_tasks(req: BulkTaskRequest, background: BackgroundTasks,
             pass
     created = []
     for email in req.assignee_emails:
-        assignee = db.query(User).filter(User.email == email.lower().strip()).first()
+        assignee = db.query(User).filter(
+            User.email == email.lower().strip(),
+            User.company_id == cid
+        ).first()
         task = Task(title=req.title, description=req.description, location=req.location,
                     client_name=req.client_name,
                     assignee_id=assignee.id if assignee else None,
                     latitude=req.latitude, longitude=req.longitude,
-                    scheduled_time=sched, status="pending")
+                    scheduled_time=sched, status="pending", company_id=cid)
         db.add(task)
         if assignee:
             tokens = [pt.token for pt in assignee.push_tokens]
@@ -772,7 +800,10 @@ async def bulk_assign_tasks(req: BulkTaskRequest, background: BackgroundTasks,
 
 @app.get("/api/admin/attendance")
 def admin_attendance(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    logs = (db.query(AttendanceLog).order_by(AttendanceLog.punch_in_time.desc()).limit(200).all())
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
+    logs = (db.query(AttendanceLog).filter(AttendanceLog.user_id.in_(cuid))
+            .order_by(AttendanceLog.punch_in_time.desc()).limit(200).all())
     return [{"id": l.id, "user_name": l.user.name, "user_email": l.user.email,
              "punch_in_time": l.punch_in_time.isoformat() + "Z",
              "punch_out_time": l.punch_out_time.isoformat() + "Z" if l.punch_out_time else None,
@@ -781,7 +812,8 @@ def admin_attendance(admin: User = Depends(require_admin), db: Session = Depends
 
 @app.get("/api/admin/performance")
 def admin_performance(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    workers = db.query(User).filter(User.role == "field_worker").all()
+    cid = admin.company_id or "default"
+    workers = db.query(User).filter(User.role == "field_worker", User.company_id == cid).all()
     result = []
     for w in workers:
         logs = db.query(AttendanceLog).filter(AttendanceLog.user_id == w.id,
@@ -802,7 +834,8 @@ def admin_performance(admin: User = Depends(require_admin), db: Session = Depend
 
 @app.get("/api/admin/live-locations")
 def admin_live_locations(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    workers = db.query(User).filter(User.role == "field_worker").all()
+    cid = admin.company_id or "default"
+    workers = db.query(User).filter(User.role == "field_worker", User.company_id == cid).all()
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
     result = []
@@ -998,12 +1031,15 @@ def my_trail(current_user: User = Depends(get_current_user), db: Session = Depen
 @app.get("/api/admin/daily-hours")
 def daily_hours(days: int = 30, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     from collections import defaultdict
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
     end_date = datetime.utcnow().date()
     start_date = end_date - timedelta(days=days-1)
     day_start_dt = datetime(start_date.year, start_date.month, start_date.day)
     day_end_dt = datetime(end_date.year, end_date.month, end_date.day) + timedelta(days=1)
     logs = (db.query(AttendanceLog)
-            .filter(AttendanceLog.punch_in_time >= day_start_dt,
+            .filter(AttendanceLog.user_id.in_(cuid),
+                    AttendanceLog.punch_in_time >= day_start_dt,
                     AttendanceLog.punch_in_time < day_end_dt,
                     AttendanceLog.total_hours.isnot(None)).all())
     daily = defaultdict(list)
@@ -1019,7 +1055,9 @@ def daily_hours(days: int = 30, admin: User = Depends(require_admin), db: Sessio
 
 @app.get("/api/admin/geofence-alerts")
 def geofence_alerts(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    breaches = (db.query(GPSPing).filter(GPSPing.is_breach == True)
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
+    breaches = (db.query(GPSPing).filter(GPSPing.is_breach == True, GPSPing.user_id.in_(cuid))
                 .order_by(GPSPing.created_at.desc()).limit(100).all())
     return [{"id": b.id, "user_name": b.user.name, "user_email": b.user.email,
              "latitude": b.latitude, "longitude": b.longitude,
@@ -1028,7 +1066,9 @@ def geofence_alerts(admin: User = Depends(require_admin), db: Session = Depends(
 
 @app.get("/api/admin/leaves")
 def admin_leaves(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    leaves = db.query(Leave).order_by(Leave.created_at.desc()).all()
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
+    leaves = db.query(Leave).filter(Leave.user_id.in_(cuid)).order_by(Leave.created_at.desc()).all()
     return [{"id": l.id, "user_name": l.user.name, "user_email": l.user.email,
              "leave_type": l.leave_type, "start_date": l.start_date.date().isoformat(),
              "end_date": l.end_date.date().isoformat(), "days": l.days,
@@ -1038,7 +1078,9 @@ def admin_leaves(admin: User = Depends(require_admin), db: Session = Depends(get
 @app.put("/api/admin/leaves/{leave_id}")
 def admin_leave_action(leave_id: str, req: LeaveActionRequest,
                        admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    leave = db.query(Leave).filter(Leave.id == leave_id).first()
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
+    leave = db.query(Leave).filter(Leave.id == leave_id, Leave.user_id.in_(cuid)).first()
     if not leave:
         raise HTTPException(status_code=404, detail="Leave not found")
     leave.status = req.status
@@ -1056,7 +1098,10 @@ def admin_leave_action(leave_id: str, req: LeaveActionRequest,
 
 @app.get("/api/admin/reports/attendance-csv")
 def attendance_csv(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    logs = db.query(AttendanceLog).order_by(AttendanceLog.punch_in_time.desc()).all()
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
+    logs = (db.query(AttendanceLog).filter(AttendanceLog.user_id.in_(cuid))
+            .order_by(AttendanceLog.punch_in_time.desc()).all())
     lines = ["Name,Email,Punch In,Punch Out,Hours,Status,Note"]
     for l in logs:
         pin = l.punch_in_time.strftime("%Y-%m-%d %H:%M")
@@ -1070,9 +1115,10 @@ def attendance_csv(admin: User = Depends(require_admin), db: Session = Depends(g
 @app.get("/api/admin/reports/payroll-csv")
 def payroll_csv(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     rate_per_hour = 200  # ₹200/hour default
+    cid = admin.company_id or "default"
     now = datetime.utcnow()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    workers = db.query(User).filter(User.role == "field_worker").all()
+    workers = db.query(User).filter(User.role == "field_worker", User.company_id == cid).all()
     lines = ["Name,Email,Shifts,Total Hours,Rate/Hr (INR),Gross Pay (INR)"]
     for w in workers:
         logs = db.query(AttendanceLog).filter(AttendanceLog.user_id == w.id,
@@ -1109,7 +1155,8 @@ def get_or_create_direct(target_user_id: str,
 
 @app.get("/api/users/list")
 def list_users_for_chat(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    users = db.query(User).filter(User.id != current_user.id, User.is_active == True).all()
+    cid = current_user.company_id or "default"
+    users = db.query(User).filter(User.id != current_user.id, User.is_active == True, User.company_id == cid).all()
     return [{"id": u.id, "name": u.name, "role": u.role, "photo_url": u.photo_url} for u in users]
 
 @app.get("/api/admin/chat/rooms")
@@ -1158,17 +1205,20 @@ def _client_dict(c: Client):
 
 @app.get("/api/admin/clients")
 def admin_list_clients(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    return [_client_dict(c) for c in db.query(Client).order_by(Client.created_at).all()]
+    cid = admin.company_id or "default"
+    return [_client_dict(c) for c in db.query(Client).filter(Client.company_id == cid).order_by(Client.created_at).all()]
 
 @app.post("/api/admin/clients")
 def admin_create_client(req: CreateClientRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    c = Client(**req.dict())
+    cid = admin.company_id or "default"
+    c = Client(**req.dict(), company_id=cid)
     db.add(c); db.commit(); db.refresh(c)
     return _client_dict(c)
 
 @app.delete("/api/admin/clients/{client_id}")
 def admin_delete_client(client_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    c = db.query(Client).filter(Client.id == client_id).first()
+    cid = admin.company_id or "default"
+    c = db.query(Client).filter(Client.id == client_id, Client.company_id == cid).first()
     if not c:
         raise HTTPException(status_code=404, detail="Client not found")
     db.delete(c); db.commit()
@@ -1187,17 +1237,20 @@ def _site_dict(s: Site):
 
 @app.get("/api/admin/sites")
 def admin_list_sites(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    return [_site_dict(s) for s in db.query(Site).order_by(Site.created_at).all()]
+    cid = admin.company_id or "default"
+    return [_site_dict(s) for s in db.query(Site).filter(Site.company_id == cid).order_by(Site.created_at).all()]
 
 @app.post("/api/admin/sites")
 def admin_create_site(req: CreateSiteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    s = Site(**req.dict())
+    cid = admin.company_id or "default"
+    s = Site(**req.dict(), company_id=cid)
     db.add(s); db.commit(); db.refresh(s)
     return _site_dict(s)
 
 @app.delete("/api/admin/sites/{site_id}")
 def admin_delete_site(site_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    s = db.query(Site).filter(Site.id == site_id).first()
+    cid = admin.company_id or "default"
+    s = db.query(Site).filter(Site.id == site_id, Site.company_id == cid).first()
     if not s:
         raise HTTPException(status_code=404, detail="Site not found")
     db.delete(s); db.commit()
@@ -1205,30 +1258,39 @@ def admin_delete_site(site_id: str, admin: User = Depends(require_admin), db: Se
 
 @app.delete("/api/admin/clear-test-data")
 def admin_clear_test_data(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    """Wipes attendance logs, GPS pings, tasks, and leaves.
-    User accounts, clients, sites, chat rooms/messages are left intact."""
+    """Wipes attendance logs, GPS pings, tasks, and leaves for this company only."""
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
     counts = {}
-    for Model, name in [
-        (AttendanceLog, "attendance_logs"),
-        (GPSPing,       "gps_pings"),
-        (Task,          "tasks"),
-        (Leave,         "leaves"),
-    ]:
-        n = db.query(Model).delete(synchronize_session=False)
-        counts[name] = n
+    n = db.query(AttendanceLog).filter(AttendanceLog.user_id.in_(cuid)).delete(synchronize_session=False)
+    counts["attendance_logs"] = n
+    n = db.query(GPSPing).filter(GPSPing.user_id.in_(cuid)).delete(synchronize_session=False)
+    counts["gps_pings"] = n
+    n = db.query(Task).filter(Task.company_id == cid).delete(synchronize_session=False)
+    counts["tasks"] = n
+    n = db.query(Leave).filter(Leave.user_id.in_(cuid)).delete(synchronize_session=False)
+    counts["leaves"] = n
     db.commit()
     return {"ok": True, "deleted": counts}
 
 @app.delete("/api/admin/full-reset")
 def admin_full_reset(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    """Nuclear reset: deletes all field workers + all operational data.
-    Keeps only the admin account, clients, and sites."""
-    # Delete all operational data first (foreign key order)
-    for Model in [Message, ChatMember, ChatRoom, GPSPing, AttendanceLog,
-                  LeaveBalance, Leave, Task, PushToken, RefreshToken]:
-        db.query(Model).delete(synchronize_session=False)
-    # Delete all non-admin users
-    deleted_users = db.query(User).filter(User.role != "admin").delete(synchronize_session=False)
+    """Nuclear reset: deletes all field workers + all operational data for this company only."""
+    cid = admin.company_id or "default"
+    cuid = db.query(User.id).filter(User.company_id == cid)
+    # Delete operational data for company users (foreign key order)
+    worker_ids = [r[0] for r in db.query(User.id).filter(User.company_id == cid, User.role != "admin").all()]
+    if worker_ids:
+        for room_mem in db.query(ChatMember).filter(ChatMember.user_id.in_(worker_ids)).all():
+            db.delete(room_mem)
+        db.query(GPSPing).filter(GPSPing.user_id.in_(worker_ids)).delete(synchronize_session=False)
+        db.query(AttendanceLog).filter(AttendanceLog.user_id.in_(worker_ids)).delete(synchronize_session=False)
+        db.query(LeaveBalance).filter(LeaveBalance.user_id.in_(worker_ids)).delete(synchronize_session=False)
+        db.query(Leave).filter(Leave.user_id.in_(worker_ids)).delete(synchronize_session=False)
+        db.query(PushToken).filter(PushToken.user_id.in_(worker_ids)).delete(synchronize_session=False)
+        db.query(RefreshToken).filter(RefreshToken.user_id.in_(worker_ids)).delete(synchronize_session=False)
+    db.query(Task).filter(Task.company_id == cid).delete(synchronize_session=False)
+    deleted_users = db.query(User).filter(User.company_id == cid, User.role != "admin").delete(synchronize_session=False)
     db.commit()
     return {"ok": True, "deleted_users": deleted_users}
 
@@ -1253,6 +1315,10 @@ def auto_punch_out(current_user: User = Depends(get_current_user), db: Session =
 @app.post("/api/admin/force-punch-out/{user_id}")
 def admin_force_punch_out(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Force-close any open attendance log for a user without requiring selfie/location."""
+    cid = admin.company_id or "default"
+    target = db.query(User).filter(User.id == user_id, User.company_id == cid).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
     active = db.query(AttendanceLog).filter(
         AttendanceLog.user_id == user_id,
         AttendanceLog.punch_out_time == None,
