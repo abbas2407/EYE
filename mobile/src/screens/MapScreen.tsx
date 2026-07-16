@@ -153,18 +153,7 @@ export default function MapScreen() {
       (loc) => {
         const newLoc = { lat: loc.coords.latitude, lng: loc.coords.longitude };
         setCurrentLocation(newLoc);
-
-        // GPS backend ping
-        const ping: GPSPingItem = {
-          latitude: loc.coords.latitude, longitude: loc.coords.longitude,
-          accuracy: loc.coords.accuracy, timestamp: new Date(loc.timestamp).toISOString(),
-        };
-        if (isOnlineRef.current) {
-          apiFetch('/api/gps/batch', { method: 'POST', body: JSON.stringify({ pings: [ping] }) })
-            .catch(() => queueGPSPing(ping));
-        } else {
-          queueGPSPing(ping);
-        }
+        // GPS pings are sent globally from App.tsx — MapScreen only updates the map display
 
         if (!navActiveRef.current || arrivedRef.current || !destinationRef.current) return;
 

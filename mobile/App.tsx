@@ -3,6 +3,8 @@ import {
   View, Text, TouchableOpacity,
   ActivityIndicator, Platform, AppState
 } from 'react-native';
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Prevents a single screen crash from blanking the entire app
 class ScreenErrorBoundary extends Component<
@@ -44,7 +46,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import NetInfo from '@react-native-community/netinfo';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import LoginScreen from './src/screens/LoginScreen';
 import ScheduleScreen from './src/screens/ScheduleScreen';
@@ -85,6 +86,85 @@ function MainApp() {
   const [isOnline, setIsOnline] = useState(true);
   const [chatUnread, setChatUnread] = useState(0);
   const lastChatVisitRef = useRef(new Date().toISOString());
+  const gpsSubRef = useRef<Location.LocationSubscription | null>(null);
+  const isOnlineRef = useRef(true);
+
+  // Flush any pings that were queued while offline
+  const flushGPSQueue = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem('gps_offline_queue');
+      if (!raw) return;
+      const queue = JSON.parse(raw);
+      if (!queue.length) return;
+      const res = await apiFetch('/api/gps/batch', { method: 'POST', body: JSON.stringify({ pings: queue }) });
+      if (res?.ok) await AsyncStorage.removeItem('gps_offline_queue');
+    } catch {}
+  }, []);
+
+  const sendGPSPing = useCallback(async (ping: object) => {
+    if (isOnlineRef.current) {
+      try {
+        const res = await apiFetch('/api/gps/batch', { method: 'POST', body: JSON.stringify({ pings: [ping] }) });
+        if (!res?.ok) throw new Error('failed');
+      } catch {
+        // Queue for later
+        const raw = await AsyncStorage.getItem('gps_offline_queue').catch(() => null);
+        const queue = raw ? JSON.parse(raw) : [];
+        queue.push(ping);
+        if (queue.length > 500) queue.splice(0, queue.length - 500);
+        await AsyncStorage.setItem('gps_offline_queue', JSON.stringify(queue)).catch(() => {});
+      }
+    } else {
+      const raw = await AsyncStorage.getItem('gps_offline_queue').catch(() => null);
+      const queue = raw ? JSON.parse(raw) : [];
+      queue.push(ping);
+      if (queue.length > 500) queue.splice(0, queue.length - 500);
+      await AsyncStorage.setItem('gps_offline_queue', JSON.stringify(queue)).catch(() => {});
+    }
+  }, []);
+
+  const startGPSTracking = useCallback(async () => {
+    if (gpsSubRef.current) return; // already tracking
+    try {
+      const { status: fg } = await Location.requestForegroundPermissionsAsync();
+      if (fg !== 'granted') return;
+      // Request background permission on Android — gracefully ignored if denied
+      if (Platform.OS === 'android') {
+        await Location.requestBackgroundPermissionsAsync().catch(() => {});
+      }
+      gpsSubRef.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 30000,   // every 30 seconds
+          distanceInterval: 20,  // or every 20 metres
+        },
+        (loc) => {
+          const ping = {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            accuracy: loc.coords.accuracy,
+            timestamp: new Date(loc.timestamp).toISOString(),
+          };
+          sendGPSPing(ping);
+        }
+      );
+    } catch {}
+  }, [sendGPSPing]);
+
+  const stopGPSTracking = useCallback(() => {
+    gpsSubRef.current?.remove();
+    gpsSubRef.current = null;
+  }, []);
+
+  // Start/stop tracking whenever punch state changes
+  useEffect(() => {
+    if (isPunchedIn) {
+      startGPSTracking();
+    } else {
+      stopGPSTracking();
+    }
+    return () => { stopGPSTracking(); };
+  }, [isPunchedIn, startGPSTracking, stopGPSTracking]);
 
   // Restore punch state from server — runs on cold start and every time
   // the app comes back to the foreground (handles swipe-away + reopen).
@@ -111,10 +191,13 @@ function MainApp() {
 
   useEffect(() => {
     const unsub = NetInfo.addEventListener(state => {
-      setIsOnline(state.isConnected ?? true);
+      const online = state.isConnected ?? true;
+      setIsOnline(online);
+      isOnlineRef.current = online;
+      if (online) flushGPSQueue();
     });
     return () => unsub();
-  }, []);
+  }, [flushGPSQueue]);
 
   // Poll for unread messages every 30 s; persist last-visit so badge
   // doesn't reset to 0 on every cold start.
