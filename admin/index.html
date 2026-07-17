@@ -181,6 +181,34 @@ textarea{min-height:70px;resize:vertical}
 .bell-btn:hover{background:var(--page-bg)}
 .bell-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:4px;
   background:#ba1a1a;border:2px solid #fff;display:none}
+/* ── Hamburger ── */
+#hamburger{display:none;flex-direction:column;justify-content:center;align-items:center;
+  width:36px;height:36px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card-bg);cursor:pointer;gap:4px;flex-shrink:0}
+#hamburger span{display:block;width:16px;height:2px;background:var(--text-primary);border-radius:2px}
+/* ── Sidebar backdrop (mobile) ── */
+#sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+/* ── Mobile ── */
+@media(max-width:768px){
+  #hamburger{display:flex}
+  #sidebar{position:fixed;top:0;left:0;height:100%;z-index:200;
+    transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow:4px 0 24px rgba(0,0,0,.18)}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-backdrop.show{display:block}
+  #content{width:100%}
+  #topbar{padding:0 12px;gap:8px}
+  .topbar-title{font-size:13px}
+  .section{padding:12px}
+  .stat-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .dash-subnav{overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .form-row{grid-template-columns:1fr}
+  .modal{width:96vw;padding:16px;max-height:92vh}
+  table{font-size:11px}
+  th,td{padding:8px 10px}
+  .chat-rooms{width:220px}
+  .card-header{padding:10px 14px}
+}
 /* Map containers */
 #loc-map,#tl-map{background:#e8ede8}
 .leaflet-container{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -205,6 +233,7 @@ textarea{min-height:70px;resize:vertical}
 </div>
 
 <div id="app" style="display:none">
+  <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
   <div id="sidebar">
     <div class="brand">
       <div class="brand-title">FieldPulse</div>
@@ -229,6 +258,7 @@ textarea{min-height:70px;resize:vertical}
 
   <div id="content">
     <div id="topbar">
+      <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu"><span></span><span></span><span></span></button>
       <div class="topbar-title" id="topbar-title">Dashboard</div>
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:11px;color:#747878" id="admin-name"></span>
@@ -1494,7 +1524,7 @@ async function doLogin(){
     document.getElementById('admin-name').textContent=adminName;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
-    const _h=location.hash.slice(1);showTab(TABS.includes(_h)?_h:'dashboard');startUnreadPoll();startNotifPoll();
+    const _h=localStorage.getItem('fp_last_tab')||location.hash.slice(1);showTab(TABS.includes(_h)?_h:'dashboard');startUnreadPoll();startNotifPoll();
   }catch{errEl.textContent='Unable to connect to server.';errEl.style.display='block';}
 }
 function doLogout(){localStorage.removeItem('fp_token');localStorage.removeItem('fp_admin_name');token=null;location.reload();}
@@ -1509,8 +1539,18 @@ const TABS=['dashboard','workers','organization','tasks','attendance','leaves','
 const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',organization:'Organization',tasks:'Tasks',attendance:'Attendance',
   leaves:'Leave Requests',chat:'Chat',clients:'Clients & Sites',performance:'Performance',reports:'Reports'};
 
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('show');
+}
 function showTab(name){
+  localStorage.setItem('fp_last_tab',name);
   history.replaceState(null,'','#'+name);
+  closeSidebar();
   document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',TABS[i]===name));
   document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
   const el=document.getElementById(`tab-${name}`);
@@ -3894,7 +3934,7 @@ if(token){
   document.getElementById('admin-name').textContent=adminName;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
-  const _h=location.hash.slice(1);showTab(TABS.includes(_h)?_h:'dashboard');
+  const _h=localStorage.getItem('fp_last_tab')||location.hash.slice(1);showTab(TABS.includes(_h)?_h:'dashboard');
   startUnreadPoll();
   startNotifPoll();
 }
