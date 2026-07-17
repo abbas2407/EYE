@@ -196,10 +196,10 @@ function MainApp() {
   useEffect(() => {
     syncPunchState();
     const sub = AppState.addEventListener('change', state => {
-      if (state === 'active') syncPunchState();
+      if (state === 'active') { syncPunchState(); flushGPSQueue(); }
     });
     return () => sub.remove();
-  }, [syncPunchState]);
+  }, [syncPunchState, flushGPSQueue]);
 
   useEffect(() => {
     const unsub = NetInfo.addEventListener(state => {
