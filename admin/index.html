@@ -215,6 +215,26 @@ textarea{min-height:70px;resize:vertical}
 /* Map containers */
 #loc-map,#tl-map{background:#e8ede8}
 .leaflet-container{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+/* Overview grid rows */
+.ov-row1{display:grid;grid-template-columns:230px 1fr 1fr 1fr;gap:14px;margin-bottom:20px;align-items:start}
+.ov-row2{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:20px;align-items:start}
+.ov-row3{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.ov-row4{display:grid;grid-template-columns:1fr 300px;gap:14px;margin-bottom:20px;align-items:start}
+/* Live location split */
+.loc-split{display:flex;flex:1;overflow:hidden}
+#loc-emp-list{width:340px;overflow-y:auto;border-right:1px solid #e3e2e0;flex-shrink:0;background:#fff}
+/* Mobile overrides */
+@media(max-width:768px){
+  .ov-row1{grid-template-columns:1fr 1fr}
+  .ov-row2{grid-template-columns:1fr}
+  .ov-row3{grid-template-columns:repeat(2,1fr)}
+  .ov-row4{grid-template-columns:1fr}
+  .loc-split{flex-direction:column}
+  #loc-emp-list{width:100%!important;border-right:none;border-bottom:1px solid #e3e2e0;max-height:45vh;flex-shrink:0}
+  #loc-map{min-height:280px!important;flex:unset;height:45vh}
+  #tl-map{height:220px!important}
+  .notif-drawer-mobile{width:100vw!important}
+}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -295,7 +315,7 @@ textarea{min-height:70px;resize:vertical}
         <div style="padding:20px">
 
           <!-- Top row: Donut + 3 stat tiles -->
-          <div style="display:grid;grid-template-columns:230px 1fr 1fr 1fr;gap:14px;margin-bottom:20px;align-items:start">
+          <div class="ov-row1">
             <!-- Real Time Status donut -->
             <div class="card" style="padding:18px">
               <div class="card-title" style="margin-bottom:12px">Real Time Status</div>
@@ -339,7 +359,7 @@ textarea{min-height:70px;resize:vertical}
           </div>
 
           <!-- Employees + Off Duty -->
-          <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:20px;align-items:start">
+          <div class="ov-row2">
             <!-- Employees table -->
             <div class="card">
               <div class="card-header">
@@ -366,7 +386,7 @@ textarea{min-height:70px;resize:vertical}
           </div>
 
           <!-- Stats row -->
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+          <div class="ov-row3">
             <div class="mini-stat">
               <div style="font-size:9px;color:#747878;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Forms Filled</div>
               <div style="font-size:32px;font-weight:700;color:#1a1c1a">0</div>
@@ -390,7 +410,7 @@ textarea{min-height:70px;resize:vertical}
           </div>
 
           <!-- Charts row -->
-          <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;margin-bottom:20px;align-items:start">
+          <div class="ov-row4">
             <!-- Daily Working Hours bar chart -->
             <div class="card">
               <div class="card-header">
@@ -432,8 +452,8 @@ textarea{min-height:70px;resize:vertical}
           </div>
         </div>
         <!-- Split layout -->
-        <div style="display:flex;flex:1;overflow:hidden">
-          <div id="loc-emp-list" style="width:340px;overflow-y:auto;border-right:1px solid #e3e2e0;flex-shrink:0;background:#fff">
+        <div class="loc-split">
+          <div id="loc-emp-list">
             <div class="loading">Loading...</div>
           </div>
           <div id="loc-map" style="flex:1;min-height:400px"></div>
