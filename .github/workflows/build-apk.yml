@@ -158,12 +158,31 @@ jobs:
         env:
           GRADLE_OPTS: "-Xmx3g -XX:MaxMetaspaceSize=512m"
 
-      - name: Find and Upload APK
+      - name: Find APK path
+        id: apk
+        run: |
+          APK=$(find mobile/android/app/build/outputs/apk -name "*.apk" | head -1)
+          echo "path=$APK" >> $GITHUB_OUTPUT
+          echo "Found: $APK"
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: FieldPulse-APK
-          path: mobile/android/app/build/outputs/apk/**/*.apk
+          path: ${{ steps.apk.outputs.path }}
           retention-days: 30
 
-      - name: Print APK location
-        run: find mobile/android/app/build/outputs/apk -name "*.apk" 2>/dev/null || echo "No APK found"
+      - name: Create GitHub Release
+        if: steps.apk.outputs.path != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "FieldPulse APK — Build #${{ github.run_number }}"
+          files: ${{ steps.apk.outputs.path }}
+          body: |
+            **Auto-built APK**
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
