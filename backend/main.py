@@ -723,6 +723,54 @@ async def places_directions(origin: str, destination: str, current_user: User = 
     return {"routes": []}
 
 
+class MapMatchRequest(BaseModel):
+    pings: List[dict]  # [{lat, lng, time}]
+
+@app.post("/api/places/map-match")
+async def places_map_match(req: MapMatchRequest, current_user: User = Depends(get_current_user)):
+    pings = req.pings
+    if len(pings) < 2:
+        return {"coords": []}
+    # Subsample to 100 pts max (Geoapify limit)
+    step = max(1, len(pings) // 100)
+    sampled = pings[::step]
+    if sampled[-1] is not pings[-1]:
+        sampled.append(pings[-1])
+    coords = [[p["lng"], p["lat"]] for p in sampled]
+    try:
+        ts = []
+        for p in sampled:
+            try:
+                ts.append(int(datetime.fromisoformat(p["time"].replace("Z","")).timestamp() * 1000))
+            except Exception:
+                ts.append(0)
+        body = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {"type": "MultiPoint", "coordinates": coords},
+                "properties": {"timestamps": ts},
+            }]
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.post(
+                f"{_GEO_BASE}/mapmatching",
+                params={"apiKey": GEOAPIFY_KEY},
+                json=body,
+            )
+        if res.status_code == 200:
+            features = res.json().get("features", [])
+            if features:
+                geom = features[0].get("geometry", {})
+                raw = geom.get("coordinates", [])
+                if geom.get("type") == "MultiLineString":
+                    raw = [c for seg in raw for c in seg]
+                return {"coords": [[c[1], c[0]] for c in raw]}  # swap to [lat, lng]
+    except Exception as e:
+        log.warning(f"Geoapify map-match failed: {e}")
+    return {"coords": []}
+
+
 # ── Admin Routes ──────────────────────────────────────────────────────────────
 @app.get("/api/admin/stats")
 def admin_stats(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
