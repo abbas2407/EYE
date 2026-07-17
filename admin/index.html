@@ -39,8 +39,15 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--page-bg);color:var(--text-primary);height:100vh;display:flex;flex-direction:column}
 #app{display:flex;flex:1;overflow:hidden}
-#sidebar{width:220px;background:var(--sidebar-bg);display:flex;flex-direction:column;flex-shrink:0}
+#sidebar{width:240px;background:var(--sidebar-bg);display:none;flex-direction:column;flex-shrink:0;border-right:1px solid var(--sidebar-border)}
+#sidebar.open{display:flex;position:fixed;top:0;left:0;height:100%;z-index:200;box-shadow:4px 0 24px rgba(0,0,0,.18);animation:slideIn .22s ease}
+@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
 #content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+/* Desktop: sidebar always visible */
+@media(min-width:769px){
+  #sidebar{display:flex;position:relative;box-shadow:none;animation:none}
+  #hamburger{display:none!important}
+}
 .brand{padding:20px 16px 16px;border-bottom:1px solid var(--sidebar-border)}
 .brand-title{font-size:15px;font-weight:700;color:var(--text-primary);letter-spacing:.5px}
 .brand-sub{font-size:9px;color:var(--sidebar-text);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
@@ -181,33 +188,29 @@ textarea{min-height:70px;resize:vertical}
 .bell-btn:hover{background:var(--page-bg)}
 .bell-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:4px;
   background:#ba1a1a;border:2px solid #fff;display:none}
-/* ── Hamburger ── */
-#hamburger{display:none;flex-direction:column;justify-content:center;align-items:center;
-  width:36px;height:36px;border-radius:8px;border:1px solid var(--border);
-  background:var(--card-bg);cursor:pointer;gap:4px;flex-shrink:0}
-#hamburger span{display:block;width:16px;height:2px;background:var(--text-primary);border-radius:2px}
-/* ── Sidebar backdrop (mobile) ── */
+/* ── Hamburger (visible on mobile by default) ── */
+#hamburger{display:flex;flex-direction:column;justify-content:center;align-items:center;
+  width:38px;height:38px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card-bg);cursor:pointer;gap:5px;flex-shrink:0}
+#hamburger span{display:block;width:18px;height:2px;background:var(--text-primary);border-radius:2px}
+/* ── Sidebar backdrop ── */
 #sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
-/* ── Mobile ── */
+#sidebar-backdrop.show{display:block}
+/* ── Mobile layout tweaks ── */
 @media(max-width:768px){
-  #hamburger{display:flex}
-  #sidebar{position:fixed;top:0;left:0;height:100%;z-index:200;
-    transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);
-    box-shadow:4px 0 24px rgba(0,0,0,.18)}
-  #sidebar.open{transform:translateX(0)}
-  #sidebar-backdrop.show{display:block}
-  #content{width:100%}
   #topbar{padding:0 12px;gap:8px}
   .topbar-title{font-size:13px}
   .section{padding:12px}
   .stat-grid{grid-template-columns:repeat(2,1fr);gap:10px}
-  .dash-subnav{overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .dash-subnav{overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:2px;scrollbar-width:none}
+  .dash-subnav::-webkit-scrollbar{display:none}
   .form-row{grid-template-columns:1fr}
   .modal{width:96vw;padding:16px;max-height:92vh}
   table{font-size:11px}
   th,td{padding:8px 10px}
-  .chat-rooms{width:220px}
+  .chat-rooms{width:200px}
   .card-header{padding:10px 14px}
+  .stat-value{font-size:22px}
 }
 /* Map containers */
 #loc-map,#tl-map{background:#e8ede8}
@@ -226,7 +229,10 @@ textarea{min-height:70px;resize:vertical}
     <label>Email</label>
     <input id="login-email" type="email" value="admin@fieldpulse.in" placeholder="admin@fieldpulse.in" />
     <label>Password</label>
-    <input id="login-password" type="password" placeholder="Password" />
+    <div style="position:relative">
+      <input id="login-password" type="password" placeholder="Password" style="padding-right:40px"/>
+      <button type="button" onclick="togglePwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:#747878;font-size:12px" id="pwd-eye">Show</button>
+    </div>
     <div class="err" id="login-err">Invalid email or password</div>
     <button class="login-btn" onclick="doLogin()">Sign In</button>
   </div>
@@ -1510,6 +1516,13 @@ function startUnreadPoll(){
 }
 
 // ── Auth ────────────────────────────────────────────────────────────────────
+function togglePwd(){
+  const inp=document.getElementById('login-password');
+  const btn=document.getElementById('pwd-eye');
+  const show=inp.type==='password';
+  inp.type=show?'text':'password';
+  btn.textContent=show?'Hide':'Show';
+}
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim();
   const password=document.getElementById('login-password').value;
