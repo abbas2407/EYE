@@ -212,6 +212,13 @@ textarea{min-height:70px;resize:vertical}
   .card-header{padding:10px 14px}
   .stat-value{font-size:22px}
 }
+/* Skeleton loaders */
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.skel{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:800px 100%;animation:shimmer 1.4s infinite;border-radius:4px;display:inline-block}
+.skel-row{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border-soft)}
+.skel-avatar{width:32px;height:32px;border-radius:16px;flex-shrink:0}
+.skel-line{height:10px;border-radius:4px}
+.skel-text{flex:1;display:flex;flex-direction:column;gap:6px;justify-content:center}
 /* Map containers */
 #loc-map,#tl-map{background:#e8ede8}
 .leaflet-container{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -237,7 +244,10 @@ textarea{min-height:70px;resize:vertical}
 }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
 </head>
 <body>
@@ -1567,6 +1577,14 @@ async function apiFetch(path,opts={}){
   return res;
 }
 
+// Skeleton helpers
+function skelRows(n=4,cols=3){
+  return Array.from({length:n},()=>`<tr>${Array.from({length:cols},(_,i)=>`<td><span class="skel" style="width:${i===0?'70%':i===cols-1?'40%':'55%'};height:10px;display:block"></span></td>`).join('')}</tr>`).join('');
+}
+function skelList(n=4){
+  return Array.from({length:n},()=>`<div class="skel-row"><div class="skel skel-avatar"></div><div class="skel-text"><div class="skel skel-line" style="width:60%"></div><div class="skel skel-line" style="width:40%"></div></div></div>`).join('');
+}
+
 // ── Tab routing ─────────────────────────────────────────────────────────────
 const TABS=['dashboard','workers','organization','tasks','attendance','leaves','chat','clients','performance','reports'];
 const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',organization:'Organization',tasks:'Tasks',attendance:'Attendance',
@@ -1624,6 +1642,8 @@ function showDashSub(name){
 let ovAllWorkers=[], ovLocs=[], ovStats=null;
 
 async function loadOverview(){
+  const tb=document.getElementById('ov-emp-tbody');
+  if(tb)tb.innerHTML=skelRows(5,3);
   const[statsRes,locRes,usersRes]=await Promise.all([
     apiFetch('/api/admin/stats'),
     apiFetch('/api/admin/live-locations'),
@@ -1772,6 +1792,7 @@ function setLocLastUpdated(){
 
 async function _fetchAndRenderLoc(isFirstLoad){
   try{
+    if(isFirstLoad){const l=document.getElementById('loc-emp-list');if(l)l.innerHTML=skelList(5);}
     const res=await apiFetch('/api/admin/live-locations');
     if(!res||!res.ok)return;
     locAllData=await res.json();
@@ -1855,6 +1876,7 @@ function makeLocPopup(loc){
   </div>`;
 }
 
+let locClusterGroup = null;
 function renderLocMap(){
   const mapEl=document.getElementById('loc-map'); if(!mapEl)return;
   const valid=locAllData.filter(l=>l.latitude&&l.longitude);
@@ -1862,7 +1884,10 @@ function renderLocMap(){
     locMap=L.map(mapEl,{zoomControl:true});
     L.tileLayer(CARTO_TILES,{attribution:CARTO_ATTR,maxZoom:19}).addTo(locMap);
   }
-  locMarkers.forEach(m=>m.remove()); locMarkers=[];
+  // Remove old cluster group
+  if(locClusterGroup){locMap.removeLayer(locClusterGroup);}
+  locClusterGroup=L.markerClusterGroup({maxClusterRadius:50,showCoverageOnHover:false});
+  locMarkers=[];
   if(!valid.length){locMap.setView([20.5937,78.9629],5);locMapInitialized=false;return;}
   const bounds=[];
   valid.forEach(loc=>{
@@ -1871,11 +1896,12 @@ function renderLocMap(){
     const icon=L.divIcon({className:'',
       html:`<div style="width:42px;height:42px;border-radius:21px;background:${pin};border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:16px;box-shadow:0 2px 10px rgba(0,0,0,.35);cursor:pointer">${loc.user_name.charAt(0).toUpperCase()}</div>`,
       iconSize:[42,42],iconAnchor:[21,21],popupAnchor:[0,-25]});
-    const m=L.marker([loc.latitude,loc.longitude],{icon}).addTo(locMap)
-      .bindPopup(makeLocPopup(loc));
+    const m=L.marker([loc.latitude,loc.longitude],{icon}).bindPopup(makeLocPopup(loc));
     m._wid=loc.user_id;
     locMarkers.push(m);
+    locClusterGroup.addLayer(m);
   });
+  locMap.addLayer(locClusterGroup);
   // Only fit bounds on the first load — subsequent refreshes keep user's zoom/pan
   if(!locMapInitialized){
     if(valid.length===1)locMap.setView(bounds[0],15);
@@ -2216,6 +2242,8 @@ async function loadCompliance(){
 
 // ═══════════════════════════════════════════════════════ WORKERS ═════════════
 async function loadWorkers(){
+  const tb=document.getElementById('workers-body');
+  if(tb)tb.innerHTML=skelRows(6,6);
   const res=await apiFetch('/api/admin/users'); if(!res)return;
   workerList=await res.json();
   const tbody=document.getElementById('workers-body');
@@ -2332,6 +2360,8 @@ async function submitAddWorker(){
 
 // ═══════════════════════════════════════════════════════ TASKS ═══════════════
 async function loadTasks(){
+  const tb=document.getElementById('tasks-body');
+  if(tb)tb.innerHTML=skelRows(5,5);
   const[tasksRes,usersRes]=await Promise.all([apiFetch('/api/admin/tasks'),apiFetch('/api/admin/users')]);
   if(!tasksRes)return;
   const tasks=await tasksRes.json();
@@ -2455,6 +2485,8 @@ let attAllLogs=[], attAllUsers=[], attLiveLocs=[], attEmpFilter='all';
 let attPollInterval=null;
 
 async function fetchAttData(){
+  const atb=document.getElementById('att-emp-tbody');
+  if(atb&&!attAllUsers.length)atb.innerHTML=skelRows(6,6);
   // Always fetch fresh — no cache so live punch-ins show immediately
   const[lRes,uRes,locRes]=await Promise.all([
     apiFetch('/api/admin/attendance'),
@@ -2870,7 +2902,11 @@ function renderPunchesTable(){
 }
 
 // ═══════════════════════════════════════════════════════ LEAVES ═════════════
-async function loadLeaves(){const res=await apiFetch('/api/admin/leaves');if(!res)return;allLeaves=await res.json();renderLeaves('all');}
+async function loadLeaves(){
+  const tb=document.getElementById('leaves-body');
+  if(tb)tb.innerHTML=skelRows(5,7);
+  const res=await apiFetch('/api/admin/leaves');if(!res)return;allLeaves=await res.json();renderLeaves('all');
+}
 function filterLeaves(el,status){document.querySelectorAll('.pill-tabs .pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');renderLeaves(status);}
 function renderLeaves(status){
   const data=status==='all'?allLeaves:allLeaves.filter(l=>l.status===status);

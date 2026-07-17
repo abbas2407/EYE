@@ -6,6 +6,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import * as Application from 'expo-application';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, API_BASE_URL, getAccessToken } from '../api/client';
 
@@ -185,6 +186,7 @@ export default function PunchModal({
           return;
         }
         setStep('success');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setTimeout(() => onPunchOutSuccess(), 1500);
       } else {
         // PUNCH IN
@@ -213,6 +215,7 @@ export default function PunchModal({
                   : new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
                 setSuccessTime(punchTime);
                 setStep('success');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 setTimeout(() => onPunchInSuccess(punchTime, String(sd.attendance_log_id)), 1500);
                 return;
               }
@@ -227,6 +230,7 @@ export default function PunchModal({
         const logId = data.id ?? data.log_id ?? data.attendance_log_id ?? '';
         setSuccessTime(punchTime);
         setStep('success');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setTimeout(() => onPunchInSuccess(punchTime, String(logId)), 1500);
       }
     } catch {

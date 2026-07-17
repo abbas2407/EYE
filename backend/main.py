@@ -234,6 +234,14 @@ class CreateSiteRequest(BaseModel):
 def root():
     return {"status": "ok", "service": "FieldPulse API", "version": "2.0.0"}
 
+@app.get("/health")
+def health(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ok", "db": "ok", "ts": datetime.utcnow().isoformat()}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB unavailable: {e}")
+
 @app.get("/api/time")
 def get_server_time():
     now = datetime.utcnow()

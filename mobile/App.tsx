@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, Component, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ActivityIndicator, Platform, AppState
+  ActivityIndicator, Platform, AppState, Linking, Alert
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as SecureStore from 'expo-secure-store';
+import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ── Background GPS task (must be defined at module level) ──────────────────
@@ -21,26 +22,34 @@ TaskManager.defineTask(GPS_BG_TASK, async ({ data, error }: TaskManager.TaskMana
       accuracy: loc.coords.accuracy ?? null,
       timestamp: new Date(loc.timestamp).toISOString(),
     };
-    try {
-      const token = await SecureStore.getItemAsync('fp_access_token');
-      const apiUrl = 'https://fp.cyberlink.co.in';
-      if (token) {
+    let sent = false;
+    // Try sending with exponential backoff: 0ms, 5s, 15s
+    const delays = [0, 5000, 15000];
+    for (const delay of delays) {
+      if (delay > 0) await new Promise(r => setTimeout(r, delay));
+      try {
+        const token = await SecureStore.getItemAsync('fp_access_token');
+        const apiUrl = 'https://fp.cyberlink.co.in';
+        if (!token) break;
         const res = await fetch(`${apiUrl}/api/gps/batch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ pings: [ping] }),
         });
-        if (res.ok) continue;
-      }
-    } catch {}
-    // Fallback: queue for later flush
-    try {
-      const raw = await AsyncStorage.getItem('gps_offline_queue');
-      const queue: object[] = raw ? JSON.parse(raw) : [];
-      queue.push(ping);
-      if (queue.length > 500) queue.splice(0, queue.length - 500);
-      await AsyncStorage.setItem('gps_offline_queue', JSON.stringify(queue));
-    } catch {}
+        if (res.ok) { sent = true; break; }
+        if (res.status === 401) break; // Token issue — don't retry
+      } catch {}
+    }
+    if (!sent) {
+      // Queue for flush when app resumes or network returns
+      try {
+        const raw = await AsyncStorage.getItem('gps_offline_queue');
+        const queue: object[] = raw ? JSON.parse(raw) : [];
+        queue.push(ping);
+        if (queue.length > 500) queue.splice(0, queue.length - 500);
+        await AsyncStorage.setItem('gps_offline_queue', JSON.stringify(queue));
+      } catch {}
+    }
   }
 });
 
@@ -138,12 +147,31 @@ function MainApp() {
     } catch {}
   }, []);
 
+  const promptBatteryOptimization = useCallback(async () => {
+    if (Platform.OS !== 'android') return;
+    const shown = await AsyncStorage.getItem('battery_opt_shown').catch(() => null);
+    if (shown) return;
+    await AsyncStorage.setItem('battery_opt_shown', '1').catch(() => {});
+    Alert.alert(
+      'Keep GPS Running',
+      'To ensure accurate attendance tracking, please disable battery optimization for FieldPulse.\n\nGo to: Settings → Apps → FieldPulse → Battery → Unrestricted',
+      [
+        { text: 'Later', style: 'cancel' },
+        {
+          text: 'Open Settings',
+          onPress: () => Linking.openSettings(),
+        },
+      ]
+    );
+  }, []);
+
   const startGPSTracking = useCallback(async () => {
     try {
       const { status: fg } = await Location.requestForegroundPermissionsAsync();
       if (fg !== 'granted') return;
       if (Platform.OS === 'android') {
         await Location.requestBackgroundPermissionsAsync().catch(() => {});
+        promptBatteryOptimization();
       }
       const running = await Location.hasStartedLocationUpdatesAsync(GPS_BG_TASK).catch(() => false);
       if (running) return;
