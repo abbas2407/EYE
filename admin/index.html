@@ -1857,7 +1857,7 @@ function openTimelineFor(uid){
 }
 
 // ═══════════════════════════════════════════════════════ TIMELINE ═══════════
-let tlMap=null, tlMarkers=[], tlPolyline=null, tlWorkers=[];
+let tlMap=null, tlMarkers=[], tlPolyline=null, tlOutline=null, tlWorkers=[];
 let _tlPollActive=false, _tlPollTimer=null;
 
 function _tlIsToday(){
@@ -1969,6 +1969,7 @@ async function loadTimeline(silent=false){
 
   tlMarkers.forEach(m=>m.remove()); tlMarkers=[];
   if(tlPolyline){tlPolyline.remove();tlPolyline=null;}
+  if(tlOutline){tlOutline.remove();tlOutline=null;}
   if(data.pings.length>0&&tlMap){
     const rawCoords=data.pings.map(p=>[p.lat,p.lng]);
     const mkDot=(clr)=>L.divIcon({className:'',
@@ -1984,7 +1985,8 @@ async function loadTimeline(silent=false){
       .then(r=>r&&r.json()).then(d=>{
         if(!d||!d.coords||d.coords.length<2)return;
         if(tlPolyline){tlPolyline.remove();tlPolyline=null;}
-        L.polyline(d.coords,{color:'#ffffff',weight:8,opacity:0.9}).addTo(tlMap);
+        if(tlOutline){tlOutline.remove();tlOutline=null;}
+        tlOutline=L.polyline(d.coords,{color:'#ffffff',weight:8,opacity:0.9}).addTo(tlMap);
         tlPolyline=L.polyline(d.coords,{color:'#FF9500',weight:5,opacity:0.95}).addTo(tlMap);
         tlMarkers.forEach(m=>m.remove()); tlMarkers=[];
         tlMarkers.push(L.marker(rawCoords[0],{icon:mkDot('#22c55e')}).addTo(tlMap));
