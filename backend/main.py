@@ -894,7 +894,7 @@ def admin_live_locations(admin: User = Depends(require_admin), db: Session = Dep
     result = []
     for w in workers:
         ping = (db.query(GPSPing).filter(GPSPing.user_id == w.id)
-                .order_by(GPSPing.created_at.desc()).first())
+                .order_by(GPSPing.timestamp.desc()).first())
         active = db.query(AttendanceLog).filter(AttendanceLog.user_id == w.id,
                                                   AttendanceLog.status == "active").first()
         if ping:

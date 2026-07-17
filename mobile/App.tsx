@@ -4,7 +4,45 @@ import {
   ActivityIndicator, Platform, AppState
 } from 'react-native';
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
+import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ── Background GPS task (must be defined at module level) ──────────────────
+const GPS_BG_TASK = 'fp-gps-background';
+
+TaskManager.defineTask(GPS_BG_TASK, async ({ data, error }: TaskManager.TaskManagerTaskBody) => {
+  if (error || !data) return;
+  const { locations } = data as { locations: Location.LocationObject[] };
+  for (const loc of locations) {
+    const ping = {
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+      accuracy: loc.coords.accuracy ?? null,
+      timestamp: new Date(loc.timestamp).toISOString(),
+    };
+    try {
+      const token = await SecureStore.getItemAsync('fp_access_token');
+      const apiUrl = 'https://fp.cyberlink.co.in';
+      if (token) {
+        const res = await fetch(`${apiUrl}/api/gps/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ pings: [ping] }),
+        });
+        if (res.ok) continue;
+      }
+    } catch {}
+    // Fallback: queue for later flush
+    try {
+      const raw = await AsyncStorage.getItem('gps_offline_queue');
+      const queue: object[] = raw ? JSON.parse(raw) : [];
+      queue.push(ping);
+      if (queue.length > 500) queue.splice(0, queue.length - 500);
+      await AsyncStorage.setItem('gps_offline_queue', JSON.stringify(queue));
+    } catch {}
+  }
+});
 
 // Prevents a single screen crash from blanking the entire app
 class ScreenErrorBoundary extends Component<
@@ -86,7 +124,6 @@ function MainApp() {
   const [isOnline, setIsOnline] = useState(true);
   const [chatUnread, setChatUnread] = useState(0);
   const lastChatVisitRef = useRef(new Date().toISOString());
-  const gpsSubRef = useRef<Location.LocationSubscription | null>(null);
   const isOnlineRef = useRef(true);
 
   // Flush any pings that were queued while offline
@@ -101,59 +138,34 @@ function MainApp() {
     } catch {}
   }, []);
 
-  const sendGPSPing = useCallback(async (ping: object) => {
-    if (isOnlineRef.current) {
-      try {
-        const res = await apiFetch('/api/gps/batch', { method: 'POST', body: JSON.stringify({ pings: [ping] }) });
-        if (!res?.ok) throw new Error('failed');
-      } catch {
-        // Queue for later
-        const raw = await AsyncStorage.getItem('gps_offline_queue').catch(() => null);
-        const queue = raw ? JSON.parse(raw) : [];
-        queue.push(ping);
-        if (queue.length > 500) queue.splice(0, queue.length - 500);
-        await AsyncStorage.setItem('gps_offline_queue', JSON.stringify(queue)).catch(() => {});
-      }
-    } else {
-      const raw = await AsyncStorage.getItem('gps_offline_queue').catch(() => null);
-      const queue = raw ? JSON.parse(raw) : [];
-      queue.push(ping);
-      if (queue.length > 500) queue.splice(0, queue.length - 500);
-      await AsyncStorage.setItem('gps_offline_queue', JSON.stringify(queue)).catch(() => {});
-    }
-  }, []);
-
   const startGPSTracking = useCallback(async () => {
-    if (gpsSubRef.current) return; // already tracking
     try {
       const { status: fg } = await Location.requestForegroundPermissionsAsync();
       if (fg !== 'granted') return;
-      // Request background permission on Android — gracefully ignored if denied
       if (Platform.OS === 'android') {
         await Location.requestBackgroundPermissionsAsync().catch(() => {});
       }
-      gpsSubRef.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 30000,   // every 30 seconds
-          distanceInterval: 20,  // or every 20 metres
+      const running = await Location.hasStartedLocationUpdatesAsync(GPS_BG_TASK).catch(() => false);
+      if (running) return;
+      await Location.startLocationUpdatesAsync(GPS_BG_TASK, {
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 30000,
+        distanceInterval: 20,
+        showsBackgroundLocationIndicator: true,
+        foregroundService: {
+          notificationTitle: 'FieldPulse',
+          notificationBody: 'Location tracking active',
+          notificationColor: '#1a6ef2',
         },
-        (loc) => {
-          const ping = {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-            accuracy: loc.coords.accuracy,
-            timestamp: new Date(loc.timestamp).toISOString(),
-          };
-          sendGPSPing(ping);
-        }
-      );
+      });
     } catch {}
-  }, [sendGPSPing]);
+  }, []);
 
-  const stopGPSTracking = useCallback(() => {
-    gpsSubRef.current?.remove();
-    gpsSubRef.current = null;
+  const stopGPSTracking = useCallback(async () => {
+    try {
+      const running = await Location.hasStartedLocationUpdatesAsync(GPS_BG_TASK).catch(() => false);
+      if (running) await Location.stopLocationUpdatesAsync(GPS_BG_TASK);
+    } catch {}
   }, []);
 
   // Start/stop tracking whenever punch state changes
