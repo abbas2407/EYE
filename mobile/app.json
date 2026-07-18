@@ -77,9 +77,7 @@
             "compileSdkVersion": 34,
             "targetSdkVersion": 34,
             "minSdkVersion": 24,
-            "kotlinVersion": "1.9.22",
-            "enableProguardInRelease": true,
-            "shrinkResources": true
+            "kotlinVersion": "1.9.22"
           }
         }
       ]

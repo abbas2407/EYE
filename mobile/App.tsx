@@ -6,7 +6,6 @@ import {
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as SecureStore from 'expo-secure-store';
-import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ── Background GPS task (must be defined at module level) ──────────────────
@@ -22,26 +21,22 @@ TaskManager.defineTask(GPS_BG_TASK, async ({ data, error }: TaskManager.TaskMana
       accuracy: loc.coords.accuracy ?? null,
       timestamp: new Date(loc.timestamp).toISOString(),
     };
+    // One fast attempt only — background tasks have strict time limits on Android.
+    // If it fails, queue for flush when app foregrounds or network returns.
     let sent = false;
-    // Try sending with exponential backoff: 0ms, 5s, 15s
-    const delays = [0, 5000, 15000];
-    for (const delay of delays) {
-      if (delay > 0) await new Promise(r => setTimeout(r, delay));
-      try {
-        const token = await SecureStore.getItemAsync('fp_access_token');
-        const apiUrl = 'https://fp.cyberlink.co.in';
-        if (!token) break;
+    try {
+      const token = await SecureStore.getItemAsync('fp_access_token');
+      const apiUrl = 'https://fp.cyberlink.co.in';
+      if (token) {
         const res = await fetch(`${apiUrl}/api/gps/batch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ pings: [ping] }),
         });
-        if (res.ok) { sent = true; break; }
-        if (res.status === 401) break; // Token issue — don't retry
-      } catch {}
-    }
+        if (res.ok) sent = true;
+      }
+    } catch {}
     if (!sent) {
-      // Queue for flush when app resumes or network returns
       try {
         const raw = await AsyncStorage.getItem('gps_offline_queue');
         const queue: object[] = raw ? JSON.parse(raw) : [];
@@ -134,6 +129,7 @@ function MainApp() {
   const [chatUnread, setChatUnread] = useState(0);
   const lastChatVisitRef = useRef(new Date().toISOString());
   const isOnlineRef = useRef(true);
+  const fgWatchRef = useRef<Location.LocationSubscription | null>(null);
 
   // Flush any pings that were queued while offline
   const flushGPSQueue = useCallback(async () => {
@@ -165,31 +161,79 @@ function MainApp() {
     );
   }, []);
 
+  // Sends a single GPS ping via apiFetch (handles token refresh); queues on failure.
+  const sendGPSPing = useCallback(async (loc: Location.LocationObject) => {
+    const ping = {
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+      accuracy: loc.coords.accuracy ?? null,
+      timestamp: new Date(loc.timestamp).toISOString(),
+    };
+    let sent = false;
+    try {
+      const res = await apiFetch('/api/gps/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pings: [ping] }),
+      });
+      if (res?.ok) sent = true;
+    } catch {}
+    if (!sent) {
+      try {
+        const raw = await AsyncStorage.getItem('gps_offline_queue');
+        const queue: object[] = raw ? JSON.parse(raw) : [];
+        queue.push(ping);
+        if (queue.length > 500) queue.splice(0, queue.length - 500);
+        await AsyncStorage.setItem('gps_offline_queue', JSON.stringify(queue));
+      } catch {}
+    }
+  }, []);
+
   const startGPSTracking = useCallback(async () => {
     try {
       const { status: fg } = await Location.requestForegroundPermissionsAsync();
       if (fg !== 'granted') return;
+
+      // Foreground watcher always works (requires only foreground permission).
+      if (fgWatchRef.current) { fgWatchRef.current.remove(); fgWatchRef.current = null; }
+      fgWatchRef.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.Balanced, timeInterval: 15000, distanceInterval: 20 },
+        sendGPSPing
+      );
+
       if (Platform.OS === 'android') {
-        await Location.requestBackgroundPermissionsAsync().catch(() => {});
+        // Request background permission for when app is minimised.
+        const { status: bg } = await Location.requestBackgroundPermissionsAsync().catch(() => ({ status: 'denied' as const }));
+        if (bg !== 'granted') {
+          Alert.alert(
+            'Background Location Needed',
+            'For GPS tracking to work while the app is minimised, go to:\nSettings → Apps → FieldPulse → Permissions → Location → Allow all the time',
+            [{ text: 'OK' }, { text: 'Open Settings', onPress: () => Linking.openSettings() }]
+          );
+          return; // Foreground watcher still runs above
+        }
         promptBatteryOptimization();
+        const running = await Location.hasStartedLocationUpdatesAsync(GPS_BG_TASK).catch(() => false);
+        if (!running) {
+          await Location.startLocationUpdatesAsync(GPS_BG_TASK, {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 30000,
+            distanceInterval: 20,
+            showsBackgroundLocationIndicator: true,
+            foregroundService: {
+              notificationTitle: 'FieldPulse',
+              notificationBody: 'Location tracking active',
+              notificationColor: '#1a6ef2',
+            },
+          });
+        }
       }
-      const running = await Location.hasStartedLocationUpdatesAsync(GPS_BG_TASK).catch(() => false);
-      if (running) return;
-      await Location.startLocationUpdatesAsync(GPS_BG_TASK, {
-        accuracy: Location.Accuracy.Balanced,
-        timeInterval: 30000,
-        distanceInterval: 20,
-        showsBackgroundLocationIndicator: true,
-        foregroundService: {
-          notificationTitle: 'FieldPulse',
-          notificationBody: 'Location tracking active',
-          notificationColor: '#1a6ef2',
-        },
-      });
     } catch {}
-  }, []);
+  }, [sendGPSPing, promptBatteryOptimization]);
 
   const stopGPSTracking = useCallback(async () => {
+    fgWatchRef.current?.remove();
+    fgWatchRef.current = null;
     try {
       const running = await Location.hasStartedLocationUpdatesAsync(GPS_BG_TASK).catch(() => false);
       if (running) await Location.stopLocationUpdatesAsync(GPS_BG_TASK);
