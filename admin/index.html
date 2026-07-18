@@ -1701,6 +1701,7 @@ function showTab(name){
   document.getElementById('topbar-title').textContent=TAB_TITLES[name]||name;
   if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;currentRoomId=null;}
   if(attPollInterval && name!=='attendance'){clearInterval(attPollInterval);attPollInterval=null;}
+  if(name!=='dashboard'){stopLocPoll();stopTlPoll();}
   if(name==='chat'){/* unread cleared per-room when room is opened */}
   const loaders={dashboard:()=>showDashSub('overview'),workers:loadWorkers,tasks:loadTasks,
     attendance:loadAttendance,leaves:loadLeaves,chat:loadChatRooms,
