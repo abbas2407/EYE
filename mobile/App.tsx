@@ -143,24 +143,6 @@ function MainApp() {
     } catch {}
   }, []);
 
-  const promptBatteryOptimization = useCallback(async () => {
-    if (Platform.OS !== 'android') return;
-    const shown = await AsyncStorage.getItem('battery_opt_shown').catch(() => null);
-    if (shown) return;
-    await AsyncStorage.setItem('battery_opt_shown', '1').catch(() => {});
-    Alert.alert(
-      'Keep GPS Running',
-      'To ensure accurate attendance tracking, please disable battery optimization for FieldPulse.\n\nGo to: Settings → Apps → FieldPulse → Battery → Unrestricted',
-      [
-        { text: 'Later', style: 'cancel' },
-        {
-          text: 'Open Settings',
-          onPress: () => Linking.openSettings(),
-        },
-      ]
-    );
-  }, []);
-
   // Sends a single GPS ping via apiFetch (handles token refresh); queues on failure.
   const sendGPSPing = useCallback(async (loc: Location.LocationObject) => {
     const ping = {
@@ -212,7 +194,6 @@ function MainApp() {
           );
           return; // Foreground watcher still runs above
         }
-        promptBatteryOptimization();
         const running = await Location.hasStartedLocationUpdatesAsync(GPS_BG_TASK).catch(() => false);
         if (!running) {
           await Location.startLocationUpdatesAsync(GPS_BG_TASK, {
@@ -229,7 +210,7 @@ function MainApp() {
         }
       }
     } catch {}
-  }, [sendGPSPing, promptBatteryOptimization]);
+  }, [sendGPSPing]);
 
   const stopGPSTracking = useCallback(async () => {
     fgWatchRef.current?.remove();
