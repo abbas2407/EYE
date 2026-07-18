@@ -2019,7 +2019,10 @@ function updateLocMarkers(){
   const valid=locAllData.filter(l=>l.latitude&&l.longitude);
   // Remove markers for workers no longer in the list
   locMarkers=locMarkers.filter(m=>{
-    if(!valid.find(l=>l.user_id===m._wid)){m.remove();return false;}
+    if(!valid.find(l=>l.user_id===m._wid)){
+      if(locClusterGroup)locClusterGroup.removeLayer(m); else m.remove();
+      return false;
+    }
     return true;
   });
   valid.forEach(loc=>{
@@ -2033,9 +2036,9 @@ function updateLocMarkers(){
       existing.setIcon(icon);
       existing.setPopupContent(makeLocPopup(loc));
     } else {
-      const m=L.marker([loc.latitude,loc.longitude],{icon}).addTo(locMap)
-        .bindPopup(makeLocPopup(loc));
+      const m=L.marker([loc.latitude,loc.longitude],{icon}).bindPopup(makeLocPopup(loc));
       m._wid=loc.user_id;
+      if(locClusterGroup)locClusterGroup.addLayer(m); else m.addTo(locMap);
       locMarkers.push(m);
     }
   });
