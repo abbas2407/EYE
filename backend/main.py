@@ -744,22 +744,9 @@ async def places_map_match(req: MapMatchRequest, current_user: User = Depends(ge
     sampled = pings[::step]
     if sampled[-1] is not pings[-1]:
         sampled.append(pings[-1])
-    coords = [[p["lng"], p["lat"]] for p in sampled]
+    waypoints = [{"location": [p["lng"], p["lat"]]} for p in sampled]
     try:
-        ts = []
-        for p in sampled:
-            try:
-                ts.append(int(datetime.fromisoformat(p["time"].replace("Z","")).timestamp() * 1000))
-            except Exception:
-                ts.append(0)
-        body = {
-            "type": "FeatureCollection",
-            "features": [{
-                "type": "Feature",
-                "geometry": {"type": "MultiPoint", "coordinates": coords},
-                "properties": {"timestamps": ts},
-            }]
-        }
+        body = {"mode": "drive", "waypoints": waypoints}
         async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.post(
                 f"{_GEO_BASE}/mapmatching",
