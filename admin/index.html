@@ -306,6 +306,7 @@ th.sortable.desc::after{content:'↓';opacity:.8}
       <div class="nav-item" onclick="showTab('clients')"><i data-feather="briefcase" class="nav-icon"></i> Clients &amp; Sites</div>
       <div class="nav-item" onclick="showTab('performance')"><i data-feather="award" class="nav-icon"></i> Performance</div>
       <div class="nav-item" onclick="showTab('reports')"><i data-feather="file-text" class="nav-icon"></i> Reports</div>
+      <div class="nav-item" onclick="showTab('payroll');loadPayroll()"><i data-feather="dollar-sign" class="nav-icon"></i> Payroll</div>
       <div class="nav-item" onclick="showTab('audit');renderAuditLog()" id="nav-audit"><i data-feather="shield" class="nav-icon"></i> Audit Log</div>
     </nav>
     <div style="padding:12px 16px;border-top:1px solid var(--sidebar-border)">
@@ -1012,6 +1013,70 @@ th.sortable.desc::after{content:'↓';opacity:.8}
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════ PAYROLL ══ -->
+    <div id="tab-payroll" class="section" style="display:none">
+      <!-- Sub-tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary btn-sm" id="pr-tab-setup" onclick="showPayrollSub('setup')">Salary Setup</button>
+        <button class="btn btn-secondary btn-sm" id="pr-tab-monthly" onclick="showPayrollSub('monthly')">Monthly Payroll</button>
+      </div>
+
+      <!-- ── Salary Setup ── -->
+      <div id="pr-sub-setup">
+        <div class="card-title" style="margin-bottom:12px">Salary Setup — edit per worker</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px" id="payroll-config-table">
+            <thead>
+              <tr style="background:var(--page-bg)">
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Worker</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Base Salary (Rs)</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Work Days/Mo</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Shift Start</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Shift End</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">OT Rate/Hr (Rs)</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Allowances (Rs)</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Allowance Note</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Deductions (Rs)</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap">Deduction Note</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary)"></th>
+              </tr>
+            </thead>
+            <tbody id="payroll-config-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Monthly Payroll ── -->
+      <div id="pr-sub-monthly" style="display:none">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <div class="card-title">Monthly Payroll</div>
+          <input type="month" id="pr-month-picker" style="border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;background:var(--card-bg);color:var(--text-primary)"/>
+          <button class="btn btn-primary btn-sm" onclick="calcPayroll()">Calculate</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadAllSlips()">⬇ Download All Slips (PDF)</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px" id="payroll-monthly-table">
+            <thead>
+              <tr style="background:var(--page-bg)">
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary)">Worker</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary)">Present</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary)">Absent</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary)">OT Hrs</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary)">OT Pay</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary)">Earned</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary)">Allowances</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary)">Deductions</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--text-secondary);color:#1a6ef2;font-size:13px">Net Pay</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary)"></th>
+              </tr>
+            </thead>
+            <tbody id="payroll-monthly-body"></tbody>
+          </table>
+        </div>
+        <div id="payroll-monthly-empty" style="display:none;text-align:center;color:var(--text-secondary);padding:32px;font-size:13px">Select a month and click Calculate.</div>
+      </div>
+    </div>
+
     <!-- ══════════════════════════════════════════ AUDIT LOG ══ -->
     <div id="tab-audit" class="section" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
@@ -1638,9 +1703,9 @@ function skelList(n=4){
 }
 
 // ── Tab routing ─────────────────────────────────────────────────────────────
-const TABS=['dashboard','workers','organization','tasks','attendance','leaves','chat','clients','performance','reports','audit'];
+const TABS=['dashboard','workers','organization','tasks','attendance','leaves','chat','clients','performance','reports','payroll','audit'];
 const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',organization:'Organization',tasks:'Tasks',attendance:'Attendance',
-  leaves:'Leave Requests',chat:'Chat',clients:'Clients & Sites',performance:'Performance',reports:'Reports'};
+  leaves:'Leave Requests',chat:'Chat',clients:'Clients & Sites',performance:'Performance',reports:'Reports',payroll:'Payroll',audit:'Audit Log'};
 
 function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('open');
@@ -1665,7 +1730,7 @@ function showTab(name){
   if(name==='chat'){/* unread cleared per-room when room is opened */}
   const loaders={dashboard:()=>showDashSub('overview'),workers:loadWorkers,tasks:loadTasks,
     attendance:loadAttendance,leaves:loadLeaves,chat:loadChatRooms,
-    clients:loadClients,organization:loadOrganization,performance:loadPerformance,reports:()=>{}};
+    clients:loadClients,organization:loadOrganization,performance:loadPerformance,reports:()=>{},payroll:loadPayroll};
   if(loaders[name])loaders[name]();
 }
 
@@ -4239,6 +4304,129 @@ function exportAuditCSV(){
   const a=document.createElement('a');a.href=url;a.download='audit-log.csv';a.click();
   URL.revokeObjectURL(url);
   showToast('Audit log exported','success');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PAYROLL
+// ══════════════════════════════════════════════════════════════════════════════
+let _payrollConfigs=[];
+let _payrollMonthly=[];
+
+function showPayrollSub(sub){
+  document.getElementById('pr-sub-setup').style.display=sub==='setup'?'':'none';
+  document.getElementById('pr-sub-monthly').style.display=sub==='monthly'?'':'none';
+  document.getElementById('pr-tab-setup').className=sub==='setup'?'btn btn-primary btn-sm':'btn btn-secondary btn-sm';
+  document.getElementById('pr-tab-monthly').className=sub==='monthly'?'btn btn-primary btn-sm':'btn btn-secondary btn-sm';
+}
+
+async function loadPayroll(){
+  showPayrollSub('setup');
+  // Default month picker to current month
+  const mp=document.getElementById('pr-month-picker');
+  if(mp&&!mp.value){const n=new Date();mp.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
+  try{
+    const res=await apiFetch('/api/admin/payroll/config');
+    if(!res)return;
+    _payrollConfigs=await res.json();
+    renderPayrollConfig();
+  }catch(e){showToast('Failed to load salary config','error');}
+}
+
+function renderPayrollConfig(){
+  const tbody=document.getElementById('payroll-config-body');
+  if(!_payrollConfigs.length){tbody.innerHTML='<tr><td colspan="11" class="empty">No workers found.</td></tr>';return;}
+  tbody.innerHTML=_payrollConfigs.map(w=>`<tr data-uid="${esc(w.user_id)}">
+    <td style="padding:8px 10px;white-space:nowrap;font-weight:500">${esc(w.name)}</td>
+    <td style="padding:6px 6px"><input type="number" min="0" step="0.01" value="${w.base_salary}" data-field="base_salary"
+      style="width:90px;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 6px"><input type="number" min="1" max="31" value="${w.working_days_per_month}" data-field="working_days_per_month"
+      style="width:60px;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 6px"><input type="time" value="${w.shift_start}" data-field="shift_start"
+      style="border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 6px"><input type="time" value="${w.shift_end}" data-field="shift_end"
+      style="border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 6px"><input type="number" min="0" step="0.01" value="${w.overtime_rate_per_hour}" data-field="overtime_rate_per_hour"
+      style="width:80px;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 6px"><input type="number" min="0" step="0.01" value="${w.allowances}" data-field="allowances"
+      style="width:80px;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 6px"><input type="text" value="${esc(w.allowance_note||'')}" data-field="allowance_note" placeholder="e.g. Travel"
+      style="width:90px;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 6px"><input type="number" min="0" step="0.01" value="${w.deductions}" data-field="deductions"
+      style="width:80px;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 6px"><input type="text" value="${esc(w.deduction_note||'')}" data-field="deduction_note" placeholder="e.g. PF"
+      style="width:90px;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/></td>
+    <td style="padding:6px 8px"><button class="btn btn-primary btn-xs" onclick="savePayrollConfig('${esc(w.user_id)}')">Save</button></td>
+  </tr>`).join('');
+}
+
+async function savePayrollConfig(userId){
+  const row=document.querySelector(`#payroll-config-body tr[data-uid="${userId}"]`);
+  if(!row)return;
+  const payload={};
+  row.querySelectorAll('[data-field]').forEach(inp=>{
+    const f=inp.dataset.field;
+    const v=inp.value;
+    payload[f]=(f==='working_days_per_month')?parseInt(v):
+               (f==='base_salary'||f==='overtime_rate_per_hour'||f==='allowances'||f==='deductions')?parseFloat(v):v;
+  });
+  try{
+    const res=await apiFetch(`/api/admin/payroll/config/${userId}`,{method:'PUT',body:JSON.stringify(payload)});
+    if(!res||!res.ok){showToast('Save failed','error');return;}
+    showToast('Salary config saved','success');
+    logAudit('Payroll config updated',`Worker ID ${userId}`);
+  }catch(e){showToast('Save failed','error');}
+}
+
+async function calcPayroll(){
+  const month=document.getElementById('pr-month-picker').value;
+  if(!month){showToast('Select a month first','warn');return;}
+  try{
+    const res=await apiFetch(`/api/admin/payroll/calculate?month=${month}`);
+    if(!res)return;
+    _payrollMonthly=await res.json();
+    renderPayrollMonthly(month);
+  }catch(e){showToast('Calculation failed','error');}
+}
+
+function renderPayrollMonthly(month){
+  const tbody=document.getElementById('payroll-monthly-body');
+  const empty=document.getElementById('payroll-monthly-empty');
+  if(!_payrollMonthly.length){tbody.innerHTML='';empty.style.display='';return;}
+  empty.style.display='none';
+  tbody.innerHTML=_payrollMonthly.map(w=>`<tr>
+    <td style="padding:8px 10px;font-weight:500;white-space:nowrap">${esc(w.name)}</td>
+    <td style="padding:8px 10px;text-align:right;color:#16a34a">${w.present_days}</td>
+    <td style="padding:8px 10px;text-align:right;color:#dc2626">${w.absent_days}</td>
+    <td style="padding:8px 10px;text-align:right">${w.ot_hours}</td>
+    <td style="padding:8px 10px;text-align:right">Rs ${w.ot_pay.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="padding:8px 10px;text-align:right">Rs ${w.earned.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="padding:8px 10px;text-align:right;color:#16a34a">Rs ${w.allowances.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="padding:8px 10px;text-align:right;color:#dc2626">Rs ${w.deductions.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="padding:8px 10px;text-align:right;font-weight:700;color:#1a6ef2;font-size:14px">Rs ${w.net_pay.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="padding:8px 10px"><button class="btn btn-secondary btn-xs" onclick="downloadSlip('${esc(w.user_id)}','${month}','${esc(w.name)}')">⬇ Slip</button></td>
+  </tr>`).join('');
+}
+
+async function downloadSlip(userId, month, name){
+  try{
+    const res=await apiFetch(`/api/admin/payroll/slip/${userId}?month=${month}`);
+    if(!res||!res.ok){showToast('Failed to download slip','error');return;}
+    const blob=await res.blob();
+    const u=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=u;a.download=`salary_slip_${name.replace(/\s+/g,'_')}_${month}.pdf`;
+    a.click();URL.revokeObjectURL(u);
+  }catch(e){showToast('Failed to download slip','error');}
+}
+
+async function downloadAllSlips(){
+  const month=document.getElementById('pr-month-picker').value;
+  if(!month){showToast('Select a month first','warn');return;}
+  if(!_payrollMonthly.length){showToast('Calculate payroll first','warn');return;}
+  for(const w of _payrollMonthly){
+    await downloadSlip(w.user_id,month,w.name);
+    await new Promise(r=>setTimeout(r,300));
+  }
 }
 
 </script>

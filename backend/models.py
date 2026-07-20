@@ -174,6 +174,23 @@ class Client(Base):
     created_at      = Column(DateTime, default=datetime.utcnow)
     sites           = relationship("Site", back_populates="client")
 
+class SalaryConfig(Base):
+    __tablename__ = "salary_configs"
+    id                    = Column(String, primary_key=True, default=gen_id)
+    user_id               = Column(String, ForeignKey("users.id"), unique=True, nullable=False)
+    company_id            = Column(String, nullable=True, default="default")
+    base_salary           = Column(Float, default=0.0)
+    working_days_per_month = Column(Integer, default=26)
+    shift_start           = Column(String, default="09:00")   # HH:MM
+    shift_end             = Column(String, default="18:00")   # HH:MM
+    overtime_rate_per_hour = Column(Float, default=0.0)
+    allowances            = Column(Float, default=0.0)
+    deductions            = Column(Float, default=0.0)
+    allowance_note        = Column(String, nullable=True)
+    deduction_note        = Column(String, nullable=True)
+    updated_at            = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user                  = relationship("User")
+
 class Site(Base):
     __tablename__ = "sites"
     id              = Column(String, primary_key=True, default=gen_id)

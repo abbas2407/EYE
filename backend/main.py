@@ -16,7 +16,7 @@ from database import get_db, engine, Base
 from sqlalchemy import text
 from models import (User, RefreshToken, AttendanceLog, Task, UploadedFile,
                     LeaveBalance, Leave, ChatRoom, ChatMember, Message, GPSPing, PushToken,
-                    Client, Site)
+                    Client, Site, SalaryConfig)
 from auth import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from seed import seed
 import vendor_models
@@ -1428,3 +1428,266 @@ def admin_force_punch_out(user_id: str, admin: User = Depends(require_admin), db
     active.status = "completed"
     db.commit()
     return {"ok": True, "closed_log_id": active.id}
+
+
+# ── Payroll ───────────────────────────────────────────────────────────────────
+
+class SalaryConfigUpdate(BaseModel):
+    base_salary: Optional[float] = None
+    working_days_per_month: Optional[int] = None
+    shift_start: Optional[str] = None
+    shift_end: Optional[str] = None
+    overtime_rate_per_hour: Optional[float] = None
+    allowances: Optional[float] = None
+    deductions: Optional[float] = None
+    allowance_note: Optional[str] = None
+    deduction_note: Optional[str] = None
+
+@app.get("/api/admin/payroll/config")
+def get_all_salary_configs(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    cid = admin.company_id or "default"
+    workers = db.query(User).filter(User.company_id == cid, User.role == "field_worker", User.is_active == True).all()
+    result = []
+    for w in workers:
+        cfg = db.query(SalaryConfig).filter(SalaryConfig.user_id == w.id).first()
+        result.append({
+            "user_id": w.id, "name": w.name, "email": w.email,
+            "base_salary": cfg.base_salary if cfg else 0.0,
+            "working_days_per_month": cfg.working_days_per_month if cfg else 26,
+            "shift_start": cfg.shift_start if cfg else "09:00",
+            "shift_end": cfg.shift_end if cfg else "18:00",
+            "overtime_rate_per_hour": cfg.overtime_rate_per_hour if cfg else 0.0,
+            "allowances": cfg.allowances if cfg else 0.0,
+            "deductions": cfg.deductions if cfg else 0.0,
+            "allowance_note": cfg.allowance_note if cfg else "",
+            "deduction_note": cfg.deduction_note if cfg else "",
+        })
+    return result
+
+@app.put("/api/admin/payroll/config/{user_id}")
+def update_salary_config(user_id: str, req: SalaryConfigUpdate, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    cid = admin.company_id or "default"
+    target = db.query(User).filter(User.id == user_id, User.company_id == cid).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    cfg = db.query(SalaryConfig).filter(SalaryConfig.user_id == user_id).first()
+    if not cfg:
+        cfg = SalaryConfig(user_id=user_id, company_id=cid)
+        db.add(cfg)
+    for field, val in req.model_dump(exclude_none=True).items():
+        setattr(cfg, field, val)
+    db.commit()
+    return {"ok": True}
+
+@app.get("/api/admin/payroll/calculate")
+def calculate_payroll(month: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """month = YYYY-MM"""
+    cid = admin.company_id or "default"
+    try:
+        year, mon = int(month.split("-")[0]), int(month.split("-")[1])
+    except Exception:
+        raise HTTPException(status_code=400, detail="month must be YYYY-MM")
+
+    import calendar
+    month_start = datetime(year, mon, 1)
+    last_day = calendar.monthrange(year, mon)[1]
+    month_end = datetime(year, mon, last_day, 23, 59, 59)
+
+    workers = db.query(User).filter(User.company_id == cid, User.role == "field_worker", User.is_active == True).all()
+    result = []
+    for w in workers:
+        cfg = db.query(SalaryConfig).filter(SalaryConfig.user_id == w.id).first()
+        base = cfg.base_salary if cfg else 0.0
+        work_days = cfg.working_days_per_month if cfg else 26
+        shift_end_str = cfg.shift_end if cfg else "18:00"
+        ot_rate = cfg.overtime_rate_per_hour if cfg else 0.0
+        allowances = cfg.allowances if cfg else 0.0
+        deductions = cfg.deductions if cfg else 0.0
+
+        logs = db.query(AttendanceLog).filter(
+            AttendanceLog.user_id == w.id,
+            AttendanceLog.punch_in_time >= month_start,
+            AttendanceLog.punch_in_time <= month_end,
+            AttendanceLog.punch_out_time != None
+        ).all()
+
+        present_days = len(set(l.punch_in_time.date() for l in logs))
+        absent_days = max(0, work_days - present_days)
+
+        ot_hours = 0.0
+        try:
+            se_h, se_m = map(int, shift_end_str.split(":"))
+            for l in logs:
+                if l.punch_out_time:
+                    shift_end_dt = l.punch_in_time.replace(hour=se_h, minute=se_m, second=0, microsecond=0)
+                    if l.punch_out_time > shift_end_dt:
+                        ot_hours += (l.punch_out_time - shift_end_dt).total_seconds() / 3600
+        except Exception:
+            pass
+
+        per_day = base / work_days if work_days > 0 else 0
+        earned = round(per_day * present_days, 2)
+        ot_pay = round(ot_hours * ot_rate, 2)
+        net_pay = round(earned + ot_pay + allowances - deductions, 2)
+
+        result.append({
+            "user_id": w.id, "name": w.name,
+            "present_days": present_days, "absent_days": absent_days,
+            "ot_hours": round(ot_hours, 2), "ot_pay": ot_pay,
+            "base_salary": base, "earned": earned,
+            "allowances": allowances, "allowance_note": cfg.allowance_note if cfg else "",
+            "deductions": deductions, "deduction_note": cfg.deduction_note if cfg else "",
+            "net_pay": net_pay,
+        })
+    return result
+
+@app.get("/api/admin/payroll/slip/{user_id}")
+def download_salary_slip(user_id: str, month: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Generate PDF salary slip for one worker. month = YYYY-MM"""
+    from fpdf import FPDF
+    import calendar
+
+    cid = admin.company_id or "default"
+    worker = db.query(User).filter(User.id == user_id, User.company_id == cid).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        year, mon = int(month.split("-")[0]), int(month.split("-")[1])
+    except Exception:
+        raise HTTPException(status_code=400, detail="month must be YYYY-MM")
+
+    month_start = datetime(year, mon, 1)
+    last_day = calendar.monthrange(year, mon)[1]
+    month_end = datetime(year, mon, last_day, 23, 59, 59)
+
+    cfg = db.query(SalaryConfig).filter(SalaryConfig.user_id == user_id).first()
+    base = cfg.base_salary if cfg else 0.0
+    work_days = cfg.working_days_per_month if cfg else 26
+    shift_end_str = cfg.shift_end if cfg else "18:00"
+    ot_rate = cfg.overtime_rate_per_hour if cfg else 0.0
+    allowances = cfg.allowances if cfg else 0.0
+    deductions = cfg.deductions if cfg else 0.0
+
+    logs = db.query(AttendanceLog).filter(
+        AttendanceLog.user_id == user_id,
+        AttendanceLog.punch_in_time >= month_start,
+        AttendanceLog.punch_in_time <= month_end,
+        AttendanceLog.punch_out_time != None
+    ).all()
+
+    present_days = len(set(l.punch_in_time.date() for l in logs))
+    absent_days = max(0, work_days - present_days)
+
+    ot_hours = 0.0
+    try:
+        se_h, se_m = map(int, shift_end_str.split(":"))
+        for l in logs:
+            if l.punch_out_time:
+                shift_end_dt = l.punch_in_time.replace(hour=se_h, minute=se_m, second=0, microsecond=0)
+                if l.punch_out_time > shift_end_dt:
+                    ot_hours += (l.punch_out_time - shift_end_dt).total_seconds() / 3600
+    except Exception:
+        pass
+
+    per_day = base / work_days if work_days > 0 else 0
+    earned = round(per_day * present_days, 2)
+    ot_pay = round(ot_hours * ot_rate, 2)
+    net_pay = round(earned + ot_pay + allowances - deductions, 2)
+    month_label = datetime(year, mon, 1).strftime("%B %Y")
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_margins(20, 20, 20)
+
+    # Header
+    pdf.set_fill_color(26, 110, 242)
+    pdf.rect(0, 0, 210, 32, "F")
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_xy(20, 8)
+    pdf.cell(0, 10, "FieldPulse", ln=False)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.set_xy(20, 20)
+    pdf.cell(0, 7, f"Salary Slip - {month_label}")
+
+    pdf.set_text_color(30, 30, 30)
+    pdf.set_xy(20, 38)
+
+    # Worker info
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.cell(0, 8, worker.name, ln=True)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 6, worker.email, ln=True)
+    pdf.ln(4)
+
+    # Divider
+    pdf.set_draw_color(220, 220, 220)
+    pdf.set_line_width(0.4)
+    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
+    pdf.ln(5)
+
+    def row(label, value, bold=False):
+        pdf.set_text_color(80, 80, 80)
+        pdf.set_font("Helvetica", "", 10)
+        pdf.cell(110, 8, label)
+        pdf.set_text_color(30, 30, 30)
+        pdf.set_font("Helvetica", "B" if bold else "", 10)
+        pdf.cell(0, 8, str(value), ln=True)
+
+    # Attendance
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(26, 110, 242)
+    pdf.cell(0, 8, "Attendance", ln=True)
+    pdf.set_text_color(30, 30, 30)
+    row("Working Days (Month)", work_days)
+    row("Present Days", present_days)
+    row("Absent Days", absent_days)
+    row("Overtime Hours", f"{ot_hours:.2f} hrs")
+    pdf.ln(3)
+
+    # Earnings
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(26, 110, 242)
+    pdf.cell(0, 8, "Earnings", ln=True)
+    pdf.set_text_color(30, 30, 30)
+    row("Base Salary", f"Rs {base:,.2f}")
+    row("Earned (for present days)", f"Rs {earned:,.2f}")
+    row("Overtime Pay", f"Rs {ot_pay:,.2f}")
+    allow_label = f"Allowances ({cfg.allowance_note})" if cfg and cfg.allowance_note else "Allowances"
+    row(allow_label, f"Rs {allowances:,.2f}")
+    pdf.ln(3)
+
+    # Deductions
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(220, 60, 60)
+    pdf.cell(0, 8, "Deductions", ln=True)
+    pdf.set_text_color(30, 30, 30)
+    ded_label = f"Deductions ({cfg.deduction_note})" if cfg and cfg.deduction_note else "Deductions"
+    row(ded_label, f"Rs {deductions:,.2f}")
+    pdf.ln(3)
+
+    # Net Pay box
+    pdf.set_fill_color(240, 247, 255)
+    pdf.set_draw_color(26, 110, 242)
+    pdf.set_line_width(0.6)
+    y = pdf.get_y()
+    pdf.rect(20, y, 170, 16, "FD")
+    pdf.set_xy(25, y + 3)
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(26, 110, 242)
+    pdf.cell(110, 10, "NET PAY")
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, f"Rs {net_pay:,.2f}")
+    pdf.ln(22)
+
+    # Footer
+    pdf.set_text_color(150, 150, 150)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.cell(0, 6, f"Generated on {datetime.utcnow().strftime('%d %b %Y')} - FieldPulse Payroll System", align="C")
+
+    buf = io.BytesIO(pdf.output())
+    filename = f"salary_slip_{worker.name.replace(' ','_')}_{month}.pdf"
+    return StreamingResponse(buf, media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{filename}"'})
