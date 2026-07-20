@@ -803,6 +803,24 @@ def admin_reset_password(user_id: str, req: ResetPasswordRequest,
     db.commit()
     return {"ok": True}
 
+class UpdateEmailRequest(BaseModel):
+    new_email: str
+
+@app.put("/api/admin/users/{user_id}/update-email")
+def admin_update_email(user_id: str, req: UpdateEmailRequest,
+                       admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    cid = admin.company_id or "default"
+    user = db.query(User).filter(User.id == user_id, User.company_id == cid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    new_email = req.new_email.lower().strip()
+    existing = db.query(User).filter(User.email == new_email, User.id != user_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already in use")
+    user.email = new_email
+    db.commit()
+    return {"ok": True}
+
 @app.post("/api/admin/users")
 def admin_create_user(req: CreateUserRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == req.email.lower().strip()).first():
@@ -1192,21 +1210,309 @@ def admin_leave_action(leave_id: str, req: LeaveActionRequest,
     db.commit()
     return {"status": leave.status}
 
-@app.get("/api/admin/reports/attendance-csv")
-def attendance_csv(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+@app.get("/api/admin/reports/attendance-xlsx")
+def attendance_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
+                    admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Unolo-style multi-sheet attendance Excel. date_from/date_to = YYYY-MM-DD (defaults to current month)."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    import calendar as cal_mod
+
     cid = admin.company_id or "default"
-    cuid = db.query(User.id).filter(User.company_id == cid)
-    logs = (db.query(AttendanceLog).filter(AttendanceLog.user_id.in_(cuid))
-            .order_by(AttendanceLog.punch_in_time.desc()).all())
-    lines = ["Name,Email,Punch In,Punch Out,Hours,Status,Note"]
-    for l in logs:
-        pin = l.punch_in_time.strftime("%Y-%m-%d %H:%M")
-        pout = l.punch_out_time.strftime("%Y-%m-%d %H:%M") if l.punch_out_time else ""
-        note = (l.check_in_note or "").replace(",", ";")
-        lines.append(f"{l.user.name},{l.user.email},{pin},{pout},{l.total_hours or ''},{l.status},{note}")
-    content = "\n".join(lines)
-    return StreamingResponse(io.StringIO(content), media_type="text/csv",
-                             headers={"Content-Disposition": "attachment; filename=attendance.csv"})
+    now = datetime.utcnow()
+
+    if date_from:
+        try: start_dt = datetime.strptime(date_from, "%Y-%m-%d")
+        except: start_dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        start_dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    if date_to:
+        try: end_dt = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        except: end_dt = now.replace(hour=23, minute=59, second=59)
+    else:
+        end_dt = now.replace(hour=23, minute=59, second=59)
+
+    workers = db.query(User).filter(User.company_id == cid, User.is_active == True,
+                                    User.role != "admin").order_by(User.name).all()
+
+    # Build date list for Quick sheet
+    from datetime import date as date_type
+    days = []
+    cur = start_dt.date()
+    while cur <= end_dt.date():
+        days.append(cur)
+        cur += timedelta(days=1)
+
+    # Collect all logs once
+    all_logs = (db.query(AttendanceLog)
+                .filter(AttendanceLog.user_id.in_([w.id for w in workers]),
+                        AttendanceLog.punch_in_time >= start_dt,
+                        AttendanceLog.punch_in_time <= end_dt)
+                .all())
+    logs_by_user = {}
+    for l in all_logs:
+        logs_by_user.setdefault(l.user_id, []).append(l)
+
+    # Collect approved leaves
+    leaves_raw = db.query(Leave).filter(
+        Leave.user_id.in_([w.id for w in workers]),
+        Leave.status.in_(["approved", "pending"])
+    ).all()
+    leaves_by_user = {}
+    for lv in leaves_raw:
+        leaves_by_user.setdefault(lv.user_id, []).append(lv)
+
+    # Salary configs for shift times
+    configs = {c.user_id: c for c in db.query(SalaryConfig).filter(
+        SalaryConfig.user_id.in_([w.id for w in workers])).all()}
+
+    # Helper: count Sundays in range
+    def count_sundays(start, end):
+        return sum(1 for d in days if d.weekday() == 6)
+
+    # Helper: determine day status for a worker
+    def day_status(uid, day):
+        day_logs = [l for l in logs_by_user.get(uid, []) if l.punch_in_time.date() == day]
+        if day_logs:
+            return "PR"
+        if day.weekday() == 6:
+            return "WO"
+        day_leaves = []
+        for lv in leaves_by_user.get(uid, []):
+            d = lv.start_date.date()
+            while d <= lv.end_date.date():
+                if d == day:
+                    day_leaves.append(lv)
+                d += timedelta(days=1)
+        if day_leaves:
+            return "PN" if day_leaves[0].status == "pending" else "OL"
+        if day > now.date():
+            return ""
+        return "AB"
+
+    BLUE = "1a6ef2"
+    LIGHT_BLUE = "EBF2FF"
+    HEADER_FILL = PatternFill("solid", fgColor="1a6ef2")
+    HEADER_FONT = Font(bold=True, color="FFFFFF", size=10)
+    SUBHDR_FILL = PatternFill("solid", fgColor="E8F0FE")
+    SUBHDR_FONT = Font(bold=True, color="1a4fa0", size=9)
+    THIN = Side(style="thin", color="CCCCCC")
+    THIN_BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+    title_font = Font(bold=True, size=13, color="1a1c1a")
+    meta_font = Font(size=10, color="555555")
+
+    wb = openpyxl.Workbook()
+
+    # ── SUMMARY SHEET ─────────────────────────────────────────────────────────
+    ws = wb.active
+    ws.title = "Summary"
+    from_label = start_dt.strftime("%B %d, %Y")
+    to_label = end_dt.strftime("%B %d, %Y")
+    ws["A1"] = f"Attendance Report for date : {from_label}  to  {to_label}"
+    ws["A1"].font = title_font
+    ws.merge_cells("A1:R1")
+    ws["A3"] = f"Prepared on {now.strftime('%B %d, %Y %H:%M:%S')}"
+    ws["A3"].font = meta_font
+    ws["A4"] = f"Total employees : {len(workers)}"
+    ws["A4"].font = meta_font
+
+    sum_headers = ["Employee Name","Manager Name","Designation","Internal ID","Team","Active",
+                   "Present (Days)","Absent (Days)","Weekly Off (Days)","On Leave (Days)",
+                   "Public Holiday (Days)","Pending Approval (Days)","Total (Days)",
+                   "Joining Date","In Late (Days)","Out Early (Days)","Total Attendance Time"]
+    for col, h in enumerate(sum_headers, 1):
+        cell = ws.cell(row=6, column=col, value=h)
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = THIN_BORDER
+    ws.row_dimensions[6].height = 30
+
+    sundays = count_sundays(start_dt.date(), end_dt.date())
+    total_days = len(days)
+
+    for row_i, w in enumerate(workers, 7):
+        cfg = configs.get(w.id)
+        ulogs = logs_by_user.get(w.id, [])
+        present = len(set(l.punch_in_time.date() for l in ulogs))
+        approved_leave = sum(
+            sum(1 for d in days if lv.start_date.date() <= d <= lv.end_date.date())
+            for lv in leaves_by_user.get(w.id, []) if lv.status == "approved"
+        )
+        pending_leave = sum(
+            sum(1 for d in days if lv.start_date.date() <= d <= lv.end_date.date())
+            for lv in leaves_by_user.get(w.id, []) if lv.status == "pending"
+        )
+        absent = max(0, total_days - present - sundays - approved_leave - pending_leave)
+        total_hours = round(sum(l.total_hours or 0 for l in ulogs), 2)
+
+        # In late / out early
+        in_late = 0
+        out_early = 0
+        if cfg:
+            try:
+                ss_h, ss_m = map(int, cfg.shift_start.split(":"))
+                se_h, se_m = map(int, cfg.shift_end.split(":"))
+                for l in ulogs:
+                    ss_dt = l.punch_in_time.replace(hour=ss_h, minute=ss_m, second=0, microsecond=0)
+                    if l.punch_in_time > ss_dt + timedelta(minutes=5):
+                        in_late += 1
+                    if l.punch_out_time:
+                        se_dt = l.punch_in_time.replace(hour=se_h, minute=se_m, second=0, microsecond=0)
+                        if l.punch_out_time < se_dt - timedelta(minutes=5):
+                            out_early += 1
+            except Exception:
+                pass
+
+        hrs = int(total_hours)
+        mins = int((total_hours - hrs) * 60)
+        att_time = f"{hrs} hours, {mins} minutes"
+
+        row_data = [w.name, "", "", "", "Default", "Yes" if w.is_active else "No",
+                    present, absent, sundays, approved_leave, 0, pending_leave, total_days,
+                    w.created_at.strftime("%Y-%m-%d"), in_late, out_early, att_time]
+        fill = PatternFill("solid", fgColor="F8FBFF") if row_i % 2 == 0 else None
+        for col, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_i, column=col, value=val)
+            cell.border = THIN_BORDER
+            cell.font = Font(size=9)
+            cell.alignment = Alignment(vertical="center")
+            if fill:
+                cell.fill = fill
+
+    # Column widths
+    col_widths = [22,18,14,12,12,8,10,10,12,10,13,15,10,14,10,12,20]
+    for i, w_val in enumerate(col_widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w_val
+
+    # ── QUICK SHEET ───────────────────────────────────────────────────────────
+    wq = wb.create_sheet("Quick")
+    wq["A1"] = f"Attendance Report for date : {from_label}  to  {to_label}"
+    wq["A1"].font = title_font
+    wq.merge_cells(f"A1:{get_column_letter(6 + len(days) + 6)}1")
+    wq["A3"] = f"Prepared on {now.strftime('%B %d, %Y %H:%M:%S')}"
+    wq["A3"].font = meta_font
+    wq["A4"] = f"Total employees : {len(workers)}"
+    wq["A4"].font = meta_font
+
+    # Legend row
+    legend = {"Present": "PR", "Absent": "AB", "Weekly Off": "WO",
+              "On Leave": "OL", "Public Holiday": "PH", "Pending Approval": "PN"}
+    legend_colors = {"Present": "16a34a", "Absent": "dc2626", "Weekly Off": "2563eb",
+                     "On Leave": "d97706", "Public Holiday": "7c3aed", "Pending Approval": "db2777"}
+    leg_col = 4
+    for label, code in legend.items():
+        cell = wq.cell(row=4, column=leg_col, value=label)
+        cell.font = Font(bold=True, size=9, color=legend_colors[label])
+        code_cell = wq.cell(row=5, column=leg_col, value=code)
+        code_cell.font = Font(bold=True, size=9, color=legend_colors[label])
+        leg_col += 2
+
+    # Headers
+    q_fixed = ["Name", "Team", "Active"]
+    for col, h in enumerate(q_fixed, 1):
+        cell = wq.cell(row=6, column=col, value=h)
+        cell.fill = HEADER_FILL; cell.font = HEADER_FONT
+        cell.border = THIN_BORDER
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    day_col_start = len(q_fixed) + 1
+    for di, day in enumerate(days):
+        col = day_col_start + di
+        label = day.strftime("%a(%d-%m-%Y)")
+        cell = wq.cell(row=6, column=col, value=label)
+        cell.fill = SUBHDR_FILL; cell.font = SUBHDR_FONT
+        cell.border = THIN_BORDER
+        cell.alignment = Alignment(horizontal="center")
+        wq.column_dimensions[get_column_letter(col)].width = 14
+    total_col_start = day_col_start + len(days)
+    for ti, th in enumerate(["Present","Absent","Weekly off","On Leave","Pub. Holiday","Pend. Approval","Total"], total_col_start):
+        cell = wq.cell(row=6, column=ti, value=th)
+        cell.fill = HEADER_FILL; cell.font = HEADER_FONT
+        cell.border = THIN_BORDER
+        cell.alignment = Alignment(horizontal="center", wrap_text=True)
+
+    STATUS_COLORS = {"PR":"16a34a","AB":"dc2626","WO":"2563eb","OL":"d97706","PN":"db2777","PH":"7c3aed"}
+    for row_i, w in enumerate(workers, 7):
+        fill = PatternFill("solid", fgColor="F8FBFF") if row_i % 2 == 0 else None
+        for col, val in enumerate([w.name, "Default", "Yes" if w.is_active else "No"], 1):
+            cell = wq.cell(row=row_i, column=col, value=val)
+            cell.border = THIN_BORDER; cell.font = Font(size=9)
+            if fill: cell.fill = fill
+
+        pr=ab=wo=ol=ph=pn=0
+        for di, day in enumerate(days):
+            status = day_status(w.id, day)
+            col = day_col_start + di
+            cell = wq.cell(row=row_i, column=col, value=status)
+            cell.border = THIN_BORDER
+            cell.alignment = Alignment(horizontal="center")
+            if status in STATUS_COLORS:
+                cell.font = Font(bold=True, size=9, color=STATUS_COLORS[status])
+            if fill: cell.fill = fill
+            if status=="PR": pr+=1
+            elif status=="AB": ab+=1
+            elif status=="WO": wo+=1
+            elif status=="OL": ol+=1
+            elif status=="PH": ph+=1
+            elif status=="PN": pn+=1
+        for ti, val in enumerate([pr,ab,wo,ol,ph,pn,pr+ab+wo+ol+ph+pn], total_col_start):
+            cell = wq.cell(row=row_i, column=ti, value=val)
+            cell.border = THIN_BORDER
+            cell.alignment = Alignment(horizontal="center")
+            cell.font = Font(size=9)
+            if fill: cell.fill = fill
+
+    for i in range(1, 4):
+        wq.column_dimensions[get_column_letter(i)].width = 20 if i==1 else 12
+
+    # ── DETAIL SHEET ──────────────────────────────────────────────────────────
+    wd = wb.create_sheet("Detail")
+    wd["A1"] = f"Attendance Detail : {from_label}  to  {to_label}"
+    wd["A1"].font = title_font
+    wd.merge_cells("A1:H1")
+    detail_headers = ["Employee Name","Date","Punch In","Punch Out","Hours","Status","In Late","Check-in Note"]
+    for col, h in enumerate(detail_headers, 1):
+        cell = wd.cell(row=3, column=col, value=h)
+        cell.fill = HEADER_FILL; cell.font = HEADER_FONT
+        cell.border = THIN_BORDER
+        cell.alignment = Alignment(horizontal="center")
+    for w in workers:
+        cfg = configs.get(w.id)
+        ss_h, ss_m = 9, 0
+        if cfg:
+            try: ss_h, ss_m = map(int, cfg.shift_start.split(":"))
+            except: pass
+        for l in sorted(logs_by_user.get(w.id, []), key=lambda x: x.punch_in_time):
+            ss_dt = l.punch_in_time.replace(hour=ss_h, minute=ss_m, second=0, microsecond=0)
+            late = l.punch_in_time > ss_dt + timedelta(minutes=5)
+            row_vals = [
+                w.name,
+                l.punch_in_time.strftime("%d-%m-%Y"),
+                l.punch_in_time.strftime("%H:%M"),
+                l.punch_out_time.strftime("%H:%M") if l.punch_out_time else "",
+                round(l.total_hours or 0, 2),
+                l.status,
+                "Yes" if late else "No",
+                l.check_in_note or ""
+            ]
+            row_num = wd.max_row + 1
+            fill = PatternFill("solid", fgColor="F8FBFF") if row_num % 2 == 0 else None
+            for col, val in enumerate(row_vals, 1):
+                cell = wd.cell(row=row_num, column=col, value=val)
+                cell.border = THIN_BORDER; cell.font = Font(size=9)
+                if fill: cell.fill = fill
+    for i, w_val in enumerate([22,12,10,10,8,12,10,28], 1):
+        wd.column_dimensions[get_column_letter(i)].width = w_val
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"attendance_{start_dt.strftime('%Y-%m-%d')}_to_{end_dt.strftime('%Y-%m-%d')}.xlsx"
+    return StreamingResponse(buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 @app.get("/api/admin/reports/payroll-csv")
 def payroll_csv(admin: User = Depends(require_admin), db: Session = Depends(get_db)):

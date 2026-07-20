@@ -997,12 +997,22 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 
     <div id="tab-reports" class="section" style="display:none">
       <div class="card-title" style="color:#695d4a;margin-bottom:16px">Export Reports</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
         <div class="card" style="padding:20px">
           <div style="font-size:24px;margin-bottom:8px">📊</div>
           <div style="font-weight:600;margin-bottom:4px;font-size:14px">Attendance Report</div>
-          <div style="font-size:11px;color:#747878;margin-bottom:14px">Full punch-in/out log with hours worked and check-in notes.</div>
-          <button class="btn btn-primary" onclick="downloadCSV('attendance')">⬇ Download CSV</button>
+          <div style="font-size:11px;color:#747878;margin-bottom:12px">Multi-sheet Excel — Summary, day-by-day Quick view, and Detail log.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font-size:10px;color:#747878;font-weight:600">FROM</span>
+              <input type="date" id="att-from" style="border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font-size:10px;color:#747878;font-weight:600">TO</span>
+              <input type="date" id="att-to" style="border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:12px;background:var(--card-bg);color:var(--text-primary)"/>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="downloadAttendanceXlsx()">⬇ Download Excel</button>
         </div>
         <div class="card" style="padding:20px">
           <div style="font-size:24px;margin-bottom:8px">💰</div>
@@ -1730,7 +1740,7 @@ function showTab(name){
   if(name==='chat'){/* unread cleared per-room when room is opened */}
   const loaders={dashboard:()=>showDashSub('overview'),workers:loadWorkers,tasks:loadTasks,
     attendance:loadAttendance,leaves:loadLeaves,chat:loadChatRooms,
-    clients:loadClients,organization:loadOrganization,performance:loadPerformance,reports:()=>{},payroll:loadPayroll};
+    clients:loadClients,organization:loadOrganization,performance:loadPerformance,reports:initReportDates,payroll:loadPayroll};
   if(loaders[name])loaders[name]();
 }
 
@@ -2409,9 +2419,11 @@ function openWorkerDetail(userId){
 
     <label>Email</label>
     <div style="display:flex;align-items:center;gap:8px">
-      <input value="${esc(u.email)}" readonly style="background:#f5f4f1;color:#747878;flex:1">
-      <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${esc(u.email)}')">Copy</button>
+      <input id="wd-email" value="${esc(u.email)}" style="flex:1">
+      <button class="btn btn-primary btn-sm" onclick="saveWorkerEmail('${u.id}')">Save</button>
+      <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('wd-email').value)">Copy</button>
     </div>
+    <div id="wd-email-msg" style="font-size:11px;margin-top:4px;display:none"></div>
 
     <label>Current Password</label>
     <div style="display:flex;align-items:center;gap:8px">
@@ -2439,6 +2451,21 @@ function openWorkerDetail(userId){
       <button class="btn btn-secondary" onclick="closeModal()">Close</button>
     </div>`;
   openModal();
+}
+
+async function saveWorkerEmail(userId){
+  const newEmail=document.getElementById('wd-email').value.trim();
+  const msgEl=document.getElementById('wd-email-msg');
+  if(!newEmail||!newEmail.includes('@')){msgEl.textContent='Enter a valid email.';msgEl.style.color='#ba1a1a';msgEl.style.display='block';return;}
+  const res=await apiFetch(`/api/admin/users/${userId}/update-email`,{method:'PUT',body:JSON.stringify({new_email:newEmail})});
+  if(res&&res.ok){
+    msgEl.textContent='✅ Email updated.';msgEl.style.color='#166534';msgEl.style.display='block';
+    const u=workerList.find(w=>w.id===userId);if(u)u.email=newEmail;
+    logAudit('Email updated',`User ${userId} → ${newEmail}`);
+  }else{
+    const err=res?await res.json().catch(()=>({})):{};
+    msgEl.textContent=err.detail||'Failed to update email.';msgEl.style.color='#ba1a1a';msgEl.style.display='block';
+  }
 }
 
 async function resetWorkerPassword(userId){
@@ -4304,6 +4331,36 @@ function exportAuditCSV(){
   const a=document.createElement('a');a.href=url;a.download='audit-log.csv';a.click();
   URL.revokeObjectURL(url);
   showToast('Audit log exported','success');
+}
+
+// ── Attendance Excel download ─────────────────────────────────────────────────
+function initReportDates(){
+  const n=new Date();
+  const y=n.getFullYear(),m=String(n.getMonth()+1).padStart(2,'0'),d=String(n.getDate()).padStart(2,'0');
+  const first=`${y}-${m}-01`;
+  const today=`${y}-${m}-${d}`;
+  const f=document.getElementById('att-from'),t=document.getElementById('att-to');
+  if(f&&!f.value)f.value=first;
+  if(t&&!t.value)t.value=today;
+}
+
+async function downloadAttendanceXlsx(){
+  initReportDates();
+  const from=document.getElementById('att-from').value;
+  const to=document.getElementById('att-to').value;
+  if(!from||!to){showToast('Select date range first','warn');return;}
+  if(from>to){showToast('From date must be before To date','warn');return;}
+  showToast('Generating report…','info');
+  try{
+    const res=await apiFetch(`/api/admin/reports/attendance-xlsx?date_from=${from}&date_to=${to}`);
+    if(!res||!res.ok){showToast('Failed to generate report','error');return;}
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`attendance_${from}_to_${to}.xlsx`;a.click();
+    URL.revokeObjectURL(url);
+    showToast('Report downloaded','success');
+  }catch(e){showToast('Download failed','error');}
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
