@@ -1882,6 +1882,9 @@ async function loadLiveLocView(){
 function stopLocPoll(){
   _locPollActive=false;
   if(_locPollTimer){clearTimeout(_locPollTimer);_locPollTimer=null;}
+  if(_locCountdownTimer){clearInterval(_locCountdownTimer);_locCountdownTimer=null;}
+  const el=document.getElementById('loc-countdown');if(el)el.textContent='';
+  locMapInitialized=false;
 }
 
 function setLocFilter(btn,mode){

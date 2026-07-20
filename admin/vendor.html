@@ -4,9 +4,12 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>FieldPulse — Vendor Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Georgia,'Palatino Linotype',Palatino,serif;background:#f4f5f7;color:#1a1a2e;min-height:100vh;display:flex}
+body{font-family:'DM Sans',sans-serif;background:#f4f5f7;color:#1a1a2e;min-height:100vh;display:flex}
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;font-family:inherit}
 input,select,textarea{font-family:inherit}
@@ -427,6 +430,7 @@ input:checked+.slider:before{transform:translateX(16px)}
     <div class="page" id="page-users">
       <div class="search-row">
         <input class="search-input" id="user-search" placeholder="Search users..." oninput="loadUsers()"/>
+        <button class="btn btn-primary" onclick="openAddWorkerModal()">+ Add Worker</button>
       </div>
       <div class="card">
         <table>
@@ -1093,6 +1097,7 @@ async function loadUsers() {
         </button>
         <button class="btn btn-secondary btn-xs" onclick="forceReset('${u.id}')">Reset PW</button>
         <button class="btn btn-xs" style="background:#eff6ff;color:#2563eb" onclick="impersonate('${u.id}')">Login As</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteWorker('${u.id}','${esc(u.name)}')">Delete</button>
       </div></td>
     </tr>`).join('') || '<tr><td colspan="6" class="empty">No users</td></tr>';
   } catch(e) { console.error(e); }
@@ -1331,6 +1336,54 @@ function closePanel() {
   document.getElementById('overlay').classList.remove('open');
   document.getElementById('panel').classList.remove('open');
   currentPanel = ''; editingCompanyId = null;
+}
+
+function openAddWorkerModal() {
+  currentPanel = 'add-worker';
+  document.getElementById('panel-title').textContent = 'Add Worker';
+  document.getElementById('panel-body').innerHTML = `
+    <div class="form-group"><label>Full Name</label><input id="aw-name" placeholder="e.g. John Doe"/></div>
+    <div class="form-group"><label>Email</label><input id="aw-email" type="email" placeholder="worker@example.com"/></div>
+    <div class="form-group"><label>Password</label><input id="aw-password" type="password" placeholder="Min 6 characters"/></div>
+    <div class="form-group"><label>Role</label>
+      <select id="aw-role">
+        <option value="field_worker">Field Worker</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Company</label>
+      <select id="aw-company">
+        <option value="default">— No Company —</option>
+        ${allCompanies.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="panel-footer" style="margin:0 -24px -24px;padding:16px 24px">
+      <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveWorker()">Create Worker</button>
+    </div>`;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+}
+
+async function saveWorker() {
+  const name = v('aw-name'), email = v('aw-email'), password = v('aw-password');
+  if (!name || !email || !password) return alert('Name, email and password are required.');
+  if (password.length < 6) return alert('Password must be at least 6 characters.');
+  try {
+    await api('POST', '/api/vendor/users', {
+      name, email, password,
+      role: v('aw-role'),
+      company_id: v('aw-company') || 'default',
+    });
+    closePanel();
+    loadUsers();
+  } catch(e) { alert(e.message); }
+}
+
+async function deleteWorker(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  try { await api('DELETE', `/api/vendor/users/${id}`); loadUsers(); }
+  catch(e) { alert(e.message); }
 }
 
 async function saveInvoice() {

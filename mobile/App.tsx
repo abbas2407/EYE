@@ -179,7 +179,7 @@ function MainApp() {
       // Foreground watcher always works (requires only foreground permission).
       if (fgWatchRef.current) { fgWatchRef.current.remove(); fgWatchRef.current = null; }
       fgWatchRef.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, timeInterval: 15000, distanceInterval: 20 },
+        { accuracy: Location.Accuracy.Balanced, timeInterval: 15000, distanceInterval: 0 },
         sendGPSPing
       );
 
@@ -199,7 +199,7 @@ function MainApp() {
           await Location.startLocationUpdatesAsync(GPS_BG_TASK, {
             accuracy: Location.Accuracy.Balanced,
             timeInterval: 30000,
-            distanceInterval: 20,
+            distanceInterval: 0,
             showsBackgroundLocationIndicator: true,
             foregroundService: {
               notificationTitle: 'FieldPulse',
