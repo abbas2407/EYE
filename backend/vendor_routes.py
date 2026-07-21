@@ -982,6 +982,12 @@ def delete_user(user_id: str, request: Request,
     if not u:
         raise HTTPException(404, "User not found")
     email = u.email
+    db.query(AttendanceLog).filter(AttendanceLog.user_id == user_id).delete()
+    db.query(GPSPing).filter(GPSPing.user_id == user_id).delete()
+    db.query(Task).filter(Task.assignee_id == user_id).delete()
+    db.query(LeaveBalance).filter(LeaveBalance.user_id == user_id).delete()
+    db.query(PushToken).filter(PushToken.user_id == user_id).delete()
+    db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete()
     db.delete(u)
     db.commit()
     _audit(db, v, "delete_user", "user", user_id, {"email": email}, request.client.host)
