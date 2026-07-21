@@ -776,11 +776,15 @@ async def places_map_match(req: MapMatchRequest, current_user: User = Depends(ge
             matchings = data.get("matchings", [])
             if matchings:
                 coords = matchings[0]["geometry"]["coordinates"]
-                return {"coords": [[c[1], c[0]] for c in coords]}  # swap to [lat, lng]
+                distance_m = matchings[0].get("distance", 0)
+                return {
+                    "coords": [[c[1], c[0]] for c in coords],
+                    "distance_km": round(distance_m / 1000, 2),
+                }
         log.warning(f"Mapbox map-match non-200: {res.status_code} {res.text[:200]}")
     except Exception as e:
         log.warning(f"Mapbox map-match failed: {e}")
-    return {"coords": []}
+    return {"coords": [], "distance_km": 0}
 
 
 # ── Admin Routes ──────────────────────────────────────────────────────────────
