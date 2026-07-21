@@ -982,14 +982,12 @@ def delete_user(user_id: str, request: Request,
     if not u:
         raise HTTPException(404, "User not found")
     email = u.email
-    db.query(AttendanceLog).filter(AttendanceLog.user_id == user_id).delete()
-    db.query(GPSPing).filter(GPSPing.user_id == user_id).delete()
-    db.query(Task).filter(Task.assignee_id == user_id).delete()
-    db.query(LeaveBalance).filter(LeaveBalance.user_id == user_id).delete()
-    db.query(PushToken).filter(PushToken.user_id == user_id).delete()
-    db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete()
-    db.delete(u)
-    db.commit()
+    import sqlite3 as _sq
+    _cn = _sq.connect("/app/data/fieldpulse.db")
+    for tbl, col in [("attendance_logs","user_id"),("gps_pings","user_id"),("tasks","assignee_id"),("leave_balances","user_id"),("push_tokens","user_id"),("refresh_tokens","user_id")]:
+        _cn.execute(f"DELETE FROM {tbl} WHERE {col}=?", (user_id,))
+    _cn.execute("DELETE FROM users WHERE id=?", (user_id,))
+    _cn.commit(); _cn.close()
     _audit(db, v, "delete_user", "user", user_id, {"email": email}, request.client.host)
     return {"ok": True}
 
