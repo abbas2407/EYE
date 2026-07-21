@@ -1,4 +1,4 @@
-import csv, io, re
+import csv, io, re, os
 from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from jose import JWTError
+from urllib.parse import quote
+import httpx
 
 from database import get_db
 from auth import hash_password, verify_password, decode_token, create_token
@@ -1218,3 +1220,24 @@ def report_revenue(db: Session = Depends(get_db), v: VendorAdmin = Depends(get_v
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=revenue.csv"},
     )
+
+
+_MAPBOX_GEO = "https://api.mapbox.com/geocoding/v5/mapbox.places"
+
+@router.get("/geocode/search")
+async def vendor_geocode_search(q: str, v: VendorAdmin = Depends(get_vendor)):
+    token = os.getenv("MAPBOX_TOKEN", "")
+    if not token or not q.strip():
+        return []
+    async with httpx.AsyncClient() as client:
+        r = await client.get(
+            f"{_MAPBOX_GEO}/{quote(q)}.json",
+            params={"access_token": token, "country": "in", "limit": 5, "language": "en"},
+            timeout=5,
+        )
+    if r.status_code != 200:
+        return []
+    data = r.json()
+    return [{"id": f["id"], "place_name": f["place_name"],
+             "lat": f["center"][1], "lng": f["center"][0]}
+            for f in data.get("features", [])]

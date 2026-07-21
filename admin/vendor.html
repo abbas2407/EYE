@@ -813,13 +813,13 @@ function companyForm(c) {
     _officeSearchTimer=setTimeout(async()=>{
       const q=document.getElementById('cf-office-search').value.trim();
       if(q.length<3)return;
-      const MAPBOX_TOKEN='pk.eyJ1IjoiYWxpLTEyMzQiLCJhIjoiY21ydTdoOXVyMDZsejJ4czI2cm9hcjJ3eSJ9.xGSdhmkLAQs2wsAGb6CuRQ';
-      const url=`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${MAPBOX_TOKEN}&country=in&limit=5&language=en`;
-      const res=await fetch(url);const data=await res.json();
-      const box=document.getElementById('cf-office-suggestions');
-      if(!data.features||!data.features.length){box.style.display='none';return;}
-      box.style.display='block';
-      box.innerHTML=data.features.map(f=>`<div onclick="selectOffice(${f.center[1]},${f.center[0]},'${f.place_name.replace(/'/g,"\\'")}');document.getElementById('cf-office-search').value='${f.place_name.replace(/'/g,"\\'")}';document.getElementById('cf-office-suggestions').style.display='none';" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${f.place_name}</div>`).join('');
+      try{
+        const results=await api('GET',`/api/vendor/geocode/search?q=${encodeURIComponent(q)}`);
+        const box=document.getElementById('cf-office-suggestions');
+        if(!results||!results.length){box.style.display='none';return;}
+        box.style.display='block';
+        box.innerHTML=results.map(f=>`<div onclick="selectOffice(${f.lat},${f.lng},'${f.place_name.replace(/'/g,"\\'")}');document.getElementById('cf-office-search').value='${f.place_name.replace(/'/g,"\\'")}';document.getElementById('cf-office-suggestions').style.display='none';" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${f.place_name}</div>`).join('');
+      }catch(e){console.warn('geocode search failed',e);}
     },400);
   }
   function selectOffice(lat,lng,name){
