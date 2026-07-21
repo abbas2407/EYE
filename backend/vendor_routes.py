@@ -107,6 +107,11 @@ def _company_dict(c: Company, db: Session) -> dict:
         "ip_whitelist": c.ip_whitelist or [],
         "require_2fa": c.require_2fa,
         "tags": c.tags or [],
+        "geo_fence_enabled": c.geo_fence_enabled or False,
+        "office_name": c.office_name,
+        "office_lat": c.office_lat,
+        "office_lng": c.office_lng,
+        "office_radius_m": c.office_radius_m or 100,
         "onboarding_score": onboarding,
         "onboarding_admin_logged_in": c.onboarding_admin_logged_in,
         "onboarding_employee_added": c.onboarding_employee_added,
@@ -153,6 +158,11 @@ class CompanyIn(BaseModel):
     require_2fa: bool = False
     tags: Optional[List[str]] = None
     initial_password: Optional[str] = None
+    geo_fence_enabled: bool = False
+    office_name: Optional[str] = None
+    office_lat: Optional[float] = None
+    office_lng: Optional[float] = None
+    office_radius_m: int = 100
 
 class CompanyUpdateIn(BaseModel):
     name: Optional[str] = None
@@ -174,6 +184,11 @@ class CompanyUpdateIn(BaseModel):
     gps_ping_interval: Optional[int] = None
     require_2fa: Optional[bool] = None
     tags: Optional[List[str]] = None
+    geo_fence_enabled: Optional[bool] = None
+    office_name: Optional[str] = None
+    office_lat: Optional[float] = None
+    office_lng: Optional[float] = None
+    office_radius_m: Optional[int] = None
 
 class ExtendIn(BaseModel):
     days: int = 30

@@ -45,6 +45,12 @@ class Company(Base):
     # Security
     ip_whitelist               = Column(JSON, nullable=True)
     require_2fa                = Column(Boolean, default=False)
+    # Geo-fence (office-only punch in/out)
+    geo_fence_enabled          = Column(Boolean, default=False)
+    office_name                = Column(String, nullable=True)
+    office_lat                 = Column(Float, nullable=True)
+    office_lng                 = Column(Float, nullable=True)
+    office_radius_m            = Column(Integer, default=100)
     # Ops
     tags                       = Column(JSON, nullable=True)     # list[str]
     # Onboarding checklist

@@ -364,6 +364,15 @@ async def punch_in(req: PunchInRequest, background: BackgroundTasks,
                                              AttendanceLog.punch_out_time == None).first()
     if active:
         raise HTTPException(status_code=400, detail="Already punched in. Punch out first.")
+    # Geo-fence check
+    company = db.query(vendor_models.Company).filter_by(id=current_user.company_id).first()
+    if company and company.geo_fence_enabled and company.office_lat and company.office_lng:
+        if req.latitude is None or req.longitude is None:
+            raise HTTPException(status_code=403, detail="Location access is required to punch in. Please enable GPS.")
+        dist_m = haversine_m(req.latitude, req.longitude, company.office_lat, company.office_lng)
+        if dist_m > (company.office_radius_m or 100):
+            raise HTTPException(status_code=403,
+                detail=f"You are {int(dist_m)}m away from the office. Punch in is only allowed within {company.office_radius_m}m of '{company.office_name or 'the office'}'.")
     now = datetime.utcnow()
     entry = AttendanceLog(user_id=current_user.id, punch_in_time=now,
                           latitude=req.latitude, longitude=req.longitude,
@@ -388,6 +397,15 @@ async def punch_out(req: PunchOutRequest, background: BackgroundTasks,
                                             AttendanceLog.punch_out_time == None).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Active attendance log not found")
+    # Geo-fence check
+    company = db.query(vendor_models.Company).filter_by(id=current_user.company_id).first()
+    if company and company.geo_fence_enabled and company.office_lat and company.office_lng:
+        if req.latitude is None or req.longitude is None:
+            raise HTTPException(status_code=403, detail="Location access is required to punch out. Please enable GPS.")
+        dist_m = haversine_m(req.latitude, req.longitude, company.office_lat, company.office_lng)
+        if dist_m > (company.office_radius_m or 100):
+            raise HTTPException(status_code=403,
+                detail=f"You are {int(dist_m)}m away from the office. Punch out is only allowed within {company.office_radius_m}m of '{company.office_name or 'the office'}'.")
     now = datetime.utcnow()
     delta = now - entry.punch_in_time
     total_hours = round(delta.total_seconds() / 3600, 2)
