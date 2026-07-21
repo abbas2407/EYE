@@ -650,25 +650,28 @@ def _encode_polyline(coords: list) -> str:
         prev_lat, prev_lng = round(lat * 1e5), round(lng * 1e5)
     return "".join(result)
 
+_MAPBOX_GEO = "https://api.mapbox.com/geocoding/v5/mapbox.places"
+
 @app.get("/api/places/autocomplete")
 async def places_autocomplete(input: str, current_user: User = Depends(get_current_user)):
+    from urllib.parse import quote
     try:
         async with httpx.AsyncClient(timeout=8.0) as client:
             res = await client.get(
-                f"{_GEO_BASE}/geocode/search",
-                params={"text": input, "limit": 5, "lang": "en",
-                        "filter": "countrycode:in", "apiKey": GEOAPIFY_KEY},
+                f"{_MAPBOX_GEO}/{quote(input)}.json",
+                params={"access_token": MAPBOX_TOKEN, "country": "in",
+                        "limit": 5, "language": "en"},
             )
         features = res.json().get("features", []) if res.status_code == 200 else []
         predictions = [
-            {"place_id": f["properties"].get("place_id", ""),
-             "description": f["properties"].get("formatted", ""),
-             "lat": f["properties"].get("lat", 0.0),
-             "lon": f["properties"].get("lon", 0.0)}
-            for f in features
+            {"place_id": f.get("id", ""),
+             "description": f.get("place_name", ""),
+             "lat": f["center"][1],
+             "lon": f["center"][0]}
+            for f in features if f.get("center")
         ]
     except Exception as e:
-        log.warning(f"Geoapify autocomplete failed: {e}")
+        log.warning(f"Mapbox autocomplete failed: {e}")
         predictions = []
     return {"predictions": predictions, "status": "OK"}
 
@@ -677,22 +680,24 @@ async def places_reverse_geocode(lat: float, lon: float, current_user: User = De
     try:
         async with httpx.AsyncClient(timeout=8.0) as client:
             res = await client.get(
-                f"{_GEO_BASE}/geocode/reverse",
-                params={"lat": lat, "lon": lon, "apiKey": GEOAPIFY_KEY},
+                f"{_MAPBOX_GEO}/{lon},{lat}.json",
+                params={"access_token": MAPBOX_TOKEN, "types": "address,place",
+                        "language": "en"},
             )
         features = res.json().get("features", []) if res.status_code == 200 else []
         if features:
-            props = features[0]["properties"]
-            return {
-                "address": props.get("formatted", ""),
-                "street": props.get("street", ""),
-                "city": props.get("city", props.get("county", "")),
-                "state": props.get("state", ""),
-                "country": props.get("country", ""),
-                "postcode": props.get("postcode", ""),
-            }
+            f = features[0]
+            address = f.get("place_name", "")
+            ctx = {c["id"].split(".")[0]: c["text"] for c in f.get("context", [])}
+            street = f.get("text", "")
+            city = ctx.get("place", ctx.get("locality", ctx.get("district", "")))
+            state = ctx.get("region", "")
+            country = ctx.get("country", "")
+            postcode = ctx.get("postcode", "")
+            return {"address": address, "street": street, "city": city,
+                    "state": state, "country": country, "postcode": postcode}
     except Exception as e:
-        log.warning(f"Geoapify reverse geocode failed: {e}")
+        log.warning(f"Mapbox reverse geocode failed: {e}")
     return {"address": "", "city": "", "state": "", "country": ""}
 
 @app.get("/api/places/directions")
