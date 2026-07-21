@@ -1,6 +1,7 @@
 """Seed initial users, tasks, chat rooms, leave balances. Idempotent."""
 from database import SessionLocal, engine, Base
 from models import User, Task, LeaveBalance, ChatRoom, ChatMember
+from vendor_models import VendorAdmin
 from auth import hash_password
 from datetime import datetime, timedelta
 import logging
@@ -60,6 +61,13 @@ def seed():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        # Seed vendor admin
+        if not db.query(VendorAdmin).first():
+            db.add(VendorAdmin(name="Vendor Admin", email="vendor@fieldpulse.in",
+                               password=hash_password("Vendor@Admin1"), is_active=True))
+            db.commit()
+            log.info("Vendor admin seeded")
+
         # Seed users
         for u in USERS:
             if not db.query(User).filter(User.email == u["email"]).first():
