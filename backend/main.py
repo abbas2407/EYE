@@ -54,6 +54,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 BASE_URL = os.getenv("BASE_URL", "http://167.233.90.245:8000")
 GOOGLE_MAPS_API_KEY = "AIzaSyAJHF-B2ulEDrxStgKH4NS7szhFdjErnos"
 GEOAPIFY_KEY = os.getenv("GEOAPIFY_KEY", "58776059a2734444a13b6f1a862b765a")
+MAPBOX_TOKEN = os.getenv("MAPBOX_TOKEN", "")
 
 app = FastAPI(title="FieldPulse API", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
@@ -734,35 +735,46 @@ async def places_directions(origin: str, destination: str, current_user: User = 
 class MapMatchRequest(BaseModel):
     pings: List[dict]  # [{lat, lng, time}]
 
+_MAPBOX_MATCH = "https://api.mapbox.com/matching/v5/mapbox/driving"
+
 @app.post("/api/places/map-match")
 async def places_map_match(req: MapMatchRequest, current_user: User = Depends(get_current_user)):
     pings = req.pings
     if len(pings) < 2:
         return {"coords": []}
-    # Subsample to 100 pts max (Geoapify limit)
+
+    # Mapbox limit: 100 waypoints per request — subsample if needed
     step = max(1, len(pings) // 100)
     sampled = pings[::step]
     if sampled[-1] is not pings[-1]:
         sampled.append(pings[-1])
-    waypoints = [{"location": [p["lng"], p["lat"]]} for p in sampled]
+
+    # Format: lng,lat;lng,lat;...
+    coord_str = ";".join(f"{p['lng']},{p['lat']}" for p in sampled)
+    # radiuses=25 per point — allows 25m snap tolerance for noisy Indian GPS
+    radiuses = ";".join("25" for _ in sampled)
+
     try:
-        body = {"mode": "drive", "waypoints": waypoints}
         async with httpx.AsyncClient(timeout=10.0) as client:
-            res = await client.post(
-                f"{_GEO_BASE}/mapmatching",
-                params={"apiKey": GEOAPIFY_KEY},
-                json=body,
+            res = await client.get(
+                f"{_MAPBOX_MATCH}/{coord_str}",
+                params={
+                    "access_token": MAPBOX_TOKEN,
+                    "geometries": "geojson",
+                    "overview": "full",
+                    "radiuses": radiuses,
+                    "tidy": "true",
+                },
             )
         if res.status_code == 200:
-            features = res.json().get("features", [])
-            if features:
-                geom = features[0].get("geometry", {})
-                raw = geom.get("coordinates", [])
-                if geom.get("type") == "MultiLineString":
-                    raw = [c for seg in raw for c in seg]
-                return {"coords": [[c[1], c[0]] for c in raw]}  # swap to [lat, lng]
+            data = res.json()
+            matchings = data.get("matchings", [])
+            if matchings:
+                coords = matchings[0]["geometry"]["coordinates"]
+                return {"coords": [[c[1], c[0]] for c in coords]}  # swap to [lat, lng]
+        log.warning(f"Mapbox map-match non-200: {res.status_code} {res.text[:200]}")
     except Exception as e:
-        log.warning(f"Geoapify map-match failed: {e}")
+        log.warning(f"Mapbox map-match failed: {e}")
     return {"coords": []}
 
 
