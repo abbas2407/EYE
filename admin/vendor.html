@@ -780,7 +780,7 @@ function companyForm(c) {
   ${toggleField('cf-leave','Leave Management',c.feature_leave!==false)}
   ${toggleField('cf-reports','Reports',c.feature_reports!==false)}
   <div class="section-title">Attendance Geo-Fence</div>
-  ${toggleField('cf-geofence','Restrict punch in/out to office area only',c.geo_fence_enabled)}
+  ${toggleField('cf-geofence','Restrict punch in/out to office area only',c.geo_fence_enabled,'initGeoFencePanel()')}
   <div id="cf-geofence-fields" style="display:${c.geo_fence_enabled?'block':'none'};margin-top:8px">
     <div class="form-group"><label>Office Name</label><input type="text" id="cf-office-name" placeholder="e.g. Head Office" value="${c.office_name||''}"/></div>
     <div class="form-group">
@@ -801,33 +801,8 @@ function companyForm(c) {
         ${[50,100,150,200,300,500].map(r=>`<option value="${r}" ${(c.office_radius_m||100)==r?'selected':''}>${r} meters</option>`).join('')}
       </select>
     </div>
-    ${c.office_lat&&c.office_lng?`<div style="font-size:11px;color:#16a34a;margin-top:4px">✓ Office location set: ${c.office_lat?.toFixed(5)}, ${c.office_lng?.toFixed(5)}</div>`:''}
+    ${c.office_lat&&c.office_lng?`<div style="font-size:11px;color:#16a34a;margin-top:4px">&#10003; Office location set: ${c.office_lat?.toFixed(5)}, ${c.office_lng?.toFixed(5)}</div>`:''}
   </div>
-  <script>
-  document.getElementById('cf-geofence')?.addEventListener('change',function(){
-    document.getElementById('cf-geofence-fields').style.display=this.checked?'block':'none';
-  });
-  let _officeSearchTimer;
-  function searchOfficeAddress(){
-    clearTimeout(_officeSearchTimer);
-    _officeSearchTimer=setTimeout(async()=>{
-      const q=document.getElementById('cf-office-search').value.trim();
-      if(q.length<3)return;
-      try{
-        const results=await api('GET',`/api/vendor/geocode/search?q=${encodeURIComponent(q)}`);
-        const box=document.getElementById('cf-office-suggestions');
-        if(!results||!results.length){box.style.display='none';return;}
-        box.style.display='block';
-        box.innerHTML=results.map(f=>`<div onclick="selectOffice(${f.lat},${f.lng},'${f.place_name.replace(/'/g,"\\'")}');document.getElementById('cf-office-search').value='${f.place_name.replace(/'/g,"\\'")}';document.getElementById('cf-office-suggestions').style.display='none';" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${f.place_name}</div>`).join('');
-      }catch(e){console.warn('geocode search failed',e);}
-    },400);
-  }
-  function selectOffice(lat,lng,name){
-    document.getElementById('cf-office-lat').value=lat.toFixed(6);
-    document.getElementById('cf-office-lng').value=lng.toFixed(6);
-    if(!document.getElementById('cf-office-name').value) document.getElementById('cf-office-name').value=name.split(',')[0];
-  }
-  </script>
   <div class="section-title">Security</div>
   ${toggleField('cf-2fa','Require 2FA',c.require_2fa)}
   ${toggleField('cf-autorenew','Auto Renew',c.auto_renew)}
@@ -843,11 +818,47 @@ function companyForm(c) {
   </div>`;
 }
 
-function toggleField(id, label, checked) {
+function toggleField(id, label, checked, onchange) {
   return `<div class="toggle-row">
     <label>${label}</label>
-    <label class="toggle"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''}><span class="slider"></span></label>
+    <label class="toggle"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''} ${onchange ? `onchange="${onchange}"` : ''}><span class="slider"></span></label>
   </div>`;
+}
+
+function initGeoFencePanel() {
+  const chk = document.getElementById('cf-geofence');
+  const fields = document.getElementById('cf-geofence-fields');
+  if (chk && fields) fields.style.display = chk.checked ? 'block' : 'none';
+}
+
+let _officeSearchTimer;
+function searchOfficeAddress() {
+  clearTimeout(_officeSearchTimer);
+  _officeSearchTimer = setTimeout(async () => {
+    const q = document.getElementById('cf-office-search').value.trim();
+    if (q.length < 3) return;
+    try {
+      const results = await api('GET', '/api/vendor/geocode/search?q=' + encodeURIComponent(q));
+      const box = document.getElementById('cf-office-suggestions');
+      if (!results || !results.length) { box.style.display = 'none'; return; }
+      box.style.display = 'block';
+      box.innerHTML = results.map(f => {
+        const name = f.place_name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `<div onclick="selectOffice(${f.lat},${f.lng},'${name}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${f.place_name}</div>`;
+      }).join('');
+    } catch(e) { console.warn('geocode search failed', e); }
+  }, 400);
+}
+
+function selectOffice(lat, lng, name) {
+  document.getElementById('cf-office-lat').value = lat.toFixed(6);
+  document.getElementById('cf-office-lng').value = lng.toFixed(6);
+  const nameEl = document.getElementById('cf-office-name');
+  if (nameEl && !nameEl.value) nameEl.value = name.split(',')[0];
+  const box = document.getElementById('cf-office-suggestions');
+  if (box) box.style.display = 'none';
+  const search = document.getElementById('cf-office-search');
+  if (search) search.value = name;
 }
 
 async function saveCompany() {
