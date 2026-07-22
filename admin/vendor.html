@@ -835,6 +835,18 @@ function companyForm(c) {
     <div class="form-group"><label>End</label><input type="time" id="cf-wh-end" value="${c.working_hours_end||'18:00'}"/></div>
   </div>
   <div class="form-group"><label>GPS Ping Interval (seconds)</label><input type="number" id="cf-gps-interval" value="${c.gps_ping_interval||30}"/></div>
+  <div class="section-title">Admin Password</div>
+  <div class="form-group">
+    <label>Set New Admin Password</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="position:relative;flex:1">
+        <input type="password" id="cf-admin-pass" placeholder="Enter new password..." style="width:100%;padding:8px 44px 8px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box"/>
+        <button type="button" onclick="const i=document.getElementById('cf-admin-pass');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Show':'Hide'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;color:#6b7280;font-size:11px;font-weight:600">Show</button>
+      </div>
+      <button class="btn btn-secondary" onclick="resetCompanyAdminPass('${c.id}')">Reset</button>
+    </div>
+    <div id="cf-pass-msg" style="font-size:11px;margin-top:4px;display:none"></div>
+  </div>
   <div class="panel-footer">
     <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
     <button class="btn btn-primary" onclick="saveCompany()">Save</button>
@@ -882,6 +894,17 @@ function selectOffice(lat, lng, name) {
   if (box) box.style.display = 'none';
   const search = document.getElementById('cf-office-search');
   if (search) search.value = name;
+}
+
+async function resetCompanyAdminPass(companyId) {
+  const pass = document.getElementById('cf-admin-pass')?.value?.trim();
+  const msg = document.getElementById('cf-pass-msg');
+  if (!pass || pass.length < 4) { msg.textContent = 'Min 4 characters.'; msg.style.color = '#dc2626'; msg.style.display = 'block'; return; }
+  try {
+    const r = await api('POST', `/api/vendor/companies/${companyId}/reset-admin-password`, { new_password: pass });
+    msg.textContent = 'Password updated.'; msg.style.color = '#16a34a'; msg.style.display = 'block';
+    document.getElementById('cf-admin-pass').value = '';
+  } catch(e) { msg.textContent = e.message || 'Failed.'; msg.style.color = '#dc2626'; msg.style.display = 'block'; }
 }
 
 async function saveCompany() {

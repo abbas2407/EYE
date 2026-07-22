@@ -535,6 +535,22 @@ def company_stats(company_id: str, db: Session = Depends(get_db), v: VendorAdmin
     }
 
 
+@router.post("/companies/{company_id}/reset-admin-password")
+def reset_company_admin_password(company_id: str, body: dict, request: Request,
+                                  db: Session = Depends(get_db), v: VendorAdmin = Depends(get_vendor)):
+    new_password = body.get("new_password", "").strip()
+    if len(new_password) < 4:
+        raise HTTPException(400, "Password too short")
+    admin_user = db.query(User).filter(User.company_id == company_id, User.role == "admin").first()
+    if not admin_user:
+        raise HTTPException(404, "No admin user found for this company")
+    admin_user.password = hash_password(new_password)
+    admin_user.plain_password = new_password
+    db.commit()
+    _audit(db, v, "reset_company_admin_password", "company", company_id, {"email": admin_user.email}, request.client.host)
+    return {"ok": True, "email": admin_user.email}
+
+
 @router.post("/companies/{company_id}/seed-demo")
 def seed_demo(company_id: str, request: Request,
               db: Session = Depends(get_db), v: VendorAdmin = Depends(get_vendor)):
