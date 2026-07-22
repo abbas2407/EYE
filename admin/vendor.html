@@ -167,6 +167,19 @@ input:checked+.slider:before{transform:translateX(16px)}
 .vr-hint{text-align:center;font-size:11px;color:#c4c7c7;margin-top:20px}
 @media(max-width:768px){.vll{display:none}.vlr{padding:32px 24px}}
 
+/* ─── Feature card animation ─────────────────── */
+.vl-feat{display:flex;flex-direction:column;gap:8px;margin-bottom:auto}
+.feat-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px 16px;position:relative;z-index:1;overflow:hidden;transition:0.55s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;gap:12px;cursor:default}
+.feat-card::before{content:"";position:absolute;background:rgba(250,249,246,0.04);width:140px;height:360px;z-index:-1;transform:rotate(42deg);right:-50px;top:-30px;border-radius:30px;transition:0.55s}
+.feat-card .hover-bubble{position:absolute;background:rgba(250,249,246,0.06);width:280px;height:280px;left:-80px;z-index:-1;top:80px;border-radius:50%;transition:0.55s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.feat-card:hover{background:#695d4a;transform:scale(1.04);z-index:9;border-color:transparent}
+.feat-card:hover::before{background:rgba(250,249,246,0.08)}
+.feat-card:hover .hover-bubble{top:-30px}
+.feat-card:hover .vl-feat-icon{background:rgba(250,249,246,0.18)}
+.feat-card:hover .vl-feat-icon svg{stroke:#faf9f6}
+.feat-card:hover .vl-feat-title{color:#faf9f6}
+.feat-card:hover .vl-feat-sub{color:rgba(250,249,246,0.75)}
+
 /* ─── Misc ───────────────────────────────────── */
 .empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:10px;background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:0 5px}
@@ -209,7 +222,8 @@ input:checked+.slider:before{transform:translateX(16px)}
     </div>
 
     <div class="vl-feat">
-      <div class="vl-feat-row">
+      <div class="feat-card">
+        <div class="hover-bubble"></div>
         <div class="vl-feat-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         </div>
@@ -218,7 +232,8 @@ input:checked+.slider:before{transform:translateX(16px)}
           <div class="vl-feat-sub">Create, edit and control all client companies</div>
         </div>
       </div>
-      <div class="vl-feat-row">
+      <div class="feat-card">
+        <div class="hover-bubble"></div>
         <div class="vl-feat-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </div>
@@ -227,7 +242,8 @@ input:checked+.slider:before{transform:translateX(16px)}
           <div class="vl-feat-sub">Real-time dashboard with revenue insights</div>
         </div>
       </div>
-      <div class="vl-feat-row">
+      <div class="feat-card">
+        <div class="hover-bubble"></div>
         <div class="vl-feat-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
