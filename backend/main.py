@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List
 
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Header, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Header, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
@@ -1284,7 +1284,7 @@ def admin_leave_action(leave_id: str, req: LeaveActionRequest,
 
 @app.get("/api/admin/reports/attendance-xlsx")
 def attendance_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
-                    user_id: Optional[str] = None,
+                    user_ids: List[str] = Query(default=[]),
                     admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Unolo-style multi-sheet attendance Excel. date_from/date_to = YYYY-MM-DD (defaults to current month)."""
     import openpyxl
@@ -1308,8 +1308,8 @@ def attendance_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = No
         end_dt = now.replace(hour=23, minute=59, second=59)
 
     q = db.query(User).filter(User.company_id == cid, User.is_active == True, User.role != "admin")
-    if user_id:
-        q = q.filter(User.id == user_id)
+    if user_ids:
+        q = q.filter(User.id.in_(user_ids))
     workers = q.order_by(User.name).all()
 
     # Build date list for Quick sheet
@@ -1591,7 +1591,7 @@ def attendance_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = No
 
 @app.get("/api/admin/reports/leaves-xlsx")
 def leaves_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
-                user_id: Optional[str] = None,
+                user_ids: List[str] = Query(default=[]),
                 admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -1601,8 +1601,8 @@ def leaves_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
     start_dt = datetime.strptime(date_from, "%Y-%m-%d") if date_from else now.replace(day=1, hour=0, minute=0, second=0)
     end_dt = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59) if date_to else now.replace(hour=23, minute=59, second=59)
     workers = db.query(User).filter(User.company_id == cid, User.is_active == True, User.role != "admin")
-    if user_id:
-        workers = workers.filter(User.id == user_id)
+    if user_ids:
+        workers = workers.filter(User.id.in_(user_ids))
     workers = workers.all()
     uid_map = {w.id: w.name for w in workers}
     q = db.query(Leave).filter(Leave.user_id.in_(uid_map.keys()), Leave.start_date >= start_dt, Leave.start_date <= end_dt)
@@ -1638,7 +1638,7 @@ def leaves_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
 
 @app.get("/api/admin/reports/tasks-xlsx")
 def tasks_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
-               user_id: Optional[str] = None,
+               user_ids: List[str] = Query(default=[]),
                admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -1648,13 +1648,13 @@ def tasks_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
     start_dt = datetime.strptime(date_from, "%Y-%m-%d") if date_from else now.replace(day=1, hour=0, minute=0, second=0)
     end_dt = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59) if date_to else now.replace(hour=23, minute=59, second=59)
     workers = db.query(User).filter(User.company_id == cid, User.is_active == True, User.role != "admin")
-    if user_id:
-        workers = workers.filter(User.id == user_id)
+    if user_ids:
+        workers = workers.filter(User.id.in_(user_ids))
     workers = workers.all()
     uid_map = {w.id: w.name for w in workers}
     q = db.query(Task).filter(Task.company_id == cid, Task.created_at >= start_dt, Task.created_at <= end_dt)
-    if user_id:
-        q = q.filter(Task.assignee_id == user_id)
+    if user_ids:
+        q = q.filter(Task.assignee_id.in_(user_ids))
     tasks = q.order_by(Task.created_at.desc()).all()
     THIN = Side(style="thin", color="CCCCCC")
     THIN_BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)

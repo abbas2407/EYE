@@ -1014,7 +1014,16 @@ th.sortable.desc::after{content:'↓';opacity:.8}
             <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">FROM</div><input type="date" id="att-from" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
             <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">TO</div><input type="date" id="att-to" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
           </div>
-          <select id="att-user" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px"><option value="">All Employees</option></select>
+          <div style="position:relative;margin-bottom:10px" id="att-user-wrap">
+            <div onclick="toggleRptDrop('att')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="att-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div id="att-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
+              <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;gap:6px">
+                <button onclick="rptSelectAll('att',true)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Select All</button>
+                <button onclick="rptSelectAll('att',false)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Clear</button>
+              </div>
+              <div id="att-user-list" style="max-height:160px;overflow-y:auto;padding:4px"></div>
+            </div>
+          </div>
           <button class="btn btn-primary" style="width:100%" onclick="downloadAttendanceXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
         </div>
         <div class="card" style="padding:18px">
@@ -1026,7 +1035,16 @@ th.sortable.desc::after{content:'↓';opacity:.8}
             <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">FROM</div><input type="date" id="lv-from" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
             <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">TO</div><input type="date" id="lv-to" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
           </div>
-          <select id="lv-user" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px"><option value="">All Employees</option></select>
+          <div style="position:relative;margin-bottom:10px" id="lv-user-wrap">
+            <div onclick="toggleRptDrop('lv')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="lv-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div id="lv-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
+              <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;gap:6px">
+                <button onclick="rptSelectAll('lv',true)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Select All</button>
+                <button onclick="rptSelectAll('lv',false)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Clear</button>
+              </div>
+              <div id="lv-user-list" style="max-height:160px;overflow-y:auto;padding:4px"></div>
+            </div>
+          </div>
           <button class="btn btn-primary" style="width:100%" onclick="downloadLeavesXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
         </div>
       </div>
@@ -1043,7 +1061,16 @@ th.sortable.desc::after{content:'↓';opacity:.8}
             <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">FROM</div><input type="date" id="task-from" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
             <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">TO</div><input type="date" id="task-to" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
           </div>
-          <select id="task-user" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px"><option value="">All Employees</option></select>
+          <div style="position:relative;margin-bottom:10px" id="task-user-wrap">
+            <div onclick="toggleRptDrop('task')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="task-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div id="task-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
+              <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;gap:6px">
+                <button onclick="rptSelectAll('task',true)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Select All</button>
+                <button onclick="rptSelectAll('task',false)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Clear</button>
+              </div>
+              <div id="task-user-list" style="max-height:160px;overflow-y:auto;padding:4px"></div>
+            </div>
+          </div>
           <button class="btn btn-primary" style="width:100%" onclick="downloadTasksXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
         </div>
       </div>
@@ -4442,18 +4469,73 @@ function exportAuditCSV(){
 }
 
 // ── Reports ───────────────────────────────────────────────────────────────────
-function initReportDates(){
+const _rptSel={att:new Set(),lv:new Set(),task:new Set()};
+
+function toggleRptDrop(prefix){
+  ['att','lv','task'].forEach(p=>{
+    const panel=document.getElementById(`${p}-user-panel`);
+    if(panel&&p!==prefix)panel.style.display='none';
+  });
+  const panel=document.getElementById(`${prefix}-user-panel`);
+  if(panel)panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
+function _buildRptList(prefix){
+  const list=document.getElementById(`${prefix}-user-list`);
+  if(!list)return;
+  list.innerHTML=workerList.map(w=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;font-size:11px;color:var(--text-primary)"><input type="checkbox" value="${w.id}" onchange="_onRptChk('${prefix}',this)" style="accent-color:#1a6ef2;flex-shrink:0"> ${esc(w.name)}</label>`).join('');
+}
+
+function _onRptChk(prefix,cb){
+  if(cb.checked)_rptSel[prefix].add(cb.value);
+  else _rptSel[prefix].delete(cb.value);
+  _updateRptLbl(prefix);
+}
+
+function rptSelectAll(prefix,all){
+  const list=document.getElementById(`${prefix}-user-list`);
+  if(!list)return;
+  _rptSel[prefix].clear();
+  list.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.checked=all;
+    if(all)_rptSel[prefix].add(cb.value);
+  });
+  _updateRptLbl(prefix);
+}
+
+function _updateRptLbl(prefix){
+  const lbl=document.getElementById(`${prefix}-user-lbl`);
+  if(!lbl)return;
+  const sel=_rptSel[prefix];
+  if(sel.size===0){lbl.textContent='All Employees';}
+  else if(sel.size===1){const w=workerList.find(x=>x.id===[...sel][0]);lbl.textContent=w?w.name:'1 Employee';}
+  else{lbl.textContent=`${sel.size} Employees`;}
+}
+
+function _rptUserParam(prefix){
+  const sel=_rptSel[prefix];
+  return sel.size===0?'':([...sel].map(id=>`user_ids=${encodeURIComponent(id)}`).join('&'));
+}
+
+async function initReportDates(){
   const n=new Date();
   const y=n.getFullYear(),m=String(n.getMonth()+1).padStart(2,'0'),d=String(n.getDate()).padStart(2,'0');
   const first=`${y}-${m}-01`, today=`${y}-${m}-${d}`;
   ['att-from','lv-from','task-from'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=first;});
   ['att-to','lv-to','task-to'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=today;});
-  // Populate employee dropdowns
-  const opts=workerList.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
-  ['att-user','lv-user','task-user'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el&&el.options.length<=1)el.innerHTML='<option value="">All Employees</option>'+opts;
+  if(!workerList.length){const res=await apiFetch('/api/admin/users');if(res)workerList=await res.json();}
+  ['att','lv','task'].forEach(p=>{
+    const list=document.getElementById(`${p}-user-list`);
+    if(list&&list.children.length===0)_buildRptList(p);
   });
+  // close dropdowns on outside click
+  if(!window._rptClickBound){
+    window._rptClickBound=true;
+    document.addEventListener('click',e=>{
+      if(!e.target.closest('[id$="-user-wrap"]'))
+        ['att','lv','task'].forEach(p=>{const el=document.getElementById(`${p}-user-panel`);if(el)el.style.display='none';});
+    });
+  }
   feather.replace();
 }
 
@@ -4469,25 +4551,27 @@ async function _dlXlsx(url, filename){
 }
 
 async function downloadAttendanceXlsx(){
-  initReportDates();
+  await initReportDates();
   const from=document.getElementById('att-from').value,to=document.getElementById('att-to').value;
   if(!from||!to||from>to){showToast('Select valid date range','warn');return;}
-  const uid=document.getElementById('att-user').value;
-  await _dlXlsx(`/api/admin/reports/attendance-xlsx?date_from=${from}&date_to=${to}${uid?'&user_id='+uid:''}`,`attendance_${from}_${to}.xlsx`);
+  const uq=_rptUserParam('att');
+  await _dlXlsx(`/api/admin/reports/attendance-xlsx?date_from=${from}&date_to=${to}${uq?'&'+uq:''}`,`attendance_${from}_${to}.xlsx`);
 }
 
 async function downloadLeavesXlsx(){
+  await initReportDates();
   const from=document.getElementById('lv-from').value,to=document.getElementById('lv-to').value;
   if(!from||!to||from>to){showToast('Select valid date range','warn');return;}
-  const uid=document.getElementById('lv-user').value;
-  await _dlXlsx(`/api/admin/reports/leaves-xlsx?date_from=${from}&date_to=${to}${uid?'&user_id='+uid:''}`,`leaves_${from}_${to}.xlsx`);
+  const uq=_rptUserParam('lv');
+  await _dlXlsx(`/api/admin/reports/leaves-xlsx?date_from=${from}&date_to=${to}${uq?'&'+uq:''}`,`leaves_${from}_${to}.xlsx`);
 }
 
 async function downloadTasksXlsx(){
+  await initReportDates();
   const from=document.getElementById('task-from').value,to=document.getElementById('task-to').value;
   if(!from||!to||from>to){showToast('Select valid date range','warn');return;}
-  const uid=document.getElementById('task-user').value;
-  await _dlXlsx(`/api/admin/reports/tasks-xlsx?date_from=${from}&date_to=${to}${uid?'&user_id='+uid:''}`,`tasks_${from}_${to}.xlsx`);
+  const uq=_rptUserParam('task');
+  await _dlXlsx(`/api/admin/reports/tasks-xlsx?date_from=${from}&date_to=${to}${uq?'&'+uq:''}`,`tasks_${from}_${to}.xlsx`);
 }
 
 async function downloadPayrollCsv(){
