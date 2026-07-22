@@ -1,13 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, TextInput,
-  ActivityIndicator, Alert, Platform, Image, ScrollView, Vibration
+  ActivityIndicator, Alert, Platform, Image, ScrollView, Vibration,
+  AppState, Linking,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import * as Application from 'expo-application';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, API_BASE_URL, getAccessToken } from '../api/client';
+import GPSPromptSheet from './GPSPromptSheet';
 
 interface PunchModalProps {
   isVisible: boolean;
@@ -36,8 +39,24 @@ export default function PunchModal({
   const [checkInNote, setCheckInNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
 
+  const [showGPSSheet, setShowGPSSheet] = useState(false);
+
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+
+  // Re-check GPS when user returns from Settings
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active' && showGPSSheet) {
+        const enabled = await Location.hasServicesEnabledAsync();
+        if (enabled) {
+          setShowGPSSheet(false);
+          runDeviceCheck();
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [showGPSSheet]);
 
   useEffect(() => {
     if (isVisible) {
@@ -64,7 +83,7 @@ export default function PunchModal({
     try {
       const providerStatus = await Location.getProviderStatusAsync();
       if (providerStatus.locationServicesEnabled === false) {
-        setStepError('Location services are disabled. Please enable GPS.');
+        setShowGPSSheet(true);
         return;
       }
       // Check for mock GPS
@@ -242,7 +261,24 @@ export default function PunchModal({
     setStep('device');
     setStepError(null);
     setCapturedPhoto(null);
+    setShowGPSSheet(false);
     onClose();
+  }
+
+  function handleGPSDismiss() {
+    setShowGPSSheet(false);
+    // Show retry UI so user can try again after enabling GPS manually
+    setStepError('Location services are disabled. Please enable GPS to continue.');
+  }
+
+  async function handleGPSTurnOn() {
+    if (Platform.OS === 'android') {
+      await IntentLauncher.startActivityAsync(
+        IntentLauncher.ActivityAction.LOCATION_SOURCE_SETTINGS,
+      );
+    } else {
+      await Linking.openURL('app-settings:');
+    }
   }
 
   const stepLabels: Record<string, string> = {
@@ -497,6 +533,13 @@ export default function PunchModal({
             </View>
           )}
         </View>
+
+        {/* GPS bottom-sheet — overlays modal content */}
+        <GPSPromptSheet
+          visible={showGPSSheet}
+          onDismiss={handleGPSDismiss}
+          onTurnOn={handleGPSTurnOn}
+        />
       </View>
     </Modal>
   );
