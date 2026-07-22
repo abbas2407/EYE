@@ -15,7 +15,11 @@ button{cursor:pointer;font-family:inherit}
 input,select,textarea{font-family:inherit}
 
 /* ─── Sidebar ─────────────────────────────────── */
-#sidebar{width:220px;min-height:100vh;background:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+#sidebar{width:220px;min-height:100vh;background:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:width .22s ease,transform .22s ease}
+#sidebar.collapsed{width:0;overflow:hidden;border-right:none}
+#sidebar-toggle{position:fixed;top:50%;left:220px;transform:translateY(-50%);width:20px;height:40px;background:#fff;border:1px solid #e5e7eb;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:101;font-size:12px;color:#6b7280;transition:left .22s ease;box-shadow:2px 0 6px rgba(0,0,0,.08)}
+#sidebar.collapsed~#sidebar-toggle,#sidebar-toggle.sb-collapsed{left:0}
+#main.expanded{margin-left:0}
 .brand{padding:20px 18px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px}
 .brand-dot{width:32px;height:32px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .brand-dot svg{width:18px;height:18px}
@@ -183,13 +187,21 @@ input:checked+.slider:before{transform:translateX(16px)}
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="login-password" placeholder="••••••••"/>
+        <div style="position:relative">
+          <input type="password" id="login-password" placeholder="••••••••" style="width:100%;padding:10px 40px 10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box"/>
+          <button type="button" onclick="const i=document.getElementById('login-password');const b=this;i.type=i.type==='password'?'text':'password';b.innerHTML=i.type==='password'?'<svg width=\'16\' height=\'16\' fill=\'none\' stroke=\'#9ca3af\' stroke-width=\'2\' viewBox=\'0 0 24 24\'><path d=\'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z\'/><circle cx=\'12\' cy=\'12\' r=\'3\'/></svg>':'<svg width=\'16\' height=\'16\' fill=\'none\' stroke=\'#9ca3af\' stroke-width=\'2\' viewBox=\'0 0 24 24\'><path d=\'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24\'/><line x1=\'1\' y1=\'1\' x2=\'23\' y2=\'23\'/></svg>'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center">
+            <svg width="16" height="16" fill="none" stroke="#9ca3af" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
       <div class="login-error" id="login-error">Invalid credentials. Please try again.</div>
       <button class="btn btn-primary" style="width:100%;margin-top:6px;padding:10px" onclick="doLogin()">Sign In</button>
     </div>
   </div>
 </div>
+
+<!-- Sidebar toggle -->
+<div id="sidebar-toggle" onclick="toggleVendorSidebar()">&#8249;</div>
 
 <!-- Sidebar -->
 <div id="sidebar">
@@ -562,6 +574,17 @@ async function api(method, path, body) {
   const ct = r.headers.get('content-type') || '';
   if (ct.includes('text/csv')) return r.blob();
   return r.json();
+}
+
+function toggleVendorSidebar(){
+  const sb=document.getElementById('sidebar');
+  const btn=document.getElementById('sidebar-toggle');
+  const main=document.getElementById('main');
+  sb.classList.toggle('collapsed');
+  const collapsed=sb.classList.contains('collapsed');
+  btn.innerHTML=collapsed?'&#8250;':'&#8249;';
+  btn.style.left=collapsed?'0':'220px';
+  if(main)main.style.marginLeft=collapsed?'0':'220px';
 }
 
 async function doLogin() {
