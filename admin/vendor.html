@@ -132,19 +132,40 @@ input:checked+.slider:before{transform:translateX(16px)}
 .note-meta{font-size:11px;color:#9ca3af;margin-top:3px}
 
 /* ─── Login ──────────────────────────────────── */
-#login-page{display:none;position:fixed;inset:0;background:#f4f5f7;align-items:center;justify-content:center;z-index:999}
+#login-page{display:none;position:fixed;inset:0;z-index:999}
 #login-page.active{display:flex}
-.login-box{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:40px;width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
-.login-logo-dot{width:40px;height:40px;background:#2563eb;border-radius:10px;display:flex;align-items:center;justify-content:center}
-.login-logo-dot svg{width:22px;height:22px}
-.login-title{font-size:20px;font-weight:700;color:#1a1a2e}
-.login-sub{font-size:12px;color:#6b7280;font-style:italic}
-.login-form .form-group{margin-bottom:14px}
-.login-form input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit}
-.login-form input:focus{outline:none;border-color:#2563eb}
-.login-error{color:#dc2626;font-size:12px;margin-top:8px;display:none}
+.vll{flex:0 0 44%;background:#1a1c1a;display:flex;flex-direction:column;padding:48px;position:relative;overflow:hidden}
+.vll::after{content:'';position:absolute;width:320px;height:320px;border-radius:50%;background:rgba(105,93,74,.08);bottom:-80px;left:-60px;pointer-events:none}
+.vlr{flex:1;background:#faf9f6;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px}
+.vl-brand{display:flex;align-items:center;gap:12px;margin-bottom:auto}
+.vl-wordmark{font-size:15px;font-weight:700;letter-spacing:1px;color:#faf9f6}
+.vl-wordmark span{color:#695d4a}
+.vl-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(105,93,74,.15);border:1px solid rgba(105,93,74,.35);color:#c4a882;font-size:10px;font-weight:700;letter-spacing:1px;padding:4px 12px;border-radius:20px;width:fit-content;margin-bottom:20px}
+.vl-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#695d4a;flex-shrink:0}
+.vl-headline{font-size:28px;font-weight:800;color:#faf9f6;line-height:1.25;margin-bottom:14px}
+.vl-desc{font-size:13px;color:#a8a29e;line-height:1.7;margin-bottom:28px}
+.vl-feat{display:flex;flex-direction:column;gap:14px;margin-bottom:auto}
+.vl-feat-row{display:flex;align-items:flex-start;gap:12px}
+.vl-feat-icon{width:34px;height:34px;border-radius:8px;background:rgba(105,93,74,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.vl-feat-title{font-size:13px;font-weight:600;color:#faf9f6;margin-bottom:2px}
+.vl-feat-sub{font-size:11px;color:#a8a29e}
+.vl-footer{font-size:11px;color:#57534e;margin-top:32px;display:flex;align-items:center;justify-content:space-between}
+.vl-switch a{color:#695d4a;text-decoration:none;font-weight:600;font-size:11px}
+.vl-switch a:hover{color:#faf9f6}
+.vr-inner{width:100%;max-width:340px}
+.vr-title{font-size:26px;font-weight:800;color:#1a1c1a;margin-bottom:4px}
+.vr-sub{font-size:13px;color:#747878;margin-bottom:36px}
+.vr-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#695d4a;display:block;margin-bottom:8px}
+.vr-input{width:100%;padding:12px 14px;border:1.5px solid #e3e2e0;border-radius:6px;font-size:14px;color:#1a1c1a;background:#fff;font-family:inherit;box-sizing:border-box;transition:border-color .2s}
+.vr-input:focus{outline:none;border-color:#1a1c1a}
+.vr-field{margin-bottom:20px;position:relative}
+.vr-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#a8a29e;padding:4px;display:flex;align-items:center}
+.v-login-btn{width:100%;padding:14px;background:#1a1c1a;color:#faf9f6;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;transition:background .2s}
+.v-login-btn:hover{background:#2d3030}
+.login-error{color:#dc2626;font-size:11px;margin-top:8px;display:none;background:#fee2e2;padding:8px 12px;border-radius:4px}
 .login-error.show{display:block}
+.vr-hint{text-align:center;font-size:11px;color:#c4c7c7;margin-top:20px}
+@media(max-width:768px){.vll{display:none}.vlr{padding:32px 24px}}
 
 /* ─── Misc ───────────────────────────────────── */
 .empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
@@ -170,32 +191,80 @@ input:checked+.slider:before{transform:translateX(16px)}
 
 <!-- Login -->
 <div id="login-page" class="active">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="login-logo-dot">
-        <svg fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-      </div>
-      <div>
-        <div class="login-title">FieldPulse</div>
-        <div class="login-sub">Vendor Control Panel</div>
-      </div>
+  <!-- LEFT panel -->
+  <div class="vll">
+    <div class="vl-brand">
+      <svg viewBox="0 0 100 100" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50,10 L82.91,29 L82.91,67 L50,86 L17.09,67 L17.09,29 Z M50,29 A12,12 0 0,1 60.39,47 L50,68 L39.61,47 A12,12 0 0,1 50,29 Z" fill="#faf9f6" fill-rule="evenodd"/>
+        <path d="M39,41 L42,41 L44,34 L46,48 L48,41 L50,39 L52,43 L54,41 L61,41" stroke="#1a1c1a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <div class="vl-wordmark">FIELD<span>PULSE</span></div>
     </div>
-    <div class="login-form">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="login-email" placeholder="vendor@fieldpulse.com"/>
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <div style="position:relative">
-          <input type="password" id="login-password" placeholder="••••••••" style="width:100%;padding:10px 40px 10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box"/>
-          <button type="button" onclick="const i=document.getElementById('login-password');const b=this;i.type=i.type==='password'?'text':'password';b.innerHTML=i.type==='password'?'<svg width=\'16\' height=\'16\' fill=\'none\' stroke=\'#9ca3af\' stroke-width=\'2\' viewBox=\'0 0 24 24\'><path d=\'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z\'/><circle cx=\'12\' cy=\'12\' r=\'3\'/></svg>':'<svg width=\'16\' height=\'16\' fill=\'none\' stroke=\'#9ca3af\' stroke-width=\'2\' viewBox=\'0 0 24 24\'><path d=\'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24\'/><line x1=\'1\' y1=\'1\' x2=\'23\' y2=\'23\'/></svg>'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center">
-            <svg width="16" height="16" fill="none" stroke="#9ca3af" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+
+    <div style="margin-top:48px">
+      <div class="vl-badge">VENDOR CONTROL PANEL</div>
+      <div class="vl-headline">Manage your companies,<br>anywhere.</div>
+      <div class="vl-desc">Oversee all your field operations companies, track performance, and manage subscriptions — from one vendor dashboard.</div>
+    </div>
+
+    <div class="vl-feat">
+      <div class="vl-feat-row">
+        <div class="vl-feat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </div>
+        <div>
+          <div class="vl-feat-title">Company management</div>
+          <div class="vl-feat-sub">Create, edit and control all client companies</div>
         </div>
       </div>
+      <div class="vl-feat-row">
+        <div class="vl-feat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div>
+          <div class="vl-feat-title">Analytics &amp; revenue</div>
+          <div class="vl-feat-sub">Real-time dashboard with revenue insights</div>
+        </div>
+      </div>
+      <div class="vl-feat-row">
+        <div class="vl-feat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <div class="vl-feat-title">Field force oversight</div>
+          <div class="vl-feat-sub">Monitor workers across all your companies</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vl-footer">
+      <span>FieldPulse v2.0 · Vendor Panel</span>
+      <span class="vl-switch"><a href="/">Admin? Login here</a></span>
+    </div>
+  </div>
+
+  <!-- RIGHT panel -->
+  <div class="vlr">
+    <div class="vr-inner">
+      <div class="vr-title">Welcome back</div>
+      <div class="vr-sub">Sign in to your vendor account</div>
+      <div class="vr-field">
+        <label class="vr-label" for="login-email">Email Address</label>
+        <input class="vr-input" type="email" id="login-email" placeholder="vendor@fieldpulse.com" autocomplete="email"/>
+      </div>
+      <div class="vr-field">
+        <label class="vr-label" for="login-password">Password</label>
+        <input class="vr-input" type="password" id="login-password" placeholder="••••••••" style="padding-right:44px" autocomplete="current-password"/>
+        <button type="button" class="vr-eye" id="vr-pwd-eye" onclick="(function(){const i=document.getElementById('login-password');const b=document.getElementById('vr-pwd-eye');i.type=i.type==='password'?'text':'password';b.innerHTML=i.type==='password'?'<svg width=16 height=16 viewBox=&quot;0 0 24 24&quot; fill=none stroke=currentColor stroke-width=2><path d=&quot;M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z&quot;/><circle cx=12 cy=12 r=3/></svg>':'<svg width=16 height=16 viewBox=&quot;0 0 24 24&quot; fill=none stroke=currentColor stroke-width=2><path d=&quot;M17.94 17.94A10 10 0 0 1 12 20c-7 0-11-8-11-8a18 18 0 0 1 5.06-5.94M9.9 4.24A9 9 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24&quot;/><line x1=1 y1=1 x2=23 y2=23/></svg>'})()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
       <div class="login-error" id="login-error">Invalid credentials. Please try again.</div>
-      <button class="btn btn-primary" style="width:100%;margin-top:6px;padding:10px" onclick="doLogin()">Sign In</button>
+      <button class="v-login-btn" onclick="doLogin()">
+        Sign In
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <div class="vr-hint">Trouble signing in? Contact your admin</div>
     </div>
   </div>
 </div>

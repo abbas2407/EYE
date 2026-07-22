@@ -99,12 +99,39 @@ input:focus,select:focus,textarea:focus{border-color:var(--input-focus)}
 textarea{min-height:70px;resize:vertical}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
-#login-screen{flex:1;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--login-bg-from) 0%,var(--login-bg-to) 100%)}
-.login-box{background:var(--card-bg);border-radius:12px;padding:36px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.login-title{font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:4px}
-.login-sub{font-size:12px;color:var(--text-muted);margin-bottom:24px}
-.login-btn{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px;text-transform:uppercase;letter-spacing:.8px}
-.login-btn:hover{background:var(--primary-hover)}
+#login-screen{display:flex;height:100vh;overflow:hidden}
+.ll{flex:0 0 44%;background:#1a1c1a;display:flex;flex-direction:column;padding:48px;position:relative;overflow:hidden}
+.ll::after{content:'';position:absolute;width:320px;height:320px;border-radius:50%;background:rgba(105,93,74,.08);bottom:-80px;left:-60px;pointer-events:none}
+.lr{flex:1;background:#faf9f6;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px}
+.l-brand{display:flex;align-items:center;gap:12px;margin-bottom:auto}
+.l-wordmark{font-size:15px;font-weight:700;letter-spacing:1px;color:#faf9f6}
+.l-wordmark span{color:#695d4a}
+.l-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.3);color:#4ade80;font-size:10px;font-weight:700;letter-spacing:1px;padding:4px 12px;border-radius:20px;width:fit-content;margin-bottom:20px}
+.l-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0}
+.l-headline{font-size:28px;font-weight:800;color:#faf9f6;line-height:1.25;margin-bottom:14px}
+.l-desc{font-size:13px;color:#a8a29e;line-height:1.7;margin-bottom:28px}
+.l-feat{display:flex;flex-direction:column;gap:14px;margin-bottom:auto}
+.l-feat-row{display:flex;align-items:flex-start;gap:12px}
+.l-feat-icon{width:34px;height:34px;border-radius:8px;background:rgba(105,93,74,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.l-feat-title{font-size:13px;font-weight:600;color:#faf9f6;margin-bottom:2px}
+.l-feat-sub{font-size:11px;color:#a8a29e}
+.l-footer{font-size:11px;color:#57534e;margin-top:32px;display:flex;align-items:center;justify-content:space-between}
+.l-switch{font-size:11px;color:#a8a29e}
+.l-switch a{color:#695d4a;text-decoration:none;font-weight:600}
+.l-switch a:hover{color:#faf9f6}
+.r-inner{width:100%;max-width:340px}
+.r-title{font-size:26px;font-weight:800;color:#1a1c1a;margin-bottom:4px}
+.r-sub{font-size:13px;color:#747878;margin-bottom:36px}
+.r-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#695d4a;display:block;margin-bottom:8px}
+.r-input{width:100%;padding:12px 14px;border:1.5px solid #e3e2e0;border-radius:6px;font-size:14px;color:#1a1c1a;background:#fff;font-family:inherit;box-sizing:border-box;transition:border-color .2s}
+.r-input:focus{outline:none;border-color:#1a1c1a}
+.r-field{margin-bottom:20px;position:relative}
+.r-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#a8a29e;padding:4px;display:flex;align-items:center}
+.login-btn{width:100%;padding:14px;background:#1a1c1a;color:#faf9f6;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;transition:background .2s}
+.login-btn:hover{background:#2d3030}
+.err{color:#dc2626;font-size:11px;margin-top:8px;display:none;background:#fee2e2;padding:8px 12px;border-radius:4px}
+.r-hint{text-align:center;font-size:11px;color:#c4c7c7;margin-top:20px}
+@media(max-width:768px){.ll{display:none}.lr{padding:32px 24px}}
 .err{color:#ba1a1a;font-size:11px;margin-top:6px;display:none}
 .chat-layout{display:flex;height:calc(100vh - 52px);overflow:hidden}
 .chat-rooms{width:280px;border-right:1px solid var(--border);background:var(--card-bg);overflow-y:auto;flex-shrink:0}
@@ -276,18 +303,81 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 <body>
 
 <div id="login-screen">
-  <div class="login-box">
-    <div class="login-title">FieldPulse</div>
-    <div class="login-sub">Admin Dashboard — sign in to continue</div>
-    <label>Email</label>
-    <input id="login-email" type="email" value="admin@fieldpulse.in" placeholder="admin@fieldpulse.in" />
-    <label>Password</label>
-    <div style="position:relative">
-      <input id="login-password" type="password" placeholder="Password" style="padding-right:40px"/>
-      <button type="button" onclick="togglePwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:#747878;font-size:12px" id="pwd-eye">Show</button>
+  <!-- LEFT panel -->
+  <div class="ll">
+    <div class="l-brand">
+      <svg viewBox="0 0 100 100" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50,10 L82.91,29 L82.91,67 L50,86 L17.09,67 L17.09,29 Z M50,29 A12,12 0 0,1 60.39,47 L50,68 L39.61,47 A12,12 0 0,1 50,29 Z" fill="#faf9f6" fill-rule="evenodd"/>
+        <path d="M39,41 L42,41 L44,34 L46,48 L48,41 L50,39 L52,43 L54,41 L61,41" stroke="#1a1c1a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <div class="l-wordmark">FIELD<span>PULSE</span></div>
     </div>
-    <div class="err" id="login-err">Invalid email or password</div>
-    <button class="login-btn" onclick="doLogin()">Sign In</button>
+
+    <div style="margin-top:48px">
+      <div class="l-badge">LIVE TRACKING ACTIVE</div>
+      <div class="l-headline">Real-time field ops,<br>zero guesswork.</div>
+      <div class="l-desc">Track your team, manage tasks, and monitor attendance — all from one platform built for field operations.</div>
+    </div>
+
+    <div class="l-feat">
+      <div class="l-feat-row">
+        <div class="l-feat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </div>
+        <div>
+          <div class="l-feat-title">Live GPS tracking</div>
+          <div class="l-feat-sub">Real-time location of every field agent</div>
+        </div>
+      </div>
+      <div class="l-feat-row">
+        <div class="l-feat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div>
+          <div class="l-feat-title">Anti-fraud punch-in</div>
+          <div class="l-feat-sub">Face + geofence + device verification</div>
+        </div>
+      </div>
+      <div class="l-feat-row">
+        <div class="l-feat-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </div>
+        <div>
+          <div class="l-feat-title">Attendance reports</div>
+          <div class="l-feat-sub">Excel exports, timelines, compliance</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="l-footer">
+      <span>FieldPulse v2.0 · Field Operations</span>
+      <span class="l-switch"><a href="/vendor">Vendor? Login here</a></span>
+    </div>
+  </div>
+
+  <!-- RIGHT panel -->
+  <div class="lr">
+    <div class="r-inner">
+      <div class="r-title">Welcome back</div>
+      <div class="r-sub">Sign in to your account</div>
+      <div class="r-field">
+        <label class="r-label" for="login-email">Email Address</label>
+        <input class="r-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="r-field">
+        <label class="r-label" for="login-password">Password</label>
+        <input class="r-input" id="login-password" type="password" placeholder="••••••••" style="padding-right:44px" autocomplete="current-password"/>
+        <button type="button" class="r-eye" onclick="togglePwd()" id="pwd-eye" aria-label="Toggle password">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div class="err" id="login-err">Invalid email or password</div>
+      <button class="login-btn" onclick="doLogin()">
+        Sign In
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <div class="r-hint">Trouble signing in? Contact your admin</div>
+    </div>
   </div>
 </div>
 
@@ -1733,10 +1823,12 @@ function startUnreadPoll(){
 // ── Auth ────────────────────────────────────────────────────────────────────
 function togglePwd(){
   const inp=document.getElementById('login-password');
-  const btn=document.getElementById('pwd-eye');
   const show=inp.type==='password';
   inp.type=show?'text':'password';
-  btn.textContent=show?'Hide':'Show';
+  const btn=document.getElementById('pwd-eye');
+  btn.innerHTML=show
+    ?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10 10 0 0 1 12 20c-7 0-11-8-11-8a18 18 0 0 1 5.06-5.94M9.9 4.24A9 9 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    :'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 }
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim();
@@ -1980,17 +2072,12 @@ async function loadHoursChart(){
 let locMap=null, locMarkers=[], locAllData=[], locFilterMode='all', locMapInitialized=false;
 let _locPollActive=false, _locPollTimer=null;
 
-const CARTO_TILES='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const CARTO_TILES='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 const CARTO_ATTR='© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>';
 let _mapboxToken=null;
 fetch('/api/map-config').then(r=>r.json()).then(d=>{_mapboxToken=d.mapbox_token||null;}).catch(()=>{});
 function addTileLayer(map){
-  if(_mapboxToken){
-    L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=${_mapboxToken}`,
-      {attribution:'© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OSM</a>',maxZoom:19,tileSize:256}).addTo(map);
-  }else{
-    L.tileLayer(CARTO_TILES,{attribution:CARTO_ATTR,maxZoom:19}).addTo(map);
-  }
+  L.tileLayer(CARTO_TILES,{attribution:CARTO_ATTR,maxZoom:19}).addTo(map);
 }
 
 function setLocLastUpdated(){
@@ -2322,7 +2409,7 @@ async function loadTimeline(silent=false){
   if(data.pings.length>0&&tlMap){
     const rawCoords=data.pings.map(p=>[p.lat,p.lng]);
     tlMap.fitBounds(rawCoords,{padding:[35,35]});
-    // Draw raw trail immediately as thin grey dashed line
+    // Draw raw trail immediately; replaced by road-snapped orange line once map-match returns
     tlPolyline=L.polyline(rawCoords,{color:'#c4c7c7',weight:3,opacity:0.6,dashArray:'6,4'}).addTo(tlMap);
     // Async: snap to roads via Mapbox map-matching, replace with orange road-following line
     apiFetch('/api/places/map-match',{method:'POST',body:JSON.stringify({pings:data.pings})})
@@ -2332,7 +2419,9 @@ async function loadTimeline(silent=false){
         if(tlOutline){tlOutline.remove();tlOutline=null;}
         tlOutline=L.polyline(d.coords,{color:'#ffffff',weight:8,opacity:0.9}).addTo(tlMap);
         tlPolyline=L.polyline(d.coords,{color:'#FF9500',weight:5,opacity:0.95}).addTo(tlMap);
-        // Update GPS Distance stat with actual road distance from Mapbox
+        // Re-raise markers so they sit on top of the route line
+        tlMarkers.forEach(m=>m.bringToFront&&m.bringToFront());
+        // Update GPS Distance stat with actual road distance
         if(d.distance_km){
           const distEls=document.querySelectorAll('#tl-stats-row > div');
           distEls.forEach(el=>{
@@ -2344,6 +2433,22 @@ async function loadTimeline(silent=false){
           });
         }
       }).catch(()=>{});
+
+    // Punch-in / punch-out dot markers
+    data.events.forEach(e=>{
+      if(!e.lat||!e.lng)return;
+      if(e.type==='punch_in'){
+        const m=L.circleMarker([e.lat,e.lng],{
+          radius:9,color:'#fff',weight:2.5,fillColor:'#16a34a',fillOpacity:1,
+        }).addTo(tlMap).bindTooltip(`Punch In — ${fmtTime(e.time)}`,{permanent:false,direction:'top'});
+        tlMarkers.push(m);
+      }else if(e.type==='punch_out'){
+        const m=L.circleMarker([e.lat,e.lng],{
+          radius:9,color:'#fff',weight:2.5,fillColor:'#dc2626',fillOpacity:1,
+        }).addTo(tlMap).bindTooltip(`Punch Out — ${fmtTime(e.time)}`,{permanent:false,direction:'top'});
+        tlMarkers.push(m);
+      }
+    });
   }else if(tlMap){
     tlMap.setView([20.5937,78.9629],5);
   }
