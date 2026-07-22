@@ -235,6 +235,10 @@ class CreateSiteRequest(BaseModel):
 def root():
     return {"status": "ok", "service": "FieldPulse API", "version": "2.0.0"}
 
+@app.get("/api/map-config")
+def map_config():
+    return {"mapbox_token": MAPBOX_TOKEN or None}
+
 @app.get("/health")
 def health(db: Session = Depends(get_db)):
     try:
@@ -1280,6 +1284,7 @@ def admin_leave_action(leave_id: str, req: LeaveActionRequest,
 
 @app.get("/api/admin/reports/attendance-xlsx")
 def attendance_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
+                    user_id: Optional[str] = None,
                     admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Unolo-style multi-sheet attendance Excel. date_from/date_to = YYYY-MM-DD (defaults to current month)."""
     import openpyxl
@@ -1302,8 +1307,10 @@ def attendance_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = No
     else:
         end_dt = now.replace(hour=23, minute=59, second=59)
 
-    workers = db.query(User).filter(User.company_id == cid, User.is_active == True,
-                                    User.role != "admin").order_by(User.name).all()
+    q = db.query(User).filter(User.company_id == cid, User.is_active == True, User.role != "admin")
+    if user_id:
+        q = q.filter(User.id == user_id)
+    workers = q.order_by(User.name).all()
 
     # Build date list for Quick sheet
     from datetime import date as date_type
@@ -1581,6 +1588,102 @@ def attendance_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = No
     return StreamingResponse(buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+@app.get("/api/admin/reports/leaves-xlsx")
+def leaves_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
+                user_id: Optional[str] = None,
+                admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    cid = admin.company_id or "default"
+    now = datetime.utcnow()
+    start_dt = datetime.strptime(date_from, "%Y-%m-%d") if date_from else now.replace(day=1, hour=0, minute=0, second=0)
+    end_dt = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59) if date_to else now.replace(hour=23, minute=59, second=59)
+    workers = db.query(User).filter(User.company_id == cid, User.is_active == True, User.role != "admin")
+    if user_id:
+        workers = workers.filter(User.id == user_id)
+    workers = workers.all()
+    uid_map = {w.id: w.name for w in workers}
+    q = db.query(Leave).filter(Leave.user_id.in_(uid_map.keys()), Leave.start_date >= start_dt, Leave.start_date <= end_dt)
+    leaves = q.order_by(Leave.start_date.desc()).all()
+    THIN = Side(style="thin", color="CCCCCC")
+    THIN_BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+    HEADER_FILL = PatternFill("solid", fgColor="1a6ef2")
+    HEADER_FONT = Font(bold=True, color="FFFFFF", size=10)
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Leaves"
+    ws["A1"] = f"Leave Report: {start_dt.strftime('%d %b %Y')} to {end_dt.strftime('%d %b %Y')}"
+    ws["A1"].font = Font(bold=True, size=13)
+    ws.merge_cells("A1:H1")
+    headers = ["Employee", "Leave Type", "Start Date", "End Date", "Days", "Status", "Reason", "Applied On"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=col, value=h)
+        cell.fill = HEADER_FILL; cell.font = HEADER_FONT; cell.border = THIN_BORDER
+        cell.alignment = Alignment(horizontal="center")
+    for ri, lv in enumerate(leaves, 4):
+        fill = PatternFill("solid", fgColor="F8FBFF") if ri % 2 == 0 else None
+        for col, val in enumerate([
+            uid_map.get(lv.user_id, ""), lv.leave_type.title(),
+            lv.start_date.strftime("%d-%m-%Y"), lv.end_date.strftime("%d-%m-%Y"),
+            lv.days, lv.status.title(), lv.reason or "", lv.created_at.strftime("%d-%m-%Y")
+        ], 1):
+            cell = ws.cell(row=ri, column=col, value=val)
+            cell.border = THIN_BORDER; cell.font = Font(size=9)
+            if fill: cell.fill = fill
+    for i, w in enumerate([22,14,14,14,8,12,30,14], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="leaves_{start_dt.strftime("%Y-%m-%d")}_to_{end_dt.strftime("%Y-%m-%d")}.xlsx"'})
+
+@app.get("/api/admin/reports/tasks-xlsx")
+def tasks_xlsx(date_from: Optional[str] = None, date_to: Optional[str] = None,
+               user_id: Optional[str] = None,
+               admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    cid = admin.company_id or "default"
+    now = datetime.utcnow()
+    start_dt = datetime.strptime(date_from, "%Y-%m-%d") if date_from else now.replace(day=1, hour=0, minute=0, second=0)
+    end_dt = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59) if date_to else now.replace(hour=23, minute=59, second=59)
+    workers = db.query(User).filter(User.company_id == cid, User.is_active == True, User.role != "admin")
+    if user_id:
+        workers = workers.filter(User.id == user_id)
+    workers = workers.all()
+    uid_map = {w.id: w.name for w in workers}
+    q = db.query(Task).filter(Task.company_id == cid, Task.created_at >= start_dt, Task.created_at <= end_dt)
+    if user_id:
+        q = q.filter(Task.assignee_id == user_id)
+    tasks = q.order_by(Task.created_at.desc()).all()
+    THIN = Side(style="thin", color="CCCCCC")
+    THIN_BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+    HEADER_FILL = PatternFill("solid", fgColor="1a6ef2")
+    HEADER_FONT = Font(bold=True, color="FFFFFF", size=10)
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Tasks"
+    ws["A1"] = f"Task Report: {start_dt.strftime('%d %b %Y')} to {end_dt.strftime('%d %b %Y')}"
+    ws["A1"].font = Font(bold=True, size=13)
+    ws.merge_cells("A1:H1")
+    headers = ["Task Title", "Assigned To", "Client", "Location", "Scheduled Time", "Status", "Description", "Created On"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=col, value=h)
+        cell.fill = HEADER_FILL; cell.font = HEADER_FONT; cell.border = THIN_BORDER
+        cell.alignment = Alignment(horizontal="center")
+    for ri, t in enumerate(tasks, 4):
+        fill = PatternFill("solid", fgColor="F8FBFF") if ri % 2 == 0 else None
+        for col, val in enumerate([
+            t.title, uid_map.get(t.assignee_id, "Unassigned"), t.client_name or "",
+            t.location or "", t.scheduled_time.strftime("%d-%m-%Y %H:%M") if t.scheduled_time else "",
+            t.status.title(), t.description or "", t.created_at.strftime("%d-%m-%Y")
+        ], 1):
+            cell = ws.cell(row=ri, column=col, value=val)
+            cell.border = THIN_BORDER; cell.font = Font(size=9)
+            if fill: cell.fill = fill
+    for i, w in enumerate([28,20,18,22,16,12,30,14], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="tasks_{start_dt.strftime("%Y-%m-%d")}_to_{end_dt.strftime("%Y-%m-%d")}.xlsx"'})
 
 @app.get("/api/admin/reports/payroll-csv")
 def payroll_csv(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
