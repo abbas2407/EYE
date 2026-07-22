@@ -305,12 +305,13 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 <div id="login-screen">
   <!-- LEFT panel -->
   <div class="ll">
-    <div class="l-brand">
-      <svg viewBox="0 0 100 100" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+    <div class="l-brand" style="flex-direction:column;align-items:flex-start;gap:8px">
+      <svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
         <path d="M50,10 L82.91,29 L82.91,67 L50,86 L17.09,67 L17.09,29 Z M50,29 A12,12 0 0,1 60.39,47 L50,68 L39.61,47 A12,12 0 0,1 50,29 Z" fill="#faf9f6" fill-rule="evenodd"/>
-        <path d="M39,41 L42,41 L44,34 L46,48 L48,41 L50,39 L52,43 L54,41 L61,41" stroke="#1a1c1a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M39,41 L42,41 L44,34 L46,48 L48,41 L50,39 L52,43 L54,41 L61,41" stroke="#faf9f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
       </svg>
-      <div class="l-wordmark">FIELD<span>PULSE</span></div>
+      <div class="l-wordmark" style="font-size:22px;letter-spacing:1.5px">FIELD<span>PULSE</span></div>
+      <div style="font-size:9px;letter-spacing:2.5px;color:#57534e;text-transform:uppercase">Smart Field Operations</div>
     </div>
 
     <div style="margin-top:48px">
@@ -351,7 +352,6 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 
     <div class="l-footer">
       <span>FieldPulse v2.0 · Field Operations</span>
-      <span class="l-switch"><a href="/vendor">Vendor? Login here</a></span>
     </div>
   </div>
 
@@ -376,7 +376,7 @@ th.sortable.desc::after{content:'↓';opacity:.8}
         Sign In
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
-      <div class="r-hint">Trouble signing in? Contact your admin</div>
+      <div class="r-hint">Vendor? <a href="/vendor" style="color:#695d4a;font-weight:700;text-decoration:none">Login here</a></div>
     </div>
   </div>
 </div>
