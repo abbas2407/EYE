@@ -2250,50 +2250,11 @@ async function loadTimeline(silent=false){
   if(tlPolyline){tlPolyline.remove();tlPolyline=null;}
   if(tlOutline){tlOutline.remove();tlOutline=null;}
 
-  const EVT_CFG={
-    punch_in: {color:'#16a34a',bg:'#dcfce7',label:'Punch In'},
-    punch_out:{color:'#dc2626',bg:'#fee2e2',label:'Punch Out'},
-    travel:   {color:'#f97316',bg:'#fff7ed',label:'Travel'},
-    halt:     {color:'#2563eb',bg:'#dbeafe',label:'Halt'},
-  };
-
-  function mkEventIcon(type){
-    const c=EVT_CFG[type]||{color:'#747878'};
-    const size=type==='punch_in'||type==='punch_out'?32:22;
-    return L.divIcon({className:'',
-      html:`<div style="width:${size}px;height:${size}px;border-radius:50%;background:${c.color};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35)"></div>`,
-      iconSize:[size,size],iconAnchor:[size/2,size/2]});
-  }
-
-  function mkPopup(e){
-    const c=EVT_CFG[e.type]||{color:'#747878',bg:'#f5f4f1',label:e.label};
-    let rows='';
-    if(e.time) rows+=`<div style="color:#555;font-size:11px;margin-top:3px">🕐 ${fmtTime(e.time)}</div>`;
-    if(e.end_time&&e.duration_min>0) rows+=`<div style="color:#555;font-size:11px">⏱ ${e.duration_min} min</div>`;
-    if(e.type==='travel'&&e.distance_km>0) rows+=`<div style="color:#555;font-size:11px">📍 ${e.distance_km} KM</div>`;
-    return `<div style="min-width:130px;font-family:-apple-system,sans-serif">
-      <div style="background:${c.color};color:#fff;padding:5px 10px;border-radius:5px 5px 0 0;font-weight:700;font-size:12px">${c.label}</div>
-      <div style="padding:6px 10px;background:#fff;border-radius:0 0 5px 5px">${rows}</div>
-    </div>`;
-  }
-
-  function addEventMarkers(events){
-    events.forEach(e=>{
-      if(!e.lat||!e.lng)return;
-      const m=L.marker([e.lat,e.lng],{icon:mkEventIcon(e.type),zIndexOffset:500})
-        .bindPopup(mkPopup(e),{maxWidth:200,className:'tl-popup'})
-        .addTo(tlMap);
-      tlMarkers.push(m);
-    });
-  }
-
   if(data.pings.length>0&&tlMap){
     const rawCoords=data.pings.map(p=>[p.lat,p.lng]);
     tlMap.fitBounds(rawCoords,{padding:[35,35]});
     // Draw raw trail immediately as thin grey dashed line
     tlPolyline=L.polyline(rawCoords,{color:'#c4c7c7',weight:3,opacity:0.6,dashArray:'6,4'}).addTo(tlMap);
-    // Add event markers with popups
-    addEventMarkers(data.events);
     // Async: snap to roads via Mapbox map-matching, replace with orange road-following line
     apiFetch('/api/places/map-match',{method:'POST',body:JSON.stringify({pings:data.pings})})
       .then(r=>r&&r.json()).then(d=>{
@@ -2302,9 +2263,6 @@ async function loadTimeline(silent=false){
         if(tlOutline){tlOutline.remove();tlOutline=null;}
         tlOutline=L.polyline(d.coords,{color:'#ffffff',weight:8,opacity:0.9}).addTo(tlMap);
         tlPolyline=L.polyline(d.coords,{color:'#FF9500',weight:5,opacity:0.95}).addTo(tlMap);
-        // Re-add event markers on top of the new route line
-        tlMarkers.forEach(m=>m.remove()); tlMarkers=[];
-        addEventMarkers(data.events);
         // Update GPS Distance stat with actual road distance from Mapbox
         if(d.distance_km){
           const distEls=document.querySelectorAll('#tl-stats-row > div');
