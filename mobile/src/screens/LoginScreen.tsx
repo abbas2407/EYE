@@ -4,6 +4,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform,
   ScrollView, StatusBar
 } from 'react-native';
+import FieldPulseLogo from '../components/FieldPulseLogo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
@@ -76,25 +77,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         >
           {/* Logo area */}
           <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: 64 }}>
-            <View style={{ marginBottom: 48 }}>
-              <Text style={{
-                fontSize: 36,
-                fontFamily: 'PlayfairDisplay-Bold',
-                color: '#1a1c1a',
-                letterSpacing: -0.5,
-              }}>
-                FieldPulse
-              </Text>
-              <Text style={{
-                fontSize: 12,
-                color: '#695d4a',
-                fontFamily: 'DM-Sans',
-                textTransform: 'uppercase',
-                letterSpacing: 2,
-                marginTop: 4,
-              }}>
-                Field Operations Platform
-              </Text>
+            <View style={{ marginBottom: 48, alignItems: 'flex-start' }}>
+              <FieldPulseLogo size={100} variant="light" showTagline={true} />
             </View>
 
             {/* Email field */}
