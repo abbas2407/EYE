@@ -693,6 +693,21 @@ async def places_autocomplete(input: str, current_user: User = Depends(get_curre
         predictions = []
     return {"predictions": predictions, "status": "OK"}
 
+@app.get("/api/admin/reverse-geocode")
+async def admin_reverse_geocode(lat: float, lon: float, admin: User = Depends(require_admin)):
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            res = await client.get(
+                f"{_MAPBOX_GEO}/{lon},{lat}.json",
+                params={"access_token": MAPBOX_TOKEN, "types": "address,place", "language": "en"},
+            )
+        features = res.json().get("features", []) if res.status_code == 200 else []
+        if features:
+            return {"address": features[0].get("place_name", "")}
+    except Exception as e:
+        log.warning(f"Admin reverse geocode failed: {e}")
+    return {"address": ""}
+
 @app.get("/api/places/reverse-geocode")
 async def places_reverse_geocode(lat: float, lon: float, current_user: User = Depends(get_current_user)):
     try:
@@ -844,6 +859,20 @@ def admin_reset_password(user_id: str, req: ResetPasswordRequest,
 
 class UpdateEmailRequest(BaseModel):
     new_email: str
+
+class UpdateNameRequest(BaseModel):
+    new_name: str
+
+@app.put("/api/admin/users/{user_id}/update-name")
+def admin_update_name(user_id: str, req: UpdateNameRequest,
+                      admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    cid = admin.company_id or "default"
+    user = db.query(User).filter(User.id == user_id, User.company_id == cid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.name = req.new_name.strip()
+    db.commit()
+    return {"ok": True}
 
 @app.put("/api/admin/users/{user_id}/update-email")
 def admin_update_email(user_id: str, req: UpdateEmailRequest,
