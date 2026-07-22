@@ -1017,11 +1017,8 @@ th.sortable.desc::after{content:'↓';opacity:.8}
           <div style="position:relative;margin-bottom:10px" id="att-user-wrap">
             <div onclick="toggleRptDrop('att')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="att-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
             <div id="att-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
-              <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;gap:6px">
-                <button onclick="rptSelectAll('att',true)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Select All</button>
-                <button onclick="rptSelectAll('att',false)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Clear</button>
-              </div>
-              <div id="att-user-list" style="max-height:160px;overflow-y:auto;padding:4px"></div>
+              <div style="padding:8px;border-bottom:1px solid var(--border)"><input id="att-search" type="text" placeholder="Search employees..." oninput="_buildRptList('att',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/></div>
+              <div id="att-user-list" style="max-height:200px;overflow-y:auto"></div>
             </div>
           </div>
           <button class="btn btn-primary" style="width:100%" onclick="downloadAttendanceXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
@@ -1038,11 +1035,8 @@ th.sortable.desc::after{content:'↓';opacity:.8}
           <div style="position:relative;margin-bottom:10px" id="lv-user-wrap">
             <div onclick="toggleRptDrop('lv')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="lv-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
             <div id="lv-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
-              <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;gap:6px">
-                <button onclick="rptSelectAll('lv',true)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Select All</button>
-                <button onclick="rptSelectAll('lv',false)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Clear</button>
-              </div>
-              <div id="lv-user-list" style="max-height:160px;overflow-y:auto;padding:4px"></div>
+              <div style="padding:8px;border-bottom:1px solid var(--border)"><input id="lv-search" type="text" placeholder="Search employees..." oninput="_buildRptList('lv',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/></div>
+              <div id="lv-user-list" style="max-height:200px;overflow-y:auto"></div>
             </div>
           </div>
           <button class="btn btn-primary" style="width:100%" onclick="downloadLeavesXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
@@ -1064,11 +1058,8 @@ th.sortable.desc::after{content:'↓';opacity:.8}
           <div style="position:relative;margin-bottom:10px" id="task-user-wrap">
             <div onclick="toggleRptDrop('task')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="task-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
             <div id="task-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
-              <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;gap:6px">
-                <button onclick="rptSelectAll('task',true)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Select All</button>
-                <button onclick="rptSelectAll('task',false)" style="flex:1;font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text-primary);cursor:pointer">Clear</button>
-              </div>
-              <div id="task-user-list" style="max-height:160px;overflow-y:auto;padding:4px"></div>
+              <div style="padding:8px;border-bottom:1px solid var(--border)"><input id="task-search" type="text" placeholder="Search employees..." oninput="_buildRptList('task',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/></div>
+              <div id="task-user-list" style="max-height:200px;overflow-y:auto"></div>
             </div>
           </div>
           <button class="btn btn-primary" style="width:100%" onclick="downloadTasksXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
@@ -4471,34 +4462,67 @@ function exportAuditCSV(){
 // ── Reports ───────────────────────────────────────────────────────────────────
 const _rptSel={att:new Set(),lv:new Set(),task:new Set()};
 
-function toggleRptDrop(prefix){
+async function _ensureWorkers(){
+  if(!workerList.length){const res=await apiFetch('/api/admin/users');if(res)workerList=await res.json();}
+}
+
+function _buildRptList(prefix,filter){
+  const list=document.getElementById(`${prefix}-user-list`);
+  if(!list)return;
+  const f=(filter||'').toLowerCase();
+  const workers=workerList.filter(w=>!f||w.name.toLowerCase().includes(f));
+  const allCk=workers.length&&workers.every(w=>_rptSel[prefix].has(w.id));
+  list.innerHTML=`
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--text-primary);font-weight:600">
+      <input type="checkbox" id="${prefix}-chk-all" onchange="rptSelectAll('${prefix}',this.checked,'${filter||''}')" ${allCk?'checked':''} style="accent-color:#1a6ef2;width:15px;height:15px;flex-shrink:0;cursor:pointer"> Select All
+    </label>
+    ${workers.map(w=>`<label style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text-primary)" onmouseover="this.style.background='var(--hover-bg,#f5f5f5)'" onmouseout="this.style.background=''">
+      <input type="checkbox" value="${w.id}" onchange="_onRptChk('${prefix}',this)" ${_rptSel[prefix].has(w.id)?'checked':''} style="accent-color:#1a6ef2;width:15px;height:15px;flex-shrink:0;cursor:pointer"> ${esc(w.name)}
+    </label>`).join('')}
+    ${workers.length===0?'<div style="padding:12px;font-size:12px;color:#999;text-align:center">No employees found</div>':''}
+  `;
+}
+
+async function toggleRptDrop(prefix){
   ['att','lv','task'].forEach(p=>{
     const panel=document.getElementById(`${p}-user-panel`);
     if(panel&&p!==prefix)panel.style.display='none';
   });
   const panel=document.getElementById(`${prefix}-user-panel`);
-  if(panel)panel.style.display=panel.style.display==='none'?'block':'none';
-}
-
-function _buildRptList(prefix){
-  const list=document.getElementById(`${prefix}-user-list`);
-  if(!list)return;
-  list.innerHTML=workerList.map(w=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;font-size:11px;color:var(--text-primary)"><input type="checkbox" value="${w.id}" onchange="_onRptChk('${prefix}',this)" style="accent-color:#1a6ef2;flex-shrink:0"> ${esc(w.name)}</label>`).join('');
+  if(!panel)return;
+  const opening=panel.style.display==='none';
+  panel.style.display=opening?'block':'none';
+  if(opening){
+    await _ensureWorkers();
+    _buildRptList(prefix,'');
+    const si=document.getElementById(`${prefix}-search`);
+    if(si){si.value='';si.focus();}
+  }
+  if(!window._rptClickBound){
+    window._rptClickBound=true;
+    document.addEventListener('click',e=>{
+      if(!e.target.closest('[id$="-user-wrap"]'))
+        ['att','lv','task'].forEach(p=>{const el=document.getElementById(`${p}-user-panel`);if(el)el.style.display='none';});
+    });
+  }
 }
 
 function _onRptChk(prefix,cb){
   if(cb.checked)_rptSel[prefix].add(cb.value);
   else _rptSel[prefix].delete(cb.value);
+  // sync Select All checkbox
+  const allCk=document.getElementById(`${prefix}-chk-all`);
+  if(allCk){const allChecked=workerList.every(w=>_rptSel[prefix].has(w.id));allCk.checked=allChecked;}
   _updateRptLbl(prefix);
 }
 
-function rptSelectAll(prefix,all){
+function rptSelectAll(prefix,all,filter){
+  const f=(filter||'').toLowerCase();
+  const workers=workerList.filter(w=>!f||w.name.toLowerCase().includes(f));
+  workers.forEach(w=>{if(all)_rptSel[prefix].add(w.id);else _rptSel[prefix].delete(w.id);});
   const list=document.getElementById(`${prefix}-user-list`);
-  if(!list)return;
-  _rptSel[prefix].clear();
-  list.querySelectorAll('input[type=checkbox]').forEach(cb=>{
-    cb.checked=all;
-    if(all)_rptSel[prefix].add(cb.value);
+  if(list)list.querySelectorAll('input[type=checkbox][value]').forEach(cb=>{
+    const w=workers.find(x=>x.id===cb.value);if(w)cb.checked=all;
   });
   _updateRptLbl(prefix);
 }
@@ -4523,19 +4547,7 @@ async function initReportDates(){
   const first=`${y}-${m}-01`, today=`${y}-${m}-${d}`;
   ['att-from','lv-from','task-from'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=first;});
   ['att-to','lv-to','task-to'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=today;});
-  if(!workerList.length){const res=await apiFetch('/api/admin/users');if(res)workerList=await res.json();}
-  ['att','lv','task'].forEach(p=>{
-    const list=document.getElementById(`${p}-user-list`);
-    if(list&&list.children.length===0)_buildRptList(p);
-  });
-  // close dropdowns on outside click
-  if(!window._rptClickBound){
-    window._rptClickBound=true;
-    document.addEventListener('click',e=>{
-      if(!e.target.closest('[id$="-user-wrap"]'))
-        ['att','lv','task'].forEach(p=>{const el=document.getElementById(`${p}-user-panel`);if(el)el.style.display='none';});
-    });
-  }
+  await _ensureWorkers();
   feather.replace();
 }
 
