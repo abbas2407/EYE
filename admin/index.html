@@ -1004,65 +1004,32 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 
       <!-- ATTENDANCE -->
       <div style="font-size:10px;font-weight:700;color:#747878;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Attendance</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:22px">
-        <div class="card" style="padding:18px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:22px">
+        <div class="card" style="padding:18px;cursor:pointer" onclick="openRptModal('attendance')">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
             <div style="width:36px;height:36px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
             <div><div style="font-weight:600;font-size:13px">Attendance Report</div><div style="font-size:10px;color:#747878">Summary, Quick &amp; Detail log</div></div>
           </div>
-          <div style="display:flex;gap:6px;margin-bottom:8px">
-            <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">FROM</div><input type="date" id="att-from" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
-            <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">TO</div><input type="date" id="att-to" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
-          </div>
-          <div style="position:relative;margin-bottom:10px" id="att-user-wrap">
-            <div onclick="toggleRptDrop('att')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="att-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div id="att-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
-              <div style="padding:8px;border-bottom:1px solid var(--border)"><input id="att-search" type="text" placeholder="Search employees..." oninput="_buildRptList('att',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/></div>
-              <div id="att-user-list" style="max-height:200px;overflow-y:auto"></div>
-            </div>
-          </div>
-          <button class="btn btn-primary" style="width:100%" onclick="downloadAttendanceXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
+          <button class="btn btn-primary" style="width:100%" onclick="event.stopPropagation();openRptModal('attendance')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>
         </div>
-        <div class="card" style="padding:18px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-            <div style="width:36px;height:36px;background:#dcfce7;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+        <div class="card" style="padding:18px;cursor:pointer" onclick="openRptModal('leaves')">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <div style="width:36px;height:36px;background:#dcfce7;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
             <div><div style="font-weight:600;font-size:13px">Leave Report</div><div style="font-size:10px;color:#747878">All leave requests with status</div></div>
           </div>
-          <div style="display:flex;gap:6px;margin-bottom:8px">
-            <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">FROM</div><input type="date" id="lv-from" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
-            <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">TO</div><input type="date" id="lv-to" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
-          </div>
-          <div style="position:relative;margin-bottom:10px" id="lv-user-wrap">
-            <div onclick="toggleRptDrop('lv')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="lv-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div id="lv-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
-              <div style="padding:8px;border-bottom:1px solid var(--border)"><input id="lv-search" type="text" placeholder="Search employees..." oninput="_buildRptList('lv',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/></div>
-              <div id="lv-user-list" style="max-height:200px;overflow-y:auto"></div>
-            </div>
-          </div>
-          <button class="btn btn-primary" style="width:100%" onclick="downloadLeavesXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
+          <button class="btn btn-primary" style="width:100%" onclick="event.stopPropagation();openRptModal('leaves')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>
         </div>
       </div>
 
       <!-- TASKS -->
       <div style="font-size:10px;font-weight:700;color:#747878;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Tasks &amp; Productivity</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:22px">
-        <div class="card" style="padding:18px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:22px">
+        <div class="card" style="padding:18px;cursor:pointer" onclick="openRptModal('tasks')">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
             <div style="width:36px;height:36px;background:#fef9c3;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
             <div><div style="font-weight:600;font-size:13px">Task Report</div><div style="font-size:10px;color:#747878">Tasks assigned &amp; completion status</div></div>
           </div>
-          <div style="display:flex;gap:6px;margin-bottom:8px">
-            <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">FROM</div><input type="date" id="task-from" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
-            <div style="flex:1"><div style="font-size:9px;color:#747878;font-weight:600;margin-bottom:3px">TO</div><input type="date" id="task-to" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:11px;background:var(--card-bg);color:var(--text-primary)"/></div>
-          </div>
-          <div style="position:relative;margin-bottom:10px" id="task-user-wrap">
-            <div onclick="toggleRptDrop('task')" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box"><span id="task-user-lbl">All Employees</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
-            <div id="task-user-panel" style="display:none;position:absolute;z-index:200;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.14);top:calc(100% + 2px)">
-              <div style="padding:8px;border-bottom:1px solid var(--border)"><input id="task-search" type="text" placeholder="Search employees..." oninput="_buildRptList('task',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:11px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/></div>
-              <div id="task-user-list" style="max-height:200px;overflow-y:auto"></div>
-            </div>
-          </div>
-          <button class="btn btn-primary" style="width:100%" onclick="downloadTasksXlsx()"><i data-feather="download" style="width:13px;height:13px;margin-right:4px"></i> Download Excel</button>
+          <button class="btn btn-primary" style="width:100%" onclick="event.stopPropagation();openRptModal('tasks')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>
         </div>
       </div>
 
@@ -1199,6 +1166,41 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 
 <div id="modal-backdrop" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- Report Download Modal -->
+<div id="rpt-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center" onclick="if(event.target===this)closeRptModal()">
+  <div style="background:var(--card-bg);border-radius:12px;width:480px;max-width:94vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.22);overflow:hidden">
+    <!-- header -->
+    <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="rpt-modal-icon" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>
+        <div><div id="rpt-modal-title" style="font-weight:700;font-size:14px;color:var(--text-primary)"></div><div id="rpt-modal-sub" style="font-size:11px;color:#747878;margin-top:1px"></div></div>
+      </div>
+      <button onclick="closeRptModal()" style="border:none;background:none;cursor:pointer;font-size:20px;color:#747878;line-height:1;padding:2px 6px">&times;</button>
+    </div>
+    <!-- date range -->
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:#747878;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Date Range</div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1"><div style="font-size:10px;color:#747878;margin-bottom:4px">From</div><input type="date" id="rpt-from" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:12px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/></div>
+        <div style="flex:1"><div style="font-size:10px;color:#747878;margin-bottom:4px">To</div><input type="date" id="rpt-to" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:12px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/></div>
+      </div>
+    </div>
+    <!-- employee list -->
+    <div id="rpt-emp-section" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:#747878;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Employees</div>
+        <input id="rpt-search" type="text" placeholder="Search here..." oninput="_rptModalSearch(this.value)" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:12px;background:var(--card-bg);color:var(--text-primary);box-sizing:border-box"/>
+      </div>
+      <div id="rpt-emp-list" style="flex:1;overflow-y:auto;max-height:240px"></div>
+    </div>
+    <!-- footer -->
+    <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeRptModal()" style="padding:8px 20px;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);color:var(--text-primary);font-size:13px;cursor:pointer">Close</button>
+      <button id="rpt-dl-btn" onclick="_rptModalDownload()" style="padding:8px 22px;border:none;border-radius:6px;background:#1a6ef2;color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════════ ADD EMPLOYEE MODAL ═══════════════════════ -->
@@ -4460,98 +4462,101 @@ function exportAuditCSV(){
 }
 
 // ── Reports ───────────────────────────────────────────────────────────────────
-const _rptSel={att:new Set(),lv:new Set(),task:new Set()};
+let _rptType='';
+const _rptSel=new Set();
+
+const _RPT_CFG={
+  attendance:{title:'Attendance Report',sub:'Summary, Quick & Detail log',iconBg:'#dbeafe',iconStroke:'#2563eb',
+    icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    url:(f,t,uq)=>`/api/admin/reports/attendance-xlsx?date_from=${f}&date_to=${t}${uq}`,
+    filename:(f,t)=>`attendance_${f}_${t}.xlsx`},
+  leaves:{title:'Leave Report',sub:'All leave requests with status',iconBg:'#dcfce7',iconStroke:'#16a34a',
+    icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    url:(f,t,uq)=>`/api/admin/reports/leaves-xlsx?date_from=${f}&date_to=${t}${uq}`,
+    filename:(f,t)=>`leaves_${f}_${t}.xlsx`},
+  tasks:{title:'Task Report',sub:'Tasks assigned & completion status',iconBg:'#fef9c3',iconStroke:'#ca8a04',
+    icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+    url:(f,t,uq)=>`/api/admin/reports/tasks-xlsx?date_from=${f}&date_to=${t}${uq}`,
+    filename:(f,t)=>`tasks_${f}_${t}.xlsx`},
+};
 
 async function _ensureWorkers(){
   if(!workerList.length){const res=await apiFetch('/api/admin/users');if(res)workerList=await res.json();}
 }
 
-function _buildRptList(prefix,filter){
-  const list=document.getElementById(`${prefix}-user-list`);
-  if(!list)return;
-  const f=(filter||'').toLowerCase();
+async function openRptModal(type){
+  _rptType=type;_rptSel.clear();
+  const cfg=_RPT_CFG[type];if(!cfg)return;
+  document.getElementById('rpt-modal-icon').style.background=cfg.iconBg;
+  document.getElementById('rpt-modal-icon').innerHTML=cfg.icon;
+  document.getElementById('rpt-modal-title').textContent=cfg.title;
+  document.getElementById('rpt-modal-sub').textContent=cfg.sub;
+  // default dates
+  const n=new Date(),y=n.getFullYear(),m=String(n.getMonth()+1).padStart(2,'0'),d=String(n.getDate()).padStart(2,'0');
+  document.getElementById('rpt-from').value=`${y}-${m}-01`;
+  document.getElementById('rpt-to').value=`${y}-${m}-${d}`;
+  document.getElementById('rpt-search').value='';
+  // show/hide employee section (payroll has none)
+  document.getElementById('rpt-emp-section').style.display='flex';
+  // show modal
+  const bd=document.getElementById('rpt-modal-backdrop');
+  bd.style.display='flex';
+  // load workers then render list
+  await _ensureWorkers();
+  _rptModalRenderList('');
+}
+
+function closeRptModal(){
+  document.getElementById('rpt-modal-backdrop').style.display='none';
+}
+
+function _rptModalSearch(q){_rptModalRenderList(q);}
+
+function _rptModalRenderList(q){
+  const f=q.toLowerCase();
   const workers=workerList.filter(w=>!f||w.name.toLowerCase().includes(f));
-  const allCk=workers.length&&workers.every(w=>_rptSel[prefix].has(w.id));
-  list.innerHTML=`
-    <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--text-primary);font-weight:600">
-      <input type="checkbox" id="${prefix}-chk-all" onchange="rptSelectAll('${prefix}',this.checked,'${filter||''}')" ${allCk?'checked':''} style="accent-color:#1a6ef2;width:15px;height:15px;flex-shrink:0;cursor:pointer"> Select All
+  const allCk=workers.length>0&&workers.every(w=>_rptSel.has(w.id));
+  document.getElementById('rpt-emp-list').innerHTML=`
+    <label style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;color:var(--text-primary);font-weight:600" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
+      <input type="checkbox" id="rpt-chk-all" onchange="_rptModalSelectAll(this.checked,'${q}')" ${allCk?'checked':''} style="accent-color:#1a6ef2;width:16px;height:16px;flex-shrink:0;cursor:pointer"> Select All
     </label>
-    ${workers.map(w=>`<label style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text-primary)" onmouseover="this.style.background='var(--hover-bg,#f5f5f5)'" onmouseout="this.style.background=''">
-      <input type="checkbox" value="${w.id}" onchange="_onRptChk('${prefix}',this)" ${_rptSel[prefix].has(w.id)?'checked':''} style="accent-color:#1a6ef2;width:15px;height:15px;flex-shrink:0;cursor:pointer"> ${esc(w.name)}
+    ${workers.map(w=>`
+    <label style="display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;font-size:13px;color:var(--text-primary)" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
+      <input type="checkbox" value="${w.id}" onchange="_rptModalChk(this)" ${_rptSel.has(w.id)?'checked':''} style="accent-color:#1a6ef2;width:16px;height:16px;flex-shrink:0;cursor:pointer"> ${esc(w.name)}
     </label>`).join('')}
-    ${workers.length===0?'<div style="padding:12px;font-size:12px;color:#999;text-align:center">No employees found</div>':''}
+    ${workers.length===0?'<div style="padding:16px;font-size:13px;color:#999;text-align:center">No employees found</div>':''}
   `;
 }
 
-async function toggleRptDrop(prefix){
-  ['att','lv','task'].forEach(p=>{
-    const panel=document.getElementById(`${p}-user-panel`);
-    if(panel&&p!==prefix)panel.style.display='none';
-  });
-  const panel=document.getElementById(`${prefix}-user-panel`);
-  if(!panel)return;
-  const opening=panel.style.display==='none';
-  panel.style.display=opening?'block':'none';
-  if(opening){
-    await _ensureWorkers();
-    _buildRptList(prefix,'');
-    const si=document.getElementById(`${prefix}-search`);
-    if(si){si.value='';si.focus();}
-  }
-  if(!window._rptClickBound){
-    window._rptClickBound=true;
-    document.addEventListener('click',e=>{
-      if(!e.target.closest('[id$="-user-wrap"]'))
-        ['att','lv','task'].forEach(p=>{const el=document.getElementById(`${p}-user-panel`);if(el)el.style.display='none';});
-    });
-  }
+function _rptModalChk(cb){
+  if(cb.checked)_rptSel.add(cb.value);else _rptSel.delete(cb.value);
+  const allCk=document.getElementById('rpt-chk-all');
+  if(allCk)allCk.checked=workerList.every(w=>_rptSel.has(w.id));
 }
 
-function _onRptChk(prefix,cb){
-  if(cb.checked)_rptSel[prefix].add(cb.value);
-  else _rptSel[prefix].delete(cb.value);
-  // sync Select All checkbox
-  const allCk=document.getElementById(`${prefix}-chk-all`);
-  if(allCk){const allChecked=workerList.every(w=>_rptSel[prefix].has(w.id));allCk.checked=allChecked;}
-  _updateRptLbl(prefix);
-}
-
-function rptSelectAll(prefix,all,filter){
-  const f=(filter||'').toLowerCase();
+function _rptModalSelectAll(all,q){
+  const f=(q||'').toLowerCase();
   const workers=workerList.filter(w=>!f||w.name.toLowerCase().includes(f));
-  workers.forEach(w=>{if(all)_rptSel[prefix].add(w.id);else _rptSel[prefix].delete(w.id);});
-  const list=document.getElementById(`${prefix}-user-list`);
-  if(list)list.querySelectorAll('input[type=checkbox][value]').forEach(cb=>{
-    const w=workers.find(x=>x.id===cb.value);if(w)cb.checked=all;
+  workers.forEach(w=>{if(all)_rptSel.add(w.id);else _rptSel.delete(w.id);});
+  document.querySelectorAll('#rpt-emp-list input[type=checkbox][value]').forEach(cb=>{
+    if(workers.find(w=>w.id===cb.value))cb.checked=all;
   });
-  _updateRptLbl(prefix);
 }
 
-function _updateRptLbl(prefix){
-  const lbl=document.getElementById(`${prefix}-user-lbl`);
-  if(!lbl)return;
-  const sel=_rptSel[prefix];
-  if(sel.size===0){lbl.textContent='All Employees';}
-  else if(sel.size===1){const w=workerList.find(x=>x.id===[...sel][0]);lbl.textContent=w?w.name:'1 Employee';}
-  else{lbl.textContent=`${sel.size} Employees`;}
-}
-
-function _rptUserParam(prefix){
-  const sel=_rptSel[prefix];
-  return sel.size===0?'':([...sel].map(id=>`user_ids=${encodeURIComponent(id)}`).join('&'));
+async function _rptModalDownload(){
+  const from=document.getElementById('rpt-from').value,to=document.getElementById('rpt-to').value;
+  if(!from||!to||from>to){showToast('Select a valid date range','warn');return;}
+  const cfg=_RPT_CFG[_rptType];if(!cfg)return;
+  const uq=_rptSel.size===0?'':('&'+[..._rptSel].map(id=>`user_ids=${encodeURIComponent(id)}`).join('&'));
+  closeRptModal();
+  await _dlXlsx(cfg.url(from,to,uq),cfg.filename(from,to));
 }
 
 async function initReportDates(){
-  const n=new Date();
-  const y=n.getFullYear(),m=String(n.getMonth()+1).padStart(2,'0'),d=String(n.getDate()).padStart(2,'0');
-  const first=`${y}-${m}-01`, today=`${y}-${m}-${d}`;
-  ['att-from','lv-from','task-from'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=first;});
-  ['att-to','lv-to','task-to'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=today;});
   await _ensureWorkers();
-  feather.replace();
 }
 
-async function _dlXlsx(url, filename){
+async function _dlXlsx(url,filename){
   showToast('Generating report…','info');
   try{
     const res=await apiFetch(url);
@@ -4560,30 +4565,6 @@ async function _dlXlsx(url, filename){
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
     showToast('Downloaded','success');
   }catch(e){showToast('Download failed','error');}
-}
-
-async function downloadAttendanceXlsx(){
-  await initReportDates();
-  const from=document.getElementById('att-from').value,to=document.getElementById('att-to').value;
-  if(!from||!to||from>to){showToast('Select valid date range','warn');return;}
-  const uq=_rptUserParam('att');
-  await _dlXlsx(`/api/admin/reports/attendance-xlsx?date_from=${from}&date_to=${to}${uq?'&'+uq:''}`,`attendance_${from}_${to}.xlsx`);
-}
-
-async function downloadLeavesXlsx(){
-  await initReportDates();
-  const from=document.getElementById('lv-from').value,to=document.getElementById('lv-to').value;
-  if(!from||!to||from>to){showToast('Select valid date range','warn');return;}
-  const uq=_rptUserParam('lv');
-  await _dlXlsx(`/api/admin/reports/leaves-xlsx?date_from=${from}&date_to=${to}${uq?'&'+uq:''}`,`leaves_${from}_${to}.xlsx`);
-}
-
-async function downloadTasksXlsx(){
-  await initReportDates();
-  const from=document.getElementById('task-from').value,to=document.getElementById('task-to').value;
-  if(!from||!to||from>to){showToast('Select valid date range','warn');return;}
-  const uq=_rptUserParam('task');
-  await _dlXlsx(`/api/admin/reports/tasks-xlsx?date_from=${from}&date_to=${to}${uq?'&'+uq:''}`,`tasks_${from}_${to}.xlsx`);
 }
 
 async function downloadPayrollCsv(){
