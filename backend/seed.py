@@ -61,12 +61,17 @@ def seed():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # Seed vendor admin
-        if not db.query(VendorAdmin).first():
-            db.add(VendorAdmin(name="Vendor Admin", email="vendor@fieldpulse.in",
-                               password=hash_password("Vendor@Admin1"), is_active=True))
-            db.commit()
-            log.info("Vendor admin seeded")
+        # Seed / update vendor admin credentials
+        v = db.query(VendorAdmin).first()
+        if v:
+            v.email    = "fp@cyberlink.co.in"
+            v.password = hash_password("Cyberlink@568")
+            v.is_active = True
+        else:
+            db.add(VendorAdmin(name="Vendor Admin", email="fp@cyberlink.co.in",
+                               password=hash_password("Cyberlink@568"), is_active=True))
+        db.commit()
+        log.info("Vendor admin credentials set")
 
         # Seed users
         for u in USERS:
