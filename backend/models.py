@@ -191,6 +191,21 @@ class SalaryConfig(Base):
     updated_at            = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user                  = relationship("User")
 
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    id          = Column(String, primary_key=True, default=gen_id)
+    company_id  = Column(String, nullable=True)
+    name        = Column(String, nullable=False)
+    email       = Column(String, nullable=False)
+    subject     = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    category    = Column(String, nullable=True)
+    priority    = Column(String, default="medium")
+    status      = Column(String, default="open")   # open | in_progress | resolved | closed
+    notes       = Column(Text, nullable=True)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class Site(Base):
     __tablename__ = "sites"
     id              = Column(String, primary_key=True, default=gen_id)

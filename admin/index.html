@@ -418,6 +418,7 @@ th.sortable.desc::after{content:'↓';opacity:.8}
       <div class="nav-item" data-tip="Reports" onclick="showTab('reports')"><i data-feather="file-text" class="nav-icon"></i></div>
       <div class="nav-item" data-tip="Payroll" onclick="showTab('payroll');loadPayroll()"><i data-feather="dollar-sign" class="nav-icon"></i></div>
       <div class="nav-item" data-tip="Audit Log" onclick="showTab('audit');renderAuditLog()" id="nav-audit"><i data-feather="shield" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Support" onclick="openSupportModal()"><i data-feather="help-circle" class="nav-icon"></i></div>
     </nav>
     <div style="padding:14px 0;border-top:1px solid var(--sidebar-border);display:flex;justify-content:center">
       <div id="sb-user-avatar" style="width:32px;height:32px;border-radius:50%;background:#695d4a;color:#faf9f6;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;title='Sign out'" onclick="doLogout()" title="Sign out">A</div>
@@ -4819,6 +4820,162 @@ async function downloadAllSlips(){
   }
 }
 
+// ── Support Modal ────────────────────────────────────────────────────────────
+function openSupportModal(){
+  const m=document.getElementById('support-modal');
+  const o=document.getElementById('support-overlay');
+  m.style.display='flex';
+  o.style.display='block';
+  // pre-fill name/email from session
+  const nameEl=document.getElementById('sp-name');
+  if(nameEl&&!nameEl.value) nameEl.value=adminName||'';
+}
+function closeSupportModal(){
+  document.getElementById('support-modal').style.display='none';
+  document.getElementById('support-overlay').style.display='none';
+  // reset form
+  document.getElementById('support-form-wrap').style.display='flex';
+  document.getElementById('support-success').style.display='none';
+  ['sp-name','sp-email','sp-subject','sp-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('sp-category').value='';
+  document.getElementById('sp-priority').value='medium';
+  document.getElementById('sp-file-label').textContent='Upload screenshot or file (max 5 MB)';
+  document.getElementById('sp-file').value='';
+  document.getElementById('sp-error').style.display='none';
+}
+function updateFileLabel(input){
+  const label=document.getElementById('sp-file-label');
+  label.textContent=input.files.length?input.files[0].name:'Upload screenshot or file (max 5 MB)';
+}
+async function submitSupportTicket(){
+  const name=document.getElementById('sp-name').value.trim();
+  const email=document.getElementById('sp-email').value.trim();
+  const subject=document.getElementById('sp-subject').value.trim();
+  const desc=document.getElementById('sp-desc').value.trim();
+  const category=document.getElementById('sp-category').value;
+  const priority=document.getElementById('sp-priority').value;
+  const errEl=document.getElementById('sp-error');
+  errEl.style.display='none';
+  if(!name||!email||!subject||!desc){
+    errEl.textContent='Please fill in all required fields.';
+    errEl.style.display='block';
+    return;
+  }
+  const btn=document.getElementById('sp-submit-btn');
+  btn.textContent='Submitting…';btn.disabled=true;
+  try{
+    const res=await apiFetch('/admin/support',{method:'POST',body:JSON.stringify({name,email,subject,description:desc,category,priority})});
+    if(!res){btn.textContent='Submit Ticket';btn.disabled=false;return;}
+    if(!res.ok){const d=await res.json();throw new Error(d.detail||'Server error');}
+    document.getElementById('support-form-wrap').style.display='none';
+    document.getElementById('support-success').style.display='flex';
+  }catch(e){
+    errEl.textContent=e.message||'Failed to submit. Please try again.';
+    errEl.style.display='block';
+  }finally{btn.textContent='Submit Ticket';btn.disabled=false;}
+}
+
 </script>
+
+<!-- ══════════════════════════════════════════ SUPPORT MODAL ══ -->
+<div id="support-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,28,26,.45);z-index:2000;backdrop-filter:blur(2px)" onclick="e=>{if(e.target===this)closeSupportModal()}"></div>
+
+<div id="support-modal" style="display:none;position:fixed;bottom:24px;right:24px;width:380px;max-height:90vh;background:#faf9f6;border-radius:16px;box-shadow:0 20px 60px rgba(26,28,26,.25),0 4px 16px rgba(26,28,26,.12);z-index:2001;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(105,93,74,.1)">
+
+  <!-- Header -->
+  <div style="background:#1a1c1a;padding:20px 20px 18px;flex-shrink:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg viewBox="0 0 100 100" width="28" height="28" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50,10 L82.91,29 L82.91,67 L50,86 L17.09,67 L17.09,29 Z M50,29 A12,12 0 0,1 60.39,47 L50,68 L39.61,47 A12,12 0 0,1 50,29 Z" fill="#faf9f6" fill-rule="evenodd"/>
+          <polyline points="39,41 42,41 44,34 46,48 48,41 50,39 52,43 54,41 61,41" stroke="#faf9f6" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+        </svg>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#faf9f6;letter-spacing:.2px">FieldPulse Support</div>
+          <div style="font-size:10px;color:rgba(250,249,246,.4);letter-spacing:.5px;text-transform:uppercase">Submit a ticket</div>
+        </div>
+      </div>
+      <button onclick="closeSupportModal()" style="background:rgba(250,249,246,.08);border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(250,249,246,.6);font-size:16px;line-height:1">&times;</button>
+    </div>
+  </div>
+
+  <!-- Success state -->
+  <div id="support-success" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;gap:14px;text-align:center">
+    <div style="width:52px;height:52px;border-radius:50%;background:rgba(105,93,74,.12);display:flex;align-items:center;justify-content:center">
+      <svg width="24" height="24" fill="none" stroke="#695d4a" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div style="font-size:16px;font-weight:700;color:#1a1c1a">Ticket submitted!</div>
+    <div style="font-size:13px;color:#a8a29e;line-height:1.5">Our team will review your request and get back to you shortly.</div>
+    <button onclick="closeSupportModal()" style="margin-top:6px;padding:10px 24px;background:#1a1c1a;color:#faf9f6;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
+  </div>
+
+  <!-- Form -->
+  <div id="support-form-wrap" style="overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#695d4a;letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px">Your Name <span style="color:#dc2626">*</span></label>
+        <input id="sp-name" type="text" placeholder="Abbas Ali" style="width:100%;padding:9px 11px;border:1.5px solid rgba(105,93,74,.2);border-radius:8px;font-size:13px;background:#fff;color:#1a1c1a;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='#695d4a'" onblur="this.style.borderColor='rgba(105,93,74,.2)'">
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#695d4a;letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px">Email <span style="color:#dc2626">*</span></label>
+        <input id="sp-email" type="email" placeholder="you@email.com" style="width:100%;padding:9px 11px;border:1.5px solid rgba(105,93,74,.2);border-radius:8px;font-size:13px;background:#fff;color:#1a1c1a;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='#695d4a'" onblur="this.style.borderColor='rgba(105,93,74,.2)'">
+      </div>
+    </div>
+
+    <div>
+      <label style="font-size:10px;font-weight:700;color:#695d4a;letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px">Subject <span style="color:#dc2626">*</span></label>
+      <input id="sp-subject" type="text" placeholder="Brief description of the issue" style="width:100%;padding:9px 11px;border:1.5px solid rgba(105,93,74,.2);border-radius:8px;font-size:13px;background:#fff;color:#1a1c1a;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='#695d4a'" onblur="this.style.borderColor='rgba(105,93,74,.2)'">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#695d4a;letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px">Category</label>
+        <select id="sp-category" style="width:100%;padding:9px 11px;border:1.5px solid rgba(105,93,74,.2);border-radius:8px;font-size:13px;background:#fff;color:#1a1c1a;outline:none;cursor:pointer;box-sizing:border-box" onfocus="this.style.borderColor='#695d4a'" onblur="this.style.borderColor='rgba(105,93,74,.2)'">
+          <option value="">Select category</option>
+          <option value="bug">Bug / Error</option>
+          <option value="gps">GPS / Tracking</option>
+          <option value="attendance">Attendance</option>
+          <option value="billing">Billing</option>
+          <option value="account">Account / Login</option>
+          <option value="feature">Feature Request</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#695d4a;letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px">Priority</label>
+        <select id="sp-priority" style="width:100%;padding:9px 11px;border:1.5px solid rgba(105,93,74,.2);border-radius:8px;font-size:13px;background:#fff;color:#1a1c1a;outline:none;cursor:pointer;box-sizing:border-box" onfocus="this.style.borderColor='#695d4a'" onblur="this.style.borderColor='rgba(105,93,74,.2)'">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label style="font-size:10px;font-weight:700;color:#695d4a;letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px">Description <span style="color:#dc2626">*</span></label>
+      <textarea id="sp-desc" rows="4" placeholder="Describe the issue in detail — what happened, what you expected, steps to reproduce..." style="width:100%;padding:9px 11px;border:1.5px solid rgba(105,93,74,.2);border-radius:8px;font-size:13px;background:#fff;color:#1a1c1a;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='#695d4a'" onblur="this.style.borderColor='rgba(105,93,74,.2)'"></textarea>
+    </div>
+
+    <!-- Screenshot attachment -->
+    <div>
+      <label style="font-size:10px;font-weight:700;color:#695d4a;letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px">Attachment</label>
+      <label for="sp-file" style="display:flex;align-items:center;gap:8px;padding:9px 14px;border:1.5px dashed rgba(105,93,74,.25);border-radius:8px;cursor:pointer;font-size:12px;color:#a8a29e;transition:border-color .15s" onmouseover="this.style.borderColor='#695d4a'" onmouseout="this.style.borderColor='rgba(105,93,74,.25)'">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span id="sp-file-label">Upload screenshot or file (max 5 MB)</span>
+      </label>
+      <input id="sp-file" type="file" accept="image/*,.pdf" style="display:none" onchange="updateFileLabel(this)">
+    </div>
+
+    <div id="sp-error" style="display:none;font-size:12px;color:#dc2626;background:rgba(220,38,38,.06);padding:8px 12px;border-radius:6px;border:1px solid rgba(220,38,38,.15)"></div>
+
+    <button onclick="submitSupportTicket()" id="sp-submit-btn" style="width:100%;padding:12px;background:#1a1c1a;color:#faf9f6;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:background .15s;margin-top:2px" onmouseover="this.style.background='#2d2f2d'" onmouseout="this.style.background='#1a1c1a'">
+      Submit Ticket
+    </button>
+
+    <div style="text-align:center;font-size:10px;color:#c4bdb5;padding-bottom:4px">FieldPulse Support &middot; Typically responds within 24 h</div>
+  </div>
+</div>
 </body>
 </html>
