@@ -191,8 +191,8 @@ class SalaryConfig(Base):
     updated_at            = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user                  = relationship("User")
 
-class SupportTicket(Base):
-    __tablename__ = "support_tickets"
+class AdminSupportTicket(Base):
+    __tablename__ = "admin_support_tickets"
     id          = Column(String, primary_key=True, default=gen_id)
     company_id  = Column(String, nullable=True)
     name        = Column(String, nullable=False)
@@ -201,7 +201,7 @@ class SupportTicket(Base):
     description = Column(Text, nullable=False)
     category    = Column(String, nullable=True)
     priority    = Column(String, default="medium")
-    status      = Column(String, default="open")   # open | in_progress | resolved | closed
+    status      = Column(String, default="open")
     notes       = Column(Text, nullable=True)
     created_at  = Column(DateTime, default=datetime.utcnow)
     updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

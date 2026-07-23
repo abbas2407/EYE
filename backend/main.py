@@ -16,7 +16,7 @@ from database import get_db, engine, Base
 from sqlalchemy import text
 from models import (User, RefreshToken, AttendanceLog, Task, UploadedFile,
                     LeaveBalance, Leave, ChatRoom, ChatMember, Message, GPSPing, PushToken,
-                    Client, Site, SalaryConfig, SupportTicket)
+                    Client, Site, SalaryConfig, AdminSupportTicket)
 from auth import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from seed import seed
 import vendor_models
@@ -2208,7 +2208,7 @@ class SupportTicketRequest(BaseModel):
 
 @app.post("/api/admin/support")
 def submit_support_ticket(req: SupportTicketRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    ticket = SupportTicket(
+    ticket = AdminSupportTicket(
         company_id=admin.company_id or "default",
         name=req.name,
         email=req.email,
@@ -2225,7 +2225,7 @@ def submit_support_ticket(req: SupportTicketRequest, admin: User = Depends(requi
 
 @app.get("/api/vendor/support/tickets")
 def list_support_tickets(status: Optional[str] = None, db: Session = Depends(get_db), vendor=Depends(get_vendor)):
-    q = db.query(SupportTicket)
+    q = db.query(AdminSupportTicket)
     if status:
         q = q.filter(SupportTicket.status == status)
     tickets = q.order_by(SupportTicket.created_at.desc()).all()
@@ -2240,7 +2240,7 @@ class TicketStatusUpdate(BaseModel):
 
 @app.put("/api/vendor/support/tickets/{ticket_id}")
 def update_ticket_status(ticket_id: str, req: TicketStatusUpdate, db: Session = Depends(get_db), vendor=Depends(get_vendor)):
-    ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+    ticket = db.query(AdminSupportTicket).filter(SupportTicket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     ticket.status = req.status
