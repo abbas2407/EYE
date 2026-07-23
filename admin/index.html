@@ -7,60 +7,61 @@
 <style>
 /* ── Colour tokens ─────────────────────────────────────────────────────────── */
 :root{
-  /* Sidebar — light */
-  --sidebar-bg:#ffffff;
-  --sidebar-border:rgba(0,0,0,.08);
-  --sidebar-text:rgba(17,19,18,.45);
-  --sidebar-text-hover:#111312;
-  --sidebar-active-bg:rgba(17,19,18,.05);
-  --sidebar-active-text:#111312;
-  --sidebar-active-accent:#111312;
+  /* Sidebar — Concept D dark icon-only */
+  --sidebar-bg:#1a1c1a;
+  --sidebar-border:rgba(250,249,246,.06);
+  --sidebar-text:rgba(250,249,246,.35);
+  --sidebar-text-hover:rgba(250,249,246,.75);
+  --sidebar-active-bg:rgba(105,93,74,.22);
+  --sidebar-active-text:#faf9f6;
+  --sidebar-active-accent:#695d4a;
   /* Page */
-  --page-bg:#f4f6f5;
-  --card-bg:#ffffff;
-  --border:#e5e7e6;
-  --border-soft:#eef0ef;
-  --text-primary:#111312;
-  --text-secondary:#5a6472;
-  --text-muted:#9ca3af;
-  /* Accent — kept for badges/status dots only */
-  --accent:#111312;
-  --accent-dark:#111312;
-  --primary:#111312;
+  --page-bg:#ede9e3;
+  --card-bg:#faf9f6;
+  --border:rgba(105,93,74,.12);
+  --border-soft:rgba(105,93,74,.07);
+  --text-primary:#1a1c1a;
+  --text-secondary:#695d4a;
+  --text-muted:#a8a29e;
+  /* Accent */
+  --accent:#695d4a;
+  --accent-dark:#4d4436;
+  --primary:#1a1c1a;
   --primary-hover:#2d3030;
-  --input-focus:#111312;
-  --row-hover:#f7f9f8;
-  --th-bg:#f7f9f8;
+  --input-focus:#695d4a;
+  --row-hover:#f5f3ef;
+  --th-bg:#f5f3ef;
   --login-bg-from:#0f1110;
   --login-bg-to:#1a2420;
-  --avatar-bg:#e8ede8;
-  --avatar-text:#374236;
+  --avatar-bg:#1a1c1a;
+  --avatar-text:#faf9f6;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--page-bg);color:var(--text-primary);height:100vh;display:flex;flex-direction:column}
 #app{display:flex;flex:1;overflow:hidden}
-#sidebar{width:240px;background:var(--sidebar-bg);display:none;flex-direction:column;flex-shrink:0;border-right:1px solid var(--sidebar-border);transition:width .22s ease}
-#sidebar.open{display:flex;position:fixed;top:0;left:0;height:100%;z-index:200;box-shadow:4px 0 24px rgba(0,0,0,.18);animation:slideIn .22s ease}
+#sidebar{width:56px;background:var(--sidebar-bg);display:none;flex-direction:column;flex-shrink:0;border-right:none;transition:width .22s ease}
+#sidebar.open{display:flex;position:fixed;top:0;left:0;height:100%;z-index:200;box-shadow:4px 0 24px rgba(0,0,0,.4);animation:slideIn .22s ease}
 @keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
 #content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
-/* Desktop: sidebar always visible, collapsible */
 @media(min-width:769px){
   #sidebar{display:flex;position:relative;box-shadow:none;animation:none}
-  #sidebar.collapsed{width:0;overflow:hidden;border-right:none}
+  #sidebar.collapsed{width:0;overflow:hidden}
   #hamburger{display:none!important}
 }
-#sidebar-toggle{position:absolute;top:50%;right:-14px;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:var(--sidebar-bg);border:1px solid var(--sidebar-border);display:none;align-items:center;justify-content:center;cursor:pointer;z-index:201;box-shadow:2px 0 6px rgba(0,0,0,.12);font-size:13px;color:var(--text-primary)}
-@media(min-width:769px){#sidebar-toggle{display:flex}}
-.brand{padding:20px 16px 16px;border-bottom:1px solid var(--sidebar-border)}
-.brand-title{font-size:15px;font-weight:700;color:var(--text-primary);letter-spacing:.5px}
-.brand-sub{font-size:9px;color:var(--sidebar-text);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
-nav{padding:12px 8px;flex:1}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:6px;cursor:pointer;color:var(--sidebar-text);font-size:12px;font-weight:500;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px;user-select:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar-toggle{display:none!important}
+.brand{padding:18px 0 16px;border-bottom:1px solid var(--sidebar-border);display:flex;justify-content:center;align-items:center}
+.brand-title,.brand-sub{display:none}
+nav{padding:10px 0;flex:1}
+.nav-item{display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;gap:0;border-radius:10px;margin:2px auto;cursor:pointer;color:var(--sidebar-text);font-size:0;user-select:none;border-left:none;position:relative;transition:background .15s,color .15s}
 .nav-item:hover{background:var(--sidebar-active-bg);color:var(--sidebar-text-hover)}
-.nav-item.active{background:var(--sidebar-active-bg);color:var(--sidebar-active-text);border-left-color:var(--sidebar-active-accent)}
+.nav-item.active{background:var(--sidebar-active-bg);color:var(--sidebar-active-text)}
+.nav-item[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:#2d2f2d;color:#faf9f6;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:9999;letter-spacing:.3px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 .nav-icon{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0}
 #topbar{background:var(--card-bg);border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.topbar-title{font-size:16px;font-weight:700;color:var(--text-primary)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-brand{font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:.2px}
+.topbar-sep{color:var(--border);font-size:14px;margin:0 2px}
+.topbar-title{font-size:14px;font-weight:600;color:#695d4a}
 .user-badge{background:var(--page-bg);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--text-secondary);font-weight:500;cursor:pointer}
 .section{padding:24px;flex:1;overflow-y:auto}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
@@ -398,27 +399,28 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 <div id="app" style="display:none">
   <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
   <div id="sidebar" style="position:relative">
-    <div id="sidebar-toggle" onclick="toggleDesktopSidebar()" title="Collapse sidebar">&#8249;</div>
     <div class="brand">
-      <div class="brand-title">FieldPulse</div>
-      <div class="brand-sub">Admin Panel</div>
+      <svg viewBox="0 0 100 100" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50,10 L82.91,29 L82.91,67 L50,86 L17.09,67 L17.09,29 Z M50,29 A12,12 0 0,1 60.39,47 L50,68 L39.61,47 A12,12 0 0,1 50,29 Z" fill="#faf9f6" fill-rule="evenodd"/>
+        <polyline points="39,41 42,41 44,34 46,48 48,41 50,39 52,43 54,41 61,41" stroke="#faf9f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
     </div>
     <nav>
-      <div class="nav-item active" onclick="showTab('dashboard')"><i data-feather="bar-chart-2" class="nav-icon"></i> Dashboard</div>
-      <div class="nav-item" onclick="showTab('workers')"><i data-feather="users" class="nav-icon"></i> Workers</div>
-      <div class="nav-item" onclick="showTab('organization')"><i data-feather="git-branch" class="nav-icon"></i> Organization</div>
-      <div class="nav-item" onclick="showTab('tasks')"><i data-feather="clipboard" class="nav-icon"></i> Tasks</div>
-      <div class="nav-item" onclick="showTab('attendance')"><i data-feather="clock" class="nav-icon"></i> Attendance</div>
-      <div class="nav-item" onclick="showTab('leaves')"><i data-feather="calendar" class="nav-icon"></i> Leaves</div>
-      <div class="nav-item" onclick="showTab('chat')" style="position:relative"><i data-feather="message-square" class="nav-icon"></i> Chat <span id="chat-badge" style="display:none;background:#ba1a1a;color:#fff;border-radius:10px;font-size:9px;font-weight:800;padding:2px 7px;margin-left:6px;letter-spacing:0;vertical-align:middle"></span></div>
-      <div class="nav-item" onclick="showTab('clients')"><i data-feather="briefcase" class="nav-icon"></i> Clients &amp; Sites</div>
-      <div class="nav-item" onclick="showTab('performance')"><i data-feather="award" class="nav-icon"></i> Performance</div>
-      <div class="nav-item" onclick="showTab('reports')"><i data-feather="file-text" class="nav-icon"></i> Reports</div>
-      <div class="nav-item" onclick="showTab('payroll');loadPayroll()"><i data-feather="dollar-sign" class="nav-icon"></i> Payroll</div>
-      <div class="nav-item" onclick="showTab('audit');renderAuditLog()" id="nav-audit"><i data-feather="shield" class="nav-icon"></i> Audit Log</div>
+      <div class="nav-item active" data-tip="Dashboard" onclick="showTab('dashboard')"><i data-feather="bar-chart-2" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Workers" onclick="showTab('workers')"><i data-feather="users" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Organization" onclick="showTab('organization')"><i data-feather="git-branch" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Tasks" onclick="showTab('tasks')"><i data-feather="clipboard" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Attendance" onclick="showTab('attendance')"><i data-feather="clock" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Leaves" onclick="showTab('leaves')"><i data-feather="calendar" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Chat" onclick="showTab('chat')" style="position:relative"><i data-feather="message-square" class="nav-icon"></i><span id="chat-badge" style="display:none;position:absolute;top:6px;right:6px;background:#ba1a1a;color:#fff;border-radius:6px;font-size:8px;font-weight:800;padding:1px 4px;letter-spacing:0;line-height:1.4"></span></div>
+      <div class="nav-item" data-tip="Clients &amp; Sites" onclick="showTab('clients')"><i data-feather="briefcase" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Performance" onclick="showTab('performance')"><i data-feather="award" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Reports" onclick="showTab('reports')"><i data-feather="file-text" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Payroll" onclick="showTab('payroll');loadPayroll()"><i data-feather="dollar-sign" class="nav-icon"></i></div>
+      <div class="nav-item" data-tip="Audit Log" onclick="showTab('audit');renderAuditLog()" id="nav-audit"><i data-feather="shield" class="nav-icon"></i></div>
     </nav>
-    <div style="padding:12px 16px;border-top:1px solid var(--sidebar-border)">
-      <div style="font-size:10px;color:var(--sidebar-text);text-align:center">v2.0.0</div>
+    <div style="padding:14px 0;border-top:1px solid var(--sidebar-border);display:flex;justify-content:center">
+      <div id="sb-user-avatar" style="width:32px;height:32px;border-radius:50%;background:#695d4a;color:#faf9f6;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;title='Sign out'" onclick="doLogout()" title="Sign out">A</div>
     </div>
   </div>
 
@@ -426,9 +428,13 @@ th.sortable.desc::after{content:'↓';opacity:.8}
     <div id="offline-banner">⚠ You are offline — changes will not save until reconnected</div>
     <div id="topbar">
       <button id="hamburger" onclick="toggleSidebar()" aria-label="Menu"><span></span><span></span><span></span></button>
-      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-left">
+        <span class="topbar-brand">FieldPulse</span>
+        <span class="topbar-sep">›</span>
+        <span class="topbar-title" id="topbar-title">Dashboard</span>
+      </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:11px;color:#747878" id="admin-name"></span>
+        <span style="font-size:11px;color:#a8a29e" id="admin-name"></span>
         <button class="bell-btn" onclick="openNotifDrawer()" title="Notifications">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#695d4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>

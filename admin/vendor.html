@@ -9,36 +9,34 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:#f4f5f7;color:#1a1a2e;min-height:100vh;display:flex}
+body{font-family:'DM Sans',sans-serif;background:#ede9e3;color:#1a1c1a;min-height:100vh;display:flex}
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;font-family:inherit}
 input,select,textarea{font-family:inherit}
 
-/* ─── Sidebar ─────────────────────────────────── */
-#sidebar{width:220px;min-height:100vh;background:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:width .22s ease,transform .22s ease}
-#sidebar.collapsed{width:0;overflow:hidden;border-right:none}
-#sidebar-toggle{position:fixed;top:50%;left:220px;transform:translateY(-50%);width:20px;height:40px;background:#fff;border:1px solid #e5e7eb;border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:101;font-size:12px;color:#6b7280;transition:left .22s ease;box-shadow:2px 0 6px rgba(0,0,0,.08)}
-#sidebar.collapsed~#sidebar-toggle,#sidebar-toggle.sb-collapsed{left:0}
-#main.expanded{margin-left:0}
-.brand{padding:20px 18px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px}
-.brand-dot{width:32px;height:32px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.brand-dot svg{width:18px;height:18px}
-.brand-name{font-size:14px;font-weight:700;color:#1a1a2e;line-height:1.2}
-.brand-sub{font-size:10px;color:#6b7280;letter-spacing:.5px;font-style:italic}
-nav{flex:1;padding:12px 0;overflow-y:auto}
-.nav-section{padding:8px 16px 4px;font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:1px;text-transform:uppercase}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:13px;color:#4b5563;cursor:pointer;border-left:3px solid transparent;transition:all .15s}
-.nav-item:hover{background:#f9fafb;color:#2563eb}
-.nav-item.active{background:#eff6ff;color:#2563eb;border-left-color:#2563eb;font-weight:600}
+/* ─── Sidebar — Concept D icon-only ───────────── */
+#sidebar{width:56px;min-height:100vh;background:#1a1c1a;border-right:none;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+#sidebar.collapsed{width:0;overflow:hidden}
+#sidebar-toggle{display:none!important}
+.brand{padding:18px 0 16px;border-bottom:1px solid rgba(250,249,246,.06);display:flex;justify-content:center;align-items:center}
+.brand-dot,.brand-name,.brand-sub{display:none}
+nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav-section{display:none}
+.nav-item{display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;gap:0;border-radius:10px;margin:2px auto;cursor:pointer;color:rgba(250,249,246,.35);font-size:0;border-left:none;position:relative;transition:background .15s,color .15s}
+.nav-item:hover{background:rgba(105,93,74,.18);color:rgba(250,249,246,.75)}
+.nav-item.active{background:rgba(105,93,74,.25);color:#faf9f6}
 .nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.7}
 .nav-item.active svg{opacity:1}
-.sidebar-footer{padding:14px 18px;border-top:1px solid #f0f0f0;font-size:11px;color:#9ca3af}
-.sidebar-footer strong{display:block;color:#374151;font-size:12px;margin-bottom:2px}
+.nav-item[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:#2d2f2d;color:#faf9f6;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:9999;letter-spacing:.3px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.sidebar-footer{padding:14px 0;border-top:1px solid rgba(250,249,246,.06);display:flex;justify-content:center}
 
 /* ─── Main ────────────────────────────────────── */
-#main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column}
-.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-.topbar-title{font-size:16px;font-weight:700;color:#1a1a2e}
+#main{margin-left:56px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:#faf9f6;border-bottom:1px solid rgba(105,93,74,.1);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-brand{font-size:14px;font-weight:700;color:#1a1c1a}
+.topbar-sep{color:rgba(105,93,74,.3);font-size:14px;margin:0 2px}
+.topbar-title{font-size:14px;font-weight:600;color:#695d4a}
 .topbar-right{display:flex;align-items:center;gap:12px}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;font-size:13px;font-weight:600;border:none;transition:all .15s;cursor:pointer}
 .btn-primary{background:#2563eb;color:#fff}
@@ -293,74 +291,59 @@ input:checked+.slider:before{transform:translateX(16px)}
 <!-- Sidebar -->
 <div id="sidebar">
   <div class="brand">
-    <div class="brand-dot">
-      <svg fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-    </div>
-    <div>
-      <div class="brand-name">FieldPulse</div>
-      <div class="brand-sub">Vendor Panel</div>
-    </div>
+    <svg viewBox="0 0 100 100" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+      <path d="M50,10 L82.91,29 L82.91,67 L50,86 L17.09,67 L17.09,29 Z M50,29 A12,12 0 0,1 60.39,47 L50,68 L39.61,47 A12,12 0 0,1 50,29 Z" fill="#faf9f6" fill-rule="evenodd"/>
+      <polyline points="39,41 42,41 44,34 46,48 48,41 50,39 52,43 54,41 61,41" stroke="#faf9f6" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    </svg>
   </div>
   <nav>
-    <div class="nav-item active" onclick="showPage('dashboard')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Dashboard
+    <div class="nav-item active" onclick="showPage('dashboard')" data-tip="Dashboard">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
     </div>
-    <div class="nav-section">Companies</div>
-    <div class="nav-item" onclick="showPage('companies')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-10h2m4 0h2m-8 4h2m4 0h2"/></svg>
-      Companies
+    <div class="nav-item" onclick="showPage('companies')" data-tip="Companies">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-10h2m4 0h2m-8 4h2m4 0h2"/></svg>
     </div>
-    <div class="nav-item" onclick="showPage('analytics')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Analytics
+    <div class="nav-item" onclick="showPage('analytics')" data-tip="Analytics">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     </div>
-    <div class="nav-section">Billing</div>
-    <div class="nav-item" onclick="showPage('billing')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-      Invoices & Payments
+    <div class="nav-item" onclick="showPage('billing')" data-tip="Invoices">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
     </div>
-    <div class="nav-item" onclick="showPage('plans')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      Plans
+    <div class="nav-item" onclick="showPage('plans')" data-tip="Plans">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
     </div>
-    <div class="nav-item" onclick="showPage('promo')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-      Promo Codes
+    <div class="nav-item" onclick="showPage('promo')" data-tip="Promo Codes">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
     </div>
-    <div class="nav-section">Operations</div>
-    <div class="nav-item" onclick="showPage('users')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg>
-      Users
+    <div class="nav-item" onclick="showPage('users')" data-tip="Users">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg>
     </div>
-    <div class="nav-item" onclick="showPage('comms')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-      Communications
+    <div class="nav-item" onclick="showPage('comms')" data-tip="Comms">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
     </div>
-    <div class="nav-item" onclick="showPage('tickets')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-      Support Tickets
+    <div class="nav-item" onclick="showPage('tickets')" data-tip="Support">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
     </div>
-    <div class="nav-section">Reports</div>
-    <div class="nav-item" onclick="showPage('reports')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-      Reports & Exports
+    <div class="nav-item" onclick="showPage('reports')" data-tip="Reports">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
     </div>
-    <div class="nav-item" onclick="showPage('audit')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-      Audit Log
+    <div class="nav-item" onclick="showPage('audit')" data-tip="Audit Log">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
     </div>
   </nav>
   <div class="sidebar-footer">
-    <strong id="vendor-name-sidebar">Vendor Admin</strong>
-    <span style="cursor:pointer;color:#2563eb" onclick="logout()">Sign out</span>
+    <div style="width:32px;height:32px;border-radius:50%;background:#695d4a;color:#faf9f6;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="logout()" title="Sign out">V</div>
   </div>
 </div>
 
 <!-- Main -->
 <div id="main">
   <div class="topbar">
-    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-left">
+      <span class="topbar-brand">FieldPulse</span>
+      <span class="topbar-sep">›</span>
+      <span class="topbar-title" id="page-title">Dashboard</span>
+    </div>
     <div class="topbar-right">
       <button class="btn btn-secondary btn-sm" onclick="refreshCurrent()">
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
