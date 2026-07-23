@@ -795,62 +795,24 @@ async def places_map_match(req: MapMatchRequest, current_user: User = Depends(ge
 
     sampled = _subsample(pings)
     coord_str = ";".join(f"{p['lng']},{p['lat']}" for p in sampled)
+    radiuses  = ";".join("50" for _ in sampled)
 
-    # ── 1. Try Mapbox (if token configured) ──────────────────────────────
-    if MAPBOX_TOKEN:
-        radiuses = ";".join("25" for _ in sampled)
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.get(
-                    f"{_MAPBOX_MATCH}/{coord_str}",
-                    params={
-                        "access_token": MAPBOX_TOKEN,
-                        "geometries": "geojson",
-                        "overview": "full",
-                        "radiuses": radiuses,
-                        "tidy": "true",
-                    },
-                )
-            if res.status_code == 200:
-                data = res.json()
-                matchings = data.get("matchings", [])
-                if matchings:
-                    coords = matchings[0]["geometry"]["coordinates"]
-                    distance_m = matchings[0].get("distance", 0)
-                    return {
-                        "coords": [[c[1], c[0]] for c in coords],
-                        "distance_km": round(distance_m / 1000, 2),
-                    }
-            log.warning(f"Mapbox map-match non-200: {res.status_code} {res.text[:200]}")
-        except Exception as e:
-            log.warning(f"Mapbox map-match failed: {e}")
-
-    # ── 2. Fallback: OSRM (free, no key required) ────────────────────────
-    radiuses = ";".join("50" for _ in sampled)
     try:
         async with httpx.AsyncClient(timeout=12.0) as client:
             res = await client.get(
                 f"{_OSRM_MATCH}/{coord_str}",
-                params={
-                    "overview": "full",
-                    "geometries": "geojson",
-                    "radiuses": radiuses,
-                },
+                params={"overview": "full", "geometries": "geojson", "radiuses": radiuses},
             )
         if res.status_code == 200:
             data = res.json()
             matchings = data.get("matchings", [])
             if matchings:
-                all_coords = []
-                total_dist = 0.0
+                all_coords, total_dist = [], 0.0
                 for m in matchings:
                     all_coords.extend([[c[1], c[0]] for c in m["geometry"]["coordinates"]])
                     total_dist += m.get("distance", 0)
                 if all_coords:
-                    return {
-                        "coords": all_coords,
-                        "distance_km": round(total_dist / 1000, 2),
-                    }
+                    return {"coords": all_coords, "distance_km": round(total_dist / 1000, 2)}
         log.warning(f"OSRM map-match non-200: {res.status_code}")
     except Exception as e:
         log.warning(f"OSRM map-match failed: {e}")
