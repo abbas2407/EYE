@@ -73,16 +73,29 @@ def seed():
         db.commit()
         log.info("Vendor admin credentials set")
 
-        # Seed / reset users (always sync password + role so deploy fixes broken logins)
+        # Seed / reset users — each in its own transaction to survive worker races
         for u in USERS:
-            existing = db.query(User).filter(User.email == u["email"]).first()
-            if existing:
-                existing.password = hash_password(u["password"])
-                existing.is_active = True
-            else:
-                db.add(User(name=u["name"], email=u["email"],
-                            password=hash_password(u["password"]), role=u["role"]))
-        db.commit()
+            try:
+                existing = db.query(User).filter(User.email == u["email"]).first()
+                if existing:
+                    existing.password = hash_password(u["password"])
+                    existing.is_active = True
+                    db.commit()
+                else:
+                    db.add(User(name=u["name"], email=u["email"],
+                                password=hash_password(u["password"]), role=u["role"]))
+                    db.commit()
+            except Exception:
+                db.rollback()
+                # Another worker already inserted — just update password
+                try:
+                    existing = db.query(User).filter(User.email == u["email"]).first()
+                    if existing:
+                        existing.password = hash_password(u["password"])
+                        existing.is_active = True
+                        db.commit()
+                except Exception:
+                    db.rollback()
 
         # Seed leave balances
         workers = db.query(User).filter(User.role == "field_worker").all()
