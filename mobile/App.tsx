@@ -197,9 +197,9 @@ function MainApp() {
         const running = await Location.hasStartedLocationUpdatesAsync(GPS_BG_TASK).catch(() => false);
         if (!running) {
           await Location.startLocationUpdatesAsync(GPS_BG_TASK, {
-            accuracy: Location.Accuracy.Balanced,
-            timeInterval: 30000,
-            distanceInterval: 0,
+            accuracy: Location.Accuracy.High,
+            timeInterval: 15000,
+            distanceInterval: 10,
             showsBackgroundLocationIndicator: true,
             foregroundService: {
               notificationTitle: 'FieldPulse',

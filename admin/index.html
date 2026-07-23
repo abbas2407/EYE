@@ -2425,7 +2425,7 @@ async function loadTimeline(silent=false){
     tlMap.fitBounds(rawCoords,{padding:[35,35]});
     // Draw raw trail immediately; replaced by road-snapped orange line once map-match returns
     tlPolyline=L.polyline(rawCoords,{color:'#c4c7c7',weight:3,opacity:0.6,dashArray:'6,4'}).addTo(tlMap);
-    // Async: snap to roads via Mapbox map-matching, replace with orange road-following line
+    // Async: snap to roads via OSRM map-matching, replace with orange road-following line
     apiFetch('/api/places/map-match',{method:'POST',body:JSON.stringify({pings:data.pings})})
       .then(r=>r&&r.json()).then(d=>{
         if(!d||!d.coords||d.coords.length<2)return;
