@@ -64,11 +64,11 @@ def seed():
         # Seed / update vendor admin credentials
         v = db.query(VendorAdmin).first()
         if v:
-            v.email    = "fp@cyberlink.co.in"
+            v.email    = "vendor@fieldpulse.in"
             v.password = hash_password("Cyberlink@568")
             v.is_active = True
         else:
-            db.add(VendorAdmin(name="Vendor Admin", email="fp@cyberlink.co.in",
+            db.add(VendorAdmin(name="Vendor Admin", email="vendor@fieldpulse.in",
                                password=hash_password("Cyberlink@568"), is_active=True))
         db.commit()
         log.info("Vendor admin credentials set")
