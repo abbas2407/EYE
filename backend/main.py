@@ -235,6 +235,36 @@ class CreateSiteRequest(BaseModel):
 def root():
     return {"status": "ok", "service": "FieldPulse API", "version": "2.0.0"}
 
+@app.get("/api/reset-credentials")
+def reset_credentials(db: Session = Depends(get_db)):
+    """Emergency: reset all users + vendor to seed passwords. Remove after use."""
+    from auth import hash_password as hp
+    from vendor_models import VendorAdmin
+    USERS_RESET = [
+        ("admin@fieldpulse.in",   "Admin@FieldPulse1",  "admin"),
+        ("abbas@fieldpulse.in",   "Field@Abbas1",       "field_worker"),
+        ("mahemud@fieldpulse.in", "Field@Mahemud1",     "field_worker"),
+        ("ahesan@fieldpulse.in",  "Field@Ahesan1",      "field_worker"),
+    ]
+    reset = []
+    for email, pw, role in USERS_RESET:
+        u = db.query(User).filter(User.email == email).first()
+        if u:
+            u.password = hp(pw); u.is_active = True
+            reset.append(email)
+        else:
+            db.add(User(name=email.split("@")[0].capitalize(), email=email,
+                        password=hp(pw), role=role, is_active=True))
+            reset.append(email + " (created)")
+    v = db.query(VendorAdmin).first()
+    if v:
+        v.email = "vendor@fieldpulse.in"; v.password = hp("Cyberlink@568"); v.is_active = True
+    else:
+        db.add(VendorAdmin(name="Vendor Admin", email="vendor@fieldpulse.in",
+                           password=hp("Cyberlink@568"), is_active=True))
+    db.commit()
+    return {"reset": reset, "vendor": "vendor@fieldpulse.in / Cyberlink@568"}
+
 @app.get("/api/map-config")
 def map_config():
     return {"mapbox_token": MAPBOX_TOKEN or None}
