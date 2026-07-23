@@ -73,9 +73,13 @@ def seed():
         db.commit()
         log.info("Vendor admin credentials set")
 
-        # Seed users
+        # Seed / reset users (always sync password + role so deploy fixes broken logins)
         for u in USERS:
-            if not db.query(User).filter(User.email == u["email"]).first():
+            existing = db.query(User).filter(User.email == u["email"]).first()
+            if existing:
+                existing.password = hash_password(u["password"])
+                existing.is_active = True
+            else:
                 db.add(User(name=u["name"], email=u["email"],
                             password=hash_password(u["password"]), role=u["role"]))
         db.commit()

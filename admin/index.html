@@ -4864,7 +4864,7 @@ async function submitSupportTicket(){
   const btn=document.getElementById('sp-submit-btn');
   btn.textContent='Submitting…';btn.disabled=true;
   try{
-    const res=await apiFetch('/admin/support',{method:'POST',body:JSON.stringify({name,email,subject,description:desc,category,priority})});
+    const res=await apiFetch('/api/admin/support',{method:'POST',body:JSON.stringify({name,email,subject,description:desc,category,priority})});
     if(!res){btn.textContent='Submit Ticket';btn.disabled=false;return;}
     if(!res.ok){const d=await res.json();throw new Error(d.detail||'Server error');}
     document.getElementById('support-form-wrap').style.display='none';

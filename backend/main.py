@@ -2176,7 +2176,7 @@ class SupportTicketRequest(BaseModel):
     category: Optional[str] = None
     priority: Optional[str] = "medium"
 
-@app.post("/admin/support")
+@app.post("/api/admin/support")
 def submit_support_ticket(req: SupportTicketRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     ticket = SupportTicket(
         company_id=admin.company_id or "default",
@@ -2193,7 +2193,7 @@ def submit_support_ticket(req: SupportTicketRequest, admin: User = Depends(requi
     db.refresh(ticket)
     return {"ok": True, "ticket_id": ticket.id}
 
-@app.get("/vendor/support/tickets")
+@app.get("/api/vendor/support/tickets")
 def list_support_tickets(status: Optional[str] = None, db: Session = Depends(get_db), vendor=Depends(get_vendor)):
     q = db.query(SupportTicket)
     if status:
@@ -2208,7 +2208,7 @@ class TicketStatusUpdate(BaseModel):
     status: str
     notes: Optional[str] = None
 
-@app.put("/vendor/support/tickets/{ticket_id}")
+@app.put("/api/vendor/support/tickets/{ticket_id}")
 def update_ticket_status(ticket_id: str, req: TicketStatusUpdate, db: Session = Depends(get_db), vendor=Depends(get_vendor)):
     ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
     if not ticket:

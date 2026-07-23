@@ -1333,7 +1333,7 @@ const STATUS_PILL   = {open:'pill-trial', in_progress:'pill-suspended', resolved
 async function loadTickets() {
   const status = document.getElementById('ticket-status-filter')?.value || '';
   try {
-    const data = await api('GET', '/vendor/support/tickets' + (status ? '?status='+status : ''));
+    const data = await api('GET', '/api/vendor/support/tickets' + (status ? '?status='+status : ''));
     const tbody = document.getElementById('tickets-tbody');
     tbody.innerHTML = data.length ? data.map(t => `<tr>
       <td class="text-muted" style="font-size:11px">${esc(t.company_id||'—')}</td>
@@ -1372,7 +1372,7 @@ function viewTicket(t) {
 
 async function updateTicket(id, status) {
   try {
-    await api('PUT', `/vendor/support/tickets/${id}`, { status });
+    await api('PUT', `/api/vendor/support/tickets/${id}`, { status });
     closePanel();
     loadTickets();
   } catch(e) { alert(e.message); }
@@ -1381,7 +1381,7 @@ async function updateTicket(id, status) {
 async function saveTicketNotes(id) {
   const notes = document.getElementById('ticket-notes')?.value || '';
   try {
-    await api('PUT', `/vendor/support/tickets/${id}`, { status: 'in_progress', notes });
+    await api('PUT', `/api/vendor/support/tickets/${id}`, { status: 'in_progress', notes });
     closePanel();
     loadTickets();
   } catch(e) { alert(e.message); }
