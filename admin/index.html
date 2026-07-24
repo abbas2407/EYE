@@ -305,6 +305,16 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 #loc-countdown{font-size:10px;color:var(--text-muted);font-variant-numeric:tabular-nums}
 /* ── Audit log tab ────────────────────────────────────────────────────────── */
 #audit-empty{padding:48px;text-align:center;color:var(--text-muted);font-size:13px}
+/* ── Settings tab ─────────────────────────────────────────────────────────── */
+#tab-settings{display:none}
+.sn-item{display:flex;align-items:center;gap:9px;padding:9px 18px;cursor:pointer;font-size:12px;font-weight:500;color:var(--sidebar-text);transition:background .12s,color .12s;white-space:nowrap}
+.sn-item:hover{background:rgba(105,93,74,.07);color:var(--sidebar-text-hover)}
+.sn-item.active{background:var(--sidebar-active-bg);color:var(--sidebar-active-text);font-weight:700;border-left:3px solid var(--accent)}
+.sn-item svg{flex-shrink:0;stroke:currentColor}
+.settings-card{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:18px}
+.settings-section-card{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:20px}
+.settings-field-label{font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:6px}
+.settings-sub-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#c4bdb5;font-weight:600;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
@@ -428,6 +438,8 @@ th.sortable.desc::after{content:'↓';opacity:.8}
       <div class="nav-item" onclick="showTab('payroll');loadPayroll()"><i data-feather="dollar-sign" class="nav-icon"></i>Payroll</div>
       <div class="nav-item" onclick="showTab('audit');renderAuditLog()" id="nav-audit"><i data-feather="shield" class="nav-icon"></i>Audit Log</div>
       <div class="nav-item" onclick="openSupportModal()"><i data-feather="help-circle" class="nav-icon"></i>Support</div>
+      <div class="nav-section">System</div>
+      <div class="nav-item" onclick="showTab('settings')"><i data-feather="settings" class="nav-icon"></i>Settings</div>
     </nav>
     <div style="padding:14px 18px;border-top:1px solid var(--sidebar-border)">
       <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="doLogout()" title="Sign out">
@@ -1250,6 +1262,315 @@ th.sortable.desc::after{content:'↓';opacity:.8}
       </div></div>
     </div><!-- /tab-audit -->
 
+    <!-- ══════════════════════════ SETTINGS TAB ══════════════════════════ -->
+    <div id="tab-settings" style="display:none;flex:1;overflow:hidden;flex-direction:row">
+
+      <!-- Settings left sub-nav -->
+      <div id="settings-subnav" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);background:var(--card-bg);overflow-y:auto;padding:16px 0">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#c4bdb5;padding:10px 16px 6px;font-weight:600">General</div>
+        <div class="sn-item active" onclick="showSettingsSub('account')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Account
+        </div>
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#c4bdb5;padding:14px 16px 6px;font-weight:600">Workforce</div>
+        <div class="sn-item" onclick="showSettingsSub('att-settings')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Attendance
+        </div>
+        <div class="sn-item" onclick="showSettingsSub('leave-settings')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Leaves &amp; Holidays
+        </div>
+        <div class="sn-item" onclick="showSettingsSub('location-settings')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>Location Tracking
+        </div>
+      </div>
+
+      <!-- Settings content area -->
+      <div style="flex:1;overflow-y:auto;padding:28px 32px;background:var(--page-bg)">
+
+        <!-- ── Account ── -->
+        <div id="ssub-account">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;align-items:start">
+            <!-- Timezone -->
+            <div class="settings-card">
+              <div class="settings-field-label">Timezone</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Choose default company timezone.</div>
+              <select id="st-timezone">
+                <option value="Asia/Kolkata" selected>Asia/Kolkata</option>
+                <option value="Asia/Dubai">Asia/Dubai</option>
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">America/New_York</option>
+                <option value="Europe/London">Europe/London</option>
+              </select>
+            </div>
+            <!-- Currency -->
+            <div class="settings-card">
+              <div class="settings-field-label">Currency</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Please choose an appropriate currency.</div>
+              <select id="st-currency">
+                <option value="INR" selected>INR – Indian rupees</option>
+                <option value="USD">USD – US Dollar</option>
+                <option value="EUR">EUR – Euro</option>
+                <option value="GBP">GBP – British Pound</option>
+                <option value="AED">AED – UAE Dirham</option>
+              </select>
+            </div>
+            <!-- Display User Data Timezone -->
+            <div class="settings-card">
+              <div class="settings-field-label">Display User Data Timezone</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Display user data in company timezone.</div>
+              <select id="st-tz-display">
+                <option value="disabled" selected>Disabled</option>
+                <option value="enabled">Enabled</option>
+              </select>
+            </div>
+            <!-- Update company logo -->
+            <div class="settings-card">
+              <div class="settings-field-label">Update company logo</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Ideal logo size is up to 500×500 px and max 250 kb. Supported types are PNG, JPG.</div>
+              <div id="logo-upload-area" onclick="document.getElementById('logo-file-input').click()" style="width:100px;height:100px;border:2px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:6px;transition:border-color .15s;background:var(--page-bg)">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                <div style="font-size:10px;color:var(--text-muted)">Click to Upload</div>
+              </div>
+              <input type="file" id="logo-file-input" accept="image/png,image/jpeg" style="display:none" onchange="handleLogoUpload(this)">
+            </div>
+            <!-- Change Password -->
+            <div class="settings-card">
+              <div class="settings-field-label">Change Password</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Please enter your current password and new password to change your password.</div>
+              <button class="btn btn-primary" onclick="openChangePwdModal()">Change Password</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Attendance Settings ── -->
+        <div id="ssub-att-settings" style="display:none">
+
+          <!-- Attendance approval methods -->
+          <div class="settings-section-card" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <div>
+                <div class="settings-field-label" style="font-size:14px;margin-bottom:2px">Attendance approval methods</div>
+                <div style="font-size:11px;color:var(--text-muted)">Reporting Hierarchy approves leaves starting with the first reporting manager till the highest manager.</div>
+              </div>
+              <button class="btn btn-primary btn-sm">Save</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0">
+                  <input type="radio" name="att-approval" value="hierarchy" checked style="width:auto;accent-color:var(--accent)"> Reporting Hierarchy
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0">
+                  <input type="radio" name="att-approval" value="fixed" style="width:auto;accent-color:var(--accent)"> Fixed Approvers
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0">
+                  <input type="radio" name="att-approval" value="hybrid" style="width:auto;accent-color:var(--accent)"> Hybrid Approval Model
+                </label>
+              </div>
+              <div>
+                <label style="margin-top:0">Number of Admins To Restrict</label>
+                <select><option>1</option><option>2</option><option>3</option></select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Backup Approval -->
+          <div class="settings-section-card" style="margin-bottom:16px">
+            <div class="settings-field-label" style="font-size:14px;margin-bottom:2px">Attendance Backup Approval</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Define Backup approvers who can take act on attendance if the listed approvers are not available.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <select><option value="">Backup Approver One</option></select>
+              <select><option value="">Backup Approver Two</option></select>
+            </div>
+          </div>
+
+          <!-- Team Level Settings -->
+          <div class="settings-section-card" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <div class="settings-field-label" style="font-size:14px;margin-bottom:0">Team Level Settings</div>
+              </div>
+              <button class="btn btn-secondary btn-sm">↗ Copy Team Settings</button>
+            </div>
+            <div style="margin-bottom:14px">
+              <label style="margin-top:0">Assigning To</label>
+              <select style="max-width:200px"><option>Default</option></select>
+            </div>
+
+            <!-- Punch in/out -->
+            <div class="settings-sub-section">PUNCH IN/PUNCH OUT OPTIONS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div>
+                <label>Mode</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Employee manually marks attendance.</div>
+                <select><option>Manual</option><option>Automatic</option></select>
+              </div>
+              <div>
+                <label>Auto Sign Out</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Employee is automatically signed out after selected minutes post shift/roster end.</div>
+                <select><option>Off</option><option>15 min</option><option>30 min</option><option>60 min</option></select>
+              </div>
+              <div>
+                <label>Prevent Early Punch Out</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Prevent Punching out before shift ends time.</div>
+                <select><option>Off</option><option>On</option></select>
+              </div>
+              <div>
+                <label>Authentication</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Use onboard phone authentication when marking attendance.</div>
+                <select><option>Off</option><option>On</option></select>
+              </div>
+            </div>
+
+            <!-- Attendance Rules -->
+            <div class="settings-sub-section">ATTENDANCE RULES</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <div>
+                    <div style="font-size:12px;font-weight:600;color:var(--text-primary)">Full Day Rule</div>
+                    <div style="font-size:10px;color:var(--text-muted)">All rules must pass to be marked present. At least one rule is required.</div>
+                  </div>
+                  <button class="btn btn-secondary btn-sm">+ Add Rule</button>
+                </div>
+                <div style="padding:10px 14px;background:var(--page-bg);border-radius:6px;font-size:12px;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center">
+                  Must complete at least 100% of scheduled shift
+                  <div style="display:flex;gap:8px">
+                    <button style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px">✏</button>
+                    <button style="background:none;border:none;cursor:pointer;color:#991b1b;font-size:14px">🗑</button>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <div>
+                    <div style="font-size:12px;font-weight:600;color:var(--text-primary)">Half Day Rule <span style="font-weight:400;color:var(--text-muted)">(Optional)</span></div>
+                    <div style="font-size:10px;color:var(--text-muted)">All rules must pass to be marked half day.</div>
+                  </div>
+                  <button class="btn btn-secondary btn-sm">+ Add Rule</button>
+                </div>
+                <div style="padding:10px 14px;background:var(--page-bg);border-radius:6px;font-size:12px;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center">
+                  Must complete at least 50% of scheduled shift
+                  <div style="display:flex;gap:8px">
+                    <button style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px">✏</button>
+                    <button style="background:none;border:none;cursor:pointer;color:#991b1b;font-size:14px">🗑</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text-primary)">Late Penalties <span style="font-weight:400;color:var(--text-muted)">(Optional)</span></div>
+                  <div style="font-size:10px;color:var(--text-muted)">Penalties applied based on late arrival.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm">+ Add Rule</button>
+              </div>
+              <div style="padding:16px 14px;background:var(--page-bg);border-radius:6px;font-size:12px;color:var(--text-muted);text-align:center">No rules defined yet</div>
+            </div>
+
+            <!-- Time Boundaries -->
+            <div class="settings-sub-section">TIME BOUNDARIES</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div>
+                <label>Grace Period (minutes)</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Tolerance period for late attendance</div>
+                <select><option>15 min</option><option>5 min</option><option>10 min</option><option>30 min</option></select>
+              </div>
+              <div>
+                <label>Strict Mode</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Require explicit punch in/out to count hours</div>
+                <select><option>On</option><option>Off</option></select>
+              </div>
+              <div>
+                <label>Limit to shift hours</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Restrict attendance counting to shift hours</div>
+                <select><option>Off</option><option>On</option></select>
+              </div>
+            </div>
+
+            <!-- Automatic Deductions -->
+            <div class="settings-sub-section">AUTOMATIC DEDUCTIONS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div>
+                <label>Deduct GPS Disabled Time</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Subtract time when GPS is disabled</div>
+                <select><option>Off</option><option>On</option></select>
+              </div>
+              <div>
+                <label>Mark Absent on Auto Punch Out</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Mark as absent if automatically punched out</div>
+                <select><option>Off</option><option>On</option></select>
+              </div>
+            </div>
+
+            <!-- Miscellaneous -->
+            <div class="settings-sub-section">MISCELLANEOUS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+              <div>
+                <label>Admin name</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Show admin name on sign in/out reminder</div>
+                <select><option>On</option><option>Off</option></select>
+              </div>
+              <div>
+                <label>Attendance Mark-IN Form</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Form to be filled in when marking attendance in</div>
+                <select><option>None</option></select>
+              </div>
+              <div>
+                <label>Attendance Mark-OUT Form</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Form to be filled in when marking attendance out</div>
+                <select><option>None</option></select>
+              </div>
+            </div>
+
+            <!-- Attendance Regularisation -->
+            <div class="settings-sub-section">ATTENDANCE REGULARISATION</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:8px">
+              <div>
+                <label>Cycle Start Day</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">The day of the month when the regularisation cycle starts (e.g., 2 means 2nd Feb – 1st Mar)</div>
+                <select><option>Not Set</option><option>1</option><option>2</option><option>5</option></select>
+              </div>
+              <div>
+                <label>Max Regularisations Per Cycle</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Limit how many attendance regularisation requests an employee can raise in one cycle</div>
+                <select><option>Unlimited</option><option>1</option><option>2</option><option>5</option><option>10</option></select>
+              </div>
+              <div>
+                <label>Regularisation Request Window</label>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Number of days after an attendance event within which a regularisation can be requested</div>
+                <select><option>Whenever</option><option>7 days</option><option>14 days</option><option>30 days</option></select>
+              </div>
+            </div>
+            <div style="max-width:320px">
+              <label>Allow Rejected Regularisation Re-submission</label>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Allow employees to re-submit attendance regularisation requests that were previously rejected</div>
+              <select><option>Off</option><option>On</option></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Leaves & Holidays ── -->
+        <div id="ssub-leave-settings" style="display:none">
+          <div class="settings-section-card">
+            <div class="settings-field-label" style="font-size:14px;margin-bottom:4px">Leaves &amp; Holidays</div>
+            <div style="font-size:11px;color:var(--text-muted)">Configure leave policies and public holidays for your organisation.</div>
+            <div style="margin-top:20px;color:var(--text-muted);font-size:13px;text-align:center;padding:32px 0">Coming soon — share a screenshot to build this section.</div>
+          </div>
+        </div>
+
+        <!-- ── Location Tracking ── -->
+        <div id="ssub-location-settings" style="display:none">
+          <div class="settings-section-card">
+            <div class="settings-field-label" style="font-size:14px;margin-bottom:4px">Location Tracking</div>
+            <div style="font-size:11px;color:var(--text-muted)">Manage GPS tracking, geofencing, and location policies.</div>
+            <div style="margin-top:20px;color:var(--text-muted);font-size:13px;text-align:center;padding:32px 0">Coming soon — share a screenshot to build this section.</div>
+          </div>
+        </div>
+
+      </div><!-- /settings content -->
+    </div><!-- /tab-settings -->
+
   </div><!-- /content -->
 </div><!-- /app -->
 
@@ -1898,9 +2219,9 @@ function skelList(n=4){
 }
 
 // ── Tab routing ─────────────────────────────────────────────────────────────
-const TABS=['dashboard','workers','organization','tasks','attendance','leaves','chat','clients','performance','reports','payroll','audit'];
+const TABS=['dashboard','workers','organization','tasks','attendance','leaves','chat','clients','performance','reports','payroll','audit','settings'];
 const TAB_TITLES={dashboard:'Dashboard',workers:'Workers',organization:'Organization',tasks:'Tasks',attendance:'Attendance',
-  leaves:'Leave Requests',chat:'Chat',clients:'Clients & Sites',performance:'Performance',reports:'Reports',payroll:'Payroll',audit:'Audit Log'};
+  leaves:'Leave Requests',chat:'Chat',clients:'Clients & Sites',performance:'Performance',reports:'Reports',payroll:'Payroll',audit:'Audit Log',settings:'Settings'};
 
 function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('open');
@@ -1929,7 +2250,7 @@ function showTab(name){
   document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',TABS[i]===name));
   document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
   const el=document.getElementById(`tab-${name}`);
-  if(el) el.style.display=(name==='dashboard'||name==='attendance'||name==='clients'||name==='organization')?'flex':'block';
+  if(el) el.style.display=(name==='dashboard'||name==='attendance'||name==='clients'||name==='organization'||name==='settings')?'flex':'block';
   document.getElementById('topbar-title').textContent=TAB_TITLES[name]||name;
   if(chatPollInterval){clearInterval(chatPollInterval);chatPollInterval=null;currentRoomId=null;}
   if(attPollInterval && name!=='attendance'){clearInterval(attPollInterval);attPollInterval=null;}
@@ -4889,6 +5210,55 @@ async function submitSupportTicket(){
     errEl.textContent=e.message||'Failed to submit. Please try again.';
     errEl.style.display='block';
   }finally{btn.textContent='Submit Ticket';btn.disabled=false;}
+}
+
+// ── Settings sub-navigation ──────────────────────────────────────────────────
+const SETTINGS_SUBS=['account','att-settings','leave-settings','location-settings'];
+function showSettingsSub(name){
+  SETTINGS_SUBS.forEach(s=>{
+    const el=document.getElementById('ssub-'+s);
+    if(el)el.style.display=(s===name)?'block':'none';
+  });
+  document.querySelectorAll('.sn-item').forEach(el=>{
+    el.classList.toggle('active',el.getAttribute('onclick')&&el.getAttribute('onclick').includes("'"+name+"'"));
+  });
+}
+
+function handleLogoUpload(input){
+  if(!input.files||!input.files[0])return;
+  const file=input.files[0];
+  if(file.size>250*1024){showToast('Logo must be under 250 KB','error');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const area=document.getElementById('logo-upload-area');
+    area.innerHTML=`<img src="${e.target.result}" style="max-width:96px;max-height:96px;border-radius:6px;object-fit:contain">`;
+  };
+  reader.readAsDataURL(file);
+  showToast('Logo updated (local preview only)','info');
+}
+
+function openChangePwdModal(){
+  const html=`<div class="modal-backdrop" id="pwd-modal-bd" onclick="if(event.target===this)this.remove()">
+    <div class="modal" style="width:380px">
+      <h3>Change Password</h3>
+      <label>Current Password</label><input type="password" id="pwd-current" placeholder="Current password">
+      <label>New Password</label><input type="password" id="pwd-new" placeholder="New password">
+      <label>Confirm New Password</label><input type="password" id="pwd-confirm" placeholder="Confirm new password">
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('pwd-modal-bd').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitChangePwd()">Update Password</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+function submitChangePwd(){
+  const cur=document.getElementById('pwd-current').value;
+  const nw=document.getElementById('pwd-new').value;
+  const cf=document.getElementById('pwd-confirm').value;
+  if(!cur||!nw||!cf){showToast('Please fill all fields','error');return;}
+  if(nw!==cf){showToast('New passwords do not match','error');return;}
+  showToast('Password change is not yet connected to the backend','warn');
 }
 
 </script>
