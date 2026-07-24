@@ -206,6 +206,10 @@ function MainApp() {
               notificationBody: 'Location tracking active',
               notificationColor: '#1a6ef2',
             },
+            android: {
+              stopOnTerminate: false,
+              startOnBoot: true,
+            },
           });
         }
       }

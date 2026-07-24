@@ -825,13 +825,13 @@ async def places_map_match(req: MapMatchRequest, current_user: User = Depends(ge
 
     sampled = _subsample(pings)
     coord_str = ";".join(f"{p['lng']},{p['lat']}" for p in sampled)
-    radiuses  = ";".join("50" for _ in sampled)
+    radiuses  = ";".join("100" for _ in sampled)
 
     try:
         async with httpx.AsyncClient(timeout=12.0) as client:
             res = await client.get(
                 f"{_OSRM_MATCH}/{coord_str}",
-                params={"overview": "full", "geometries": "geojson", "radiuses": radiuses},
+                params={"overview": "full", "geometries": "geojson", "radiuses": radiuses, "gaps": "ignore"},
             )
         if res.status_code == 200:
             data = res.json()
