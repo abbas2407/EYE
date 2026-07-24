@@ -333,6 +333,16 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 /* Icon btn */
 .icon-btn{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px 4px;border-radius:4px}
 .icon-btn:hover{background:var(--page-bg)}
+/* Integrations */
+.int-pill{padding:8px 16px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;border:none;background:none;color:var(--text-muted);cursor:pointer;border-right:1px solid var(--border);transition:background .15s,color .15s;white-space:nowrap}
+.int-pill:last-child{border-right:none}
+.int-pill:hover{background:var(--page-bg);color:var(--text-primary)}
+.int-pill.active{background:var(--accent);color:#fff}
+.int-card{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.int-card:hover{border-color:var(--accent);box-shadow:0 4px 16px rgba(105,93,74,.12)}
+.int-logo{width:52px;height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.webhook-row{padding:14px 0;border-bottom:1px solid var(--border-soft)}
+.webhook-row:last-of-type{border-bottom:none}
 /* Leaves & Holidays */
 .lh-tab{padding:11px 18px;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;border:none;background:none;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s}
 .lh-tab:hover{color:var(--text-primary)}
@@ -1314,6 +1324,9 @@ th.sortable.desc::after{content:'↓';opacity:.8}
         <div class="sn-item" onclick="showSettingsSub('expense-settings')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Expense
         </div>
+        <div class="sn-item" onclick="showSettingsSub('integration-settings')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/></svg>Integrations
+        </div>
       </div>
 
       <!-- Settings content area -->
@@ -2179,6 +2192,300 @@ th.sortable.desc::after{content:'↓';opacity:.8}
               <button class="btn btn-secondary" onclick="closeExpCatModal()">Cancel</button>
               <button class="btn btn-primary" id="exp-cat-submit-btn" onclick="submitExpCat()">Create</button>
             </div>
+          </div>
+        </div>
+
+        <!-- ── Integrations ── -->
+        <div id="ssub-integration-settings" style="display:none">
+
+          <!-- Pill tabs top-right -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+            <div>
+              <div id="int-main-title" style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Integrations</div>
+              <div id="int-main-desc" style="font-size:11px;color:var(--text-muted)">Connect FieldPulse with other systems with a single click.</div>
+            </div>
+            <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;flex-shrink:0">
+              <button class="int-pill active" id="intpill-integrations" onclick="switchIntTab('integrations')">Integrations</button>
+              <button class="int-pill" id="intpill-webhooks"     onclick="switchIntTab('webhooks')">Webhooks</button>
+              <button class="int-pill" id="intpill-logs"         onclick="switchIntTab('logs')">Integration Logs</button>
+            </div>
+          </div>
+
+          <!-- ── Integrations tab ── -->
+          <div id="intpanel-integrations">
+
+            <!-- CRM Integrations -->
+            <div style="margin-bottom:24px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                <span style="font-size:13px;font-weight:700;color:var(--text-primary)">CRM Integrations</span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+                <div class="int-card" onclick="openIntModal('Zoho CRM','zohocrm')">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                    <div class="int-logo" style="background:#e8f4fd;color:#e07400;font-weight:800;font-size:13px;letter-spacing:-.5px">Zoho</div>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openIntModal('Zoho CRM','zohocrm')">Connect</button>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:5px">Zoho CRM</div>
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.5">Two way sync between Zoho CRM (leads/accounts/contacts/activities) and FieldPulse (clients/tasks).</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- HRMS -->
+            <div style="margin-bottom:24px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                <span style="font-size:13px;font-weight:700;color:var(--text-primary)">HRMS</span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+                <div class="int-card" onclick="openIntModal('GREYTHR','greythr')">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                    <div class="int-logo" style="background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:800">GREYTHR</div>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openIntModal('GREYTHR','greythr')">Connect</button>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:5px">GREYTHR</div>
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.5">Sync attendance from FieldPulse to GreytHR.</div>
+                </div>
+                <div class="int-card" onclick="openIntModal('HROne','hrone')">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                    <div class="int-logo" style="background:#e3f2fd;color:#1565c0;font-size:13px;font-weight:800">HROne</div>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openIntModal('HROne','hrone')">Connect</button>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:5px">HROne</div>
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.5">Sync attendance from FieldPulse to HROne.</div>
+                </div>
+                <div class="int-card" onclick="openIntModal('Zoho People','zohoppl')">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                    <div class="int-logo" style="background:#fff3e0;color:#e65100;font-size:13px;font-weight:800">Zoho</div>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openIntModal('Zoho People','zohoppl')">Connect</button>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:5px">Zoho People</div>
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.5">Sync attendance and/or leaves data from FieldPulse to Zoho People.</div>
+                </div>
+                <div class="int-card" onclick="openIntModal('Keka','keka')">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                    <div class="int-logo" style="background:#fce4ec;color:#c62828;font-size:14px;font-weight:800">Keka</div>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openIntModal('Keka','keka')">Connect</button>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:5px">Keka</div>
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.5">Sync Attendance/Expense/Leaves from FieldPulse to Keka.</div>
+                </div>
+                <div class="int-card" onclick="openIntModal('Oracle Cloud','oracle')">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                    <div class="int-logo" style="background:#ffebee;color:#b71c1c;font-size:12px;font-weight:800">Oracle</div>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openIntModal('Oracle Cloud','oracle')">Connect</button>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:5px">Oracle Cloud</div>
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.5">EOD sync of paired attendance (first check-in + last check-out per day) from FieldPulse to Oracle Integration Cloud.</div>
+                </div>
+                <div class="int-card" onclick="openIntModal('Spine HR','spinehr')">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                    <div class="int-logo" style="background:#e8eaf6;color:#283593;font-size:12px;font-weight:800">Spine</div>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openIntModal('Spine HR','spinehr')">Connect</button>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:5px">Spine HR</div>
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.5">Sync attendance from FieldPulse into Spine HR's AttenInfo table.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Others -->
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                <span style="font-size:13px;font-weight:700;color:var(--text-primary)">Others</span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+                <div class="int-card" onclick="openIntModal('Zoho Books','zohobks')">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+                    <div class="int-logo" style="background:#e8f5e9;color:#e07400;font-size:13px;font-weight:800">Zoho</div>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openIntModal('Zoho Books','zohobks')">Connect</button>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:5px">Zoho Books</div>
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.5">Sync clients/products/orders data from FieldPulse to Zoho Books.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Webhooks tab ── -->
+          <div id="intpanel-webhooks" style="display:none">
+            <div class="settings-section-card">
+              <div style="margin-bottom:20px">
+                <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Webhooks</div>
+                <div style="font-size:11px;color:var(--text-muted)">Create and manage webhook triggers for real-time updates.</div>
+              </div>
+
+              <!-- Each webhook row -->
+              <div class="webhook-row">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px">Clients Webhook</div>
+                  <div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--page-bg)">
+                    <div style="font-size:11px;color:var(--text-muted)">Send all clients that are created/edited in FieldPulse to any system via a POST request.</div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                      <label class="tog"><input type="checkbox" onchange="toggleWebhook(this,'clients')"><span class="tog-slider"></span></label>
+                      <span class="wh-status-label" style="font-size:11px;color:var(--text-muted)">Disabled</span>
+                    </div>
+                  </div>
+                  <div class="wh-url-row" id="wh-url-clients" style="display:none;margin-top:8px">
+                    <input placeholder="Enter webhook URL (https://...)" style="font-size:12px">
+                  </div>
+                </div>
+              </div>
+
+              <div class="webhook-row">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px">Attendance Webhook</div>
+                  <div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--page-bg)">
+                    <div style="font-size:11px;color:var(--text-muted)">Send all attendance that are created/edited in FieldPulse to any system via a POST request.</div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                      <label class="tog"><input type="checkbox" onchange="toggleWebhook(this,'attendance')"><span class="tog-slider"></span></label>
+                      <span class="wh-status-label" style="font-size:11px;color:var(--text-muted)">Disabled</span>
+                    </div>
+                  </div>
+                  <div class="wh-url-row" id="wh-url-attendance" style="display:none;margin-top:8px">
+                    <input placeholder="Enter webhook URL (https://...)" style="font-size:12px">
+                  </div>
+                </div>
+              </div>
+
+              <div class="webhook-row">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px">Tasks Webhook</div>
+                  <div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--page-bg)">
+                    <div style="font-size:11px;color:var(--text-muted)">Send all tasks that are created/edited in FieldPulse to any system via a POST request.</div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                      <label class="tog"><input type="checkbox" onchange="toggleWebhook(this,'tasks')"><span class="tog-slider"></span></label>
+                      <span class="wh-status-label" style="font-size:11px;color:var(--text-muted)">Disabled</span>
+                    </div>
+                  </div>
+                  <div class="wh-url-row" id="wh-url-tasks" style="display:none;margin-top:8px">
+                    <input placeholder="Enter webhook URL (https://...)" style="font-size:12px">
+                  </div>
+                </div>
+              </div>
+
+              <div class="webhook-row">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px">Forms Webhook</div>
+                  <div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--page-bg)">
+                    <div style="font-size:11px;color:var(--text-muted)">Send all forms that are created/edited in FieldPulse to any system via a POST request.</div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                      <label class="tog"><input type="checkbox" onchange="toggleWebhook(this,'forms')"><span class="tog-slider"></span></label>
+                      <span class="wh-status-label" style="font-size:11px;color:var(--text-muted)">Disabled</span>
+                    </div>
+                  </div>
+                  <div class="wh-url-row" id="wh-url-forms" style="display:none;margin-top:8px">
+                    <input placeholder="Enter webhook URL (https://...)" style="font-size:12px">
+                  </div>
+                </div>
+              </div>
+
+              <div class="webhook-row">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px">Photo Webhook</div>
+                  <div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--page-bg)">
+                    <div style="font-size:11px;color:var(--text-muted)">Send all photo that are created/edited in FieldPulse to any system via a POST request.</div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                      <label class="tog"><input type="checkbox" onchange="toggleWebhook(this,'photo')"><span class="tog-slider"></span></label>
+                      <span class="wh-status-label" style="font-size:11px;color:var(--text-muted)">Disabled</span>
+                    </div>
+                  </div>
+                  <div class="wh-url-row" id="wh-url-photo" style="display:none;margin-top:8px">
+                    <input placeholder="Enter webhook URL (https://...)" style="font-size:12px">
+                  </div>
+                </div>
+              </div>
+
+              <div class="webhook-row">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px">Orders Webhook</div>
+                  <div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--page-bg)">
+                    <div style="font-size:11px;color:var(--text-muted)">Send all orders that are created/edited in FieldPulse to any system via a POST request.</div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                      <label class="tog"><input type="checkbox" onchange="toggleWebhook(this,'orders')"><span class="tog-slider"></span></label>
+                      <span class="wh-status-label" style="font-size:11px;color:var(--text-muted)">Disabled</span>
+                    </div>
+                  </div>
+                  <div class="wh-url-row" id="wh-url-orders" style="display:none;margin-top:8px">
+                    <input placeholder="Enter webhook URL (https://...)" style="font-size:12px">
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;margin-top:16px">
+                <button class="btn btn-primary" onclick="submitWebhooks()">SUBMIT</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Integration Logs tab ── -->
+          <div id="intpanel-logs" style="display:none">
+            <div class="settings-section-card">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                <div>
+                  <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Integration Logs</div>
+                  <div style="font-size:11px;color:var(--text-muted)">View all integration activity and sync logs.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Logs refreshed','info')">↺ Refresh</button>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead><tr>
+                    <th>Timestamp</th><th>Integration</th><th>Event</th><th>Status</th><th>Details</th>
+                  </tr></thead>
+                  <tbody id="int-log-body">
+                    <tr><td colspan="5" class="empty">No integration logs yet. Connect an integration to start syncing.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /ssub-integration-settings -->
+
+        <!-- ── Integration Connect Modal ── -->
+        <div id="int-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(26,28,26,.45);z-index:600" onclick="if(event.target===this)closeIntModal()"></div>
+        <div id="int-modal" style="position:fixed;top:0;right:0;height:100%;width:520px;max-width:98vw;background:var(--card-bg);box-shadow:-4px 0 32px rgba(0,0,0,.18);z-index:601;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column">
+          <!-- Header -->
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+            <button onclick="closeIntModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;display:flex;align-items:center">←</button>
+            <div id="int-modal-name" style="font-size:16px;font-weight:700;color:var(--text-primary)"></div>
+          </div>
+          <!-- Status bar -->
+          <div style="padding:10px 20px;background:#fff5f5;border-bottom:1px solid #fee2e2;display:flex;justify-content:space-between;align-items:center">
+            <span id="int-modal-status-text" style="font-size:12px;font-weight:600;color:#b91c1c">This Integration is disabled</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <label class="tog"><input type="checkbox" id="int-modal-toggle" onchange="toggleIntStatus(this)"><span class="tog-slider"></span></label>
+              <span id="int-modal-status-label" style="font-size:11px;color:var(--text-muted)">Disabled</span>
+            </div>
+          </div>
+          <!-- Body -->
+          <div style="flex:1;overflow-y:auto;padding:20px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+              <div>
+                <label style="margin-top:0">API KEY <span style="color:#b91c1c">*</span></label>
+                <input id="int-api-key" placeholder="Enter API Key">
+              </div>
+              <div>
+                <label style="margin-top:0">HOSTNAME / URL <span style="color:#b91c1c">*</span></label>
+                <input id="int-hostname" placeholder="https://your-domain.example.com">
+              </div>
+            </div>
+            <div style="margin-bottom:14px">
+              <label>Upload File (optional)</label>
+              <div style="display:flex;align-items:center;gap:10px">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('int-file-input').click()">Upload File</button>
+                <span id="int-file-label" style="font-size:11px;color:var(--text-muted)">No file uploaded</span>
+              </div>
+              <input type="file" id="int-file-input" style="display:none" onchange="document.getElementById('int-file-label').textContent=this.files[0]?.name||'No file uploaded'">
+            </div>
+            <div id="int-modal-notes" style="background:#eff6ff;border-radius:6px;padding:14px;font-size:11px;color:#1d4ed8;line-height:1.7"></div>
+          </div>
+          <!-- Footer -->
+          <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+            <button class="btn btn-primary" id="int-save-btn" onclick="saveIntegration()">Save</button>
           </div>
         </div>
 
@@ -5985,8 +6292,109 @@ function submitLeavePolicy(){
   showToast('Leave policy created','success');
 }
 
+// ── Integrations ─────────────────────────────────────────────────────────────
+const INT_NOTES = {
+  greythr:  ['Make sure you set the Employee ID in the Workers page.','Make sure the same Employee ID is mapped to the employee in GreytHR.','Make sure that the option to allow employee code as an access card is enabled in GreytHR.'],
+  hrone:    ['Generate an API Key from HROne Admin → Settings → API Access.','Enter the API Key and your HROne domain URL above.','Save and verify sync from the Integration Logs tab.'],
+  zohoppl:  ['Create a Server-to-Server OAuth app in Zoho API Console.','Enter the Client ID as API Key and your Zoho domain as Hostname.','Authorize the connection and confirm data flow in Integration Logs.'],
+  keka:     ['Enable API access from Keka HR → Settings → Integrations.','Enter your Keka API Key and subdomain URL above.','After saving, trigger a manual sync to verify attendance data.'],
+  oracle:   ['Obtain Integration Cloud URL and API token from Oracle dashboard.','Enter the token as API Key and the Integration Cloud URL as Hostname.','Ensure EOD attendance sync is scheduled in your Oracle workflow.'],
+  spinehr:  ['Generate the API token from Spine HR → Admin → API Settings.','Enter token as API Key and your Spine HR URL as Hostname.','Verify AttenInfo table is receiving records after first sync.'],
+  zohocrm:  ['Create a Zoho CRM API app and copy the Client Secret as API Key.','Enter your Zoho CRM domain as Hostname (e.g. zohoapis.com).','Map FieldPulse clients/tasks to Zoho CRM leads/activities in settings.'],
+  zohobks:  ['Enable API access in Zoho Books → Settings → API Access.','Enter the auth token as API Key and your Books domain as Hostname.','Verify clients and orders are syncing in Integration Logs.'],
+};
+const INT_STORE = {};
+
+function switchIntTab(name){
+  ['integrations','webhooks','logs'].forEach(t=>{
+    document.getElementById('intpanel-'+t).style.display = t===name?'block':'none';
+    document.getElementById('intpill-'+t).classList.toggle('active', t===name);
+  });
+  const titles = {integrations:'Integrations',webhooks:'Webhooks',logs:'Integration Logs'};
+  const descs  = {integrations:'Connect FieldPulse with other systems with a single click.',webhooks:'Create and manage webhook triggers for real-time updates.',logs:'View all integration activity and sync logs.'};
+  document.getElementById('int-main-title').textContent = titles[name];
+  document.getElementById('int-main-desc').textContent  = descs[name];
+}
+
+function openIntModal(name, key){
+  const saved = INT_STORE[key] || {};
+  document.getElementById('int-modal-name').textContent   = name;
+  document.getElementById('int-api-key').value            = saved.apiKey   || '';
+  document.getElementById('int-hostname').value           = saved.hostname || '';
+  document.getElementById('int-file-label').textContent   = 'No file uploaded';
+  document.getElementById('int-modal-toggle').checked     = saved.enabled  || false;
+  document.getElementById('int-save-btn').dataset.key     = key;
+  updateIntModalStatus(saved.enabled || false);
+  const notes = INT_NOTES[key] || [];
+  document.getElementById('int-modal-notes').innerHTML = notes.length
+    ? '<strong>Note:</strong><br>' + notes.map((n,i)=>`${i+1}. ${n}`).join('<br>')
+    : '';
+  document.getElementById('int-modal-bg').style.display = 'block';
+  document.getElementById('int-modal').style.transform  = 'translateX(0)';
+}
+function closeIntModal(){
+  document.getElementById('int-modal').style.transform  = 'translateX(100%)';
+  setTimeout(()=>document.getElementById('int-modal-bg').style.display='none', 280);
+}
+function toggleIntStatus(cb){
+  updateIntModalStatus(cb.checked);
+}
+function updateIntModalStatus(enabled){
+  const bar   = document.getElementById('int-modal-status-text').parentElement;
+  const text  = document.getElementById('int-modal-status-text');
+  const label = document.getElementById('int-modal-status-label');
+  if(enabled){
+    bar.style.background   = '#f0fdf4';
+    bar.style.borderColor  = '#bbf7d0';
+    text.style.color       = '#166534';
+    text.textContent       = 'This Integration is enabled';
+    label.textContent      = 'Enabled';
+    label.style.color      = '#166534';
+  } else {
+    bar.style.background   = '#fff5f5';
+    bar.style.borderColor  = '#fee2e2';
+    text.style.color       = '#b91c1c';
+    text.textContent       = 'This Integration is disabled';
+    label.textContent      = 'Disabled';
+    label.style.color      = 'var(--text-muted)';
+  }
+}
+function saveIntegration(){
+  const key      = document.getElementById('int-save-btn').dataset.key;
+  const apiKey   = document.getElementById('int-api-key').value.trim();
+  const hostname = document.getElementById('int-hostname').value.trim();
+  const enabled  = document.getElementById('int-modal-toggle').checked;
+  if(enabled && (!apiKey || !hostname)){
+    showToast('API Key and Hostname are required to enable the integration','error');
+    return;
+  }
+  INT_STORE[key] = { apiKey, hostname, enabled };
+  // Add log entry
+  const tbody = document.getElementById('int-log-body');
+  const name  = document.getElementById('int-modal-name').textContent;
+  const now   = new Date().toLocaleString();
+  if(tbody.querySelector('.empty')) tbody.innerHTML='';
+  tbody.insertAdjacentHTML('beforeend',
+    `<tr><td>${now}</td><td>${name}</td><td>Configuration saved</td>
+     <td><span class="badge ${enabled?'badge-green':'badge-gray'}">${enabled?'Enabled':'Disabled'}</span></td>
+     <td>${apiKey?'API Key set':'No credentials'}</td></tr>`);
+  showToast(`${name} ${enabled?'connected':'saved (disabled)'}`, enabled?'success':'info');
+  closeIntModal();
+}
+
+function toggleWebhook(cb, name){
+  const label  = cb.closest('div').querySelector('.wh-status-label');
+  const urlRow = document.getElementById('wh-url-'+name);
+  label.textContent  = cb.checked ? 'Enabled'  : 'Disabled';
+  label.style.color  = cb.checked ? '#166534'  : 'var(--text-muted)';
+  if(urlRow) urlRow.style.display = cb.checked ? 'block' : 'none';
+}
+function submitWebhooks(){
+  showToast('Webhook settings saved','success');
+}
+
 // ── Settings sub-navigation ──────────────────────────────────────────────────
-const SETTINGS_SUBS=['account','att-settings','leave-settings','location-settings','expense-settings'];
+const SETTINGS_SUBS=['account','att-settings','leave-settings','location-settings','expense-settings','integration-settings'];
 function showSettingsSub(name){
   SETTINGS_SUBS.forEach(s=>{
     const el=document.getElementById('ssub-'+s);
