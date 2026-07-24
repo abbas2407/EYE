@@ -315,6 +315,24 @@ th.sortable.desc::after{content:'↓';opacity:.8}
 .settings-section-card{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:20px}
 .settings-field-label{font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:6px}
 .settings-sub-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#c4bdb5;font-weight:600;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+/* Expense tabs */
+.exp-tab{display:inline-flex;align-items:center;gap:6px;padding:11px 16px;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;border:none;background:none;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s;white-space:nowrap}
+.exp-tab:hover{color:var(--text-primary)}
+.exp-tab.active{color:var(--text-primary);border-bottom-color:var(--accent);font-weight:700}
+/* Toggle switch */
+.tog{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0;position:absolute}
+.tog-slider{position:absolute;inset:0;background:#d1d5db;border-radius:20px;cursor:pointer;transition:background .2s}
+.tog-slider::before{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;left:3px;top:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tog input:checked+.tog-slider{background:#22c55e}
+.tog input:checked+.tog-slider::before{transform:translateX(16px)}
+/* Driver chips */
+.driver-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--card-bg);color:var(--text-muted);cursor:pointer;transition:all .15s;user-select:none}
+.driver-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.driver-chip.locked{color:#c4bdb5;cursor:not-allowed;border-color:var(--border)}
+/* Icon btn */
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px 4px;border-radius:4px}
+.icon-btn:hover{background:var(--page-bg)}
 /* Leaves & Holidays */
 .lh-tab{padding:11px 18px;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;border:none;background:none;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s}
 .lh-tab:hover{color:var(--text-primary)}
@@ -1293,6 +1311,9 @@ th.sortable.desc::after{content:'↓';opacity:.8}
         <div class="sn-item" onclick="showSettingsSub('location-settings')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>Location Tracking
         </div>
+        <div class="sn-item" onclick="showSettingsSub('expense-settings')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Expense
+        </div>
       </div>
 
       <!-- Settings content area -->
@@ -1822,6 +1843,342 @@ th.sortable.desc::after{content:'↓';opacity:.8}
             <div class="settings-field-label" style="font-size:14px;margin-bottom:4px">Location Tracking</div>
             <div style="font-size:11px;color:var(--text-muted)">Manage GPS tracking, geofencing, and location policies.</div>
             <div style="margin-top:20px;color:var(--text-muted);font-size:13px;text-align:center;padding:32px 0">Coming soon — share a screenshot to build this section.</div>
+          </div>
+        </div>
+
+        <!-- ── Expense ── -->
+        <div id="ssub-expense-settings" style="display:none">
+
+          <!-- Expense top tabs -->
+          <div style="display:flex;border-bottom:2px solid var(--border);background:var(--card-bg);border-radius:8px 8px 0 0;padding:0 4px;margin-bottom:20px">
+            <button class="exp-tab active" id="exptab-expense"    onclick="switchExpTab('expense')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Expense
+            </button>
+            <button class="exp-tab" id="exptab-conveyance" onclick="switchExpTab('conveyance')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Conveyance
+            </button>
+            <button class="exp-tab" id="exptab-advances"   onclick="switchExpTab('advances')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Advances
+            </button>
+            <button class="exp-tab" id="exptab-additional" onclick="switchExpTab('additional')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07"/></svg> Additional Settings
+            </button>
+          </div>
+
+          <!-- ── Expense tab ── -->
+          <div id="exppanel-expense">
+            <div class="settings-section-card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+                <div>
+                  <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Categories &amp; Limits</div>
+                  <div style="font-size:11px;color:var(--text-muted)">Create Categories of expenses to use for expense creation for Expense Limits. The same will apply to advances as well.</div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openExpCatModal('expense')">+ Create Category</button>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead><tr>
+                    <th style="width:32px"><input type="checkbox" style="width:auto"></th>
+                    <th>Category</th><th>Created On</th><th>Modified On</th>
+                    <th>Enable For Advances</th><th>Status</th><th style="width:24px"></th><th>Action</th>
+                  </tr></thead>
+                  <tbody id="exp-cat-body">
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Travel</td><td>14/04/2026</td><td>14/04/2026</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><button class="icon-btn" title="More">⋮</button></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit" title="Duplicate">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()" title="Delete">🗑</button></div></td>
+                    </tr>
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Telephone bill</td><td>14/04/2026</td><td>14/04/2026</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><button class="icon-btn">⋮</button></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+                    </tr>
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Others</td><td>14/04/2026</td><td>14/04/2026</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><button class="icon-btn">⋮</button></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+                    </tr>
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Office supplies</td><td>14/04/2026</td><td>14/04/2026</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><button class="icon-btn">⋮</button></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+                    </tr>
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Meals</td><td>14/04/2026</td><td>14/04/2026</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><button class="icon-btn">⋮</button></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+                    </tr>
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Accommodation</td><td>14/04/2026</td><td>14/04/2026</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><button class="icon-btn">⋮</button></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Conveyance tab ── -->
+          <div id="exppanel-conveyance" style="display:none">
+            <div class="settings-section-card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+                <div>
+                  <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Categories &amp; Limits</div>
+                  <div style="font-size:11px;color:var(--text-muted)">Create Categories of conveyance to use for conveyance creation for Conveyance Limits. The same will apply to advances as well.</div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openExpCatModal('conveyance')">+ Create Category</button>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead><tr>
+                    <th style="width:32px"><input type="checkbox" style="width:auto"></th>
+                    <th>Category</th><th>Created On</th><th>Modified On</th><th>Type</th>
+                    <th>Enable For Advances</th><th>Status</th><th>Action</th>
+                  </tr></thead>
+                  <tbody id="conv-cat-body">
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Public Transport</td><td>14/04/2026</td><td>14/04/2026</td><td>Public Transport</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+                    </tr>
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Car</td><td>14/04/2026</td><td>14/04/2026</td><td>Private Vehicle</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+                    </tr>
+                    <tr><td><input type="checkbox" style="width:auto"></td><td style="color:var(--accent);font-weight:500;cursor:pointer">Bike</td><td>14/04/2026</td><td>14/04/2026</td><td>Private Vehicle</td>
+                      <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+                      <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Advances tab ── -->
+          <div id="exppanel-advances" style="display:none">
+            <div class="settings-section-card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+                <div>
+                  <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Categories</div>
+                  <div style="font-size:11px;color:var(--text-muted)">You can only import categories for advances from existing expense or conveyance records. The limits and visibility will remain the same.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Categories imported from Expense &amp; Conveyance','info')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.36"/></svg> Import
+                </button>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead><tr>
+                    <th>Category</th>
+                    <th style="border-left:1px solid var(--border)">Type</th>
+                  </tr></thead>
+                  <tbody id="advances-body">
+                    <tr><td>Telephone bill</td><td style="border-left:1px solid var(--border)">Expense</td></tr>
+                    <tr><td>Accommodation</td><td style="border-left:1px solid var(--border)">Expense</td></tr>
+                    <tr><td>Others</td><td style="border-left:1px solid var(--border)">Expense</td></tr>
+                    <tr><td>Travel</td><td style="border-left:1px solid var(--border)">Expense</td></tr>
+                    <tr><td>Office supplies</td><td style="border-left:1px solid var(--border)">Expense</td></tr>
+                    <tr><td>Meals</td><td style="border-left:1px solid var(--border)">Expense</td></tr>
+                    <tr><td>Bike</td><td style="border-left:1px solid var(--border)">Conveyance (Private Vehicle)</td></tr>
+                    <tr><td>Car</td><td style="border-left:1px solid var(--border)">Conveyance (Private Vehicle)</td></tr>
+                    <tr><td>Public Transport</td><td style="border-left:1px solid var(--border)">Conveyance (Public Transport)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Additional Settings tab ── -->
+          <div id="exppanel-additional" style="display:none">
+
+            <!-- Team Level Settings -->
+            <div class="settings-section-card" style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <div style="font-size:14px;font-weight:700;color:var(--text-primary)">Team Level Settings</div>
+                </div>
+                <button class="btn btn-primary btn-sm">↗ Copy Team Settings</button>
+              </div>
+              <div style="margin-bottom:16px">
+                <label style="margin-top:0">Assigning To</label>
+                <select style="max-width:200px"><option>Default</option></select>
+              </div>
+
+              <!-- Expense Restrictions + Override -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+                <div style="border:1px solid var(--border);border-radius:6px;padding:14px">
+                  <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:3px">Expense Restrictions</div>
+                  <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Define how late expenses can be raised.</div>
+                  <select><option>No Restriction</option><option>Same Day</option><option>Within 7 Days</option><option>Within 30 Days</option></select>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:6px;padding:14px">
+                  <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:3px">Expense Override</div>
+                  <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Allow to override expense rules while approving expenses.</div>
+                  <select><option>Disabled</option><option>Enabled</option></select>
+                </div>
+              </div>
+
+              <!-- Expense approval methods -->
+              <div style="margin-bottom:16px">
+                <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:2px">Expense approval methods</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Reporting Hierarchy approves expenses starting with the first reporting manager till the highest manager.</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+                  <div style="display:flex;flex-direction:column;gap:12px">
+                    <label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0;cursor:pointer">
+                      <input type="radio" name="exp-approval" value="hierarchy" checked style="width:auto;accent-color:var(--accent)"> Reporting Hierarchy
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0;cursor:pointer">
+                      <input type="radio" name="exp-approval" value="fixed" style="width:auto;accent-color:var(--accent)"> Fixed Approvers
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0;cursor:pointer">
+                      <input type="radio" name="exp-approval" value="hybrid" style="width:auto;accent-color:var(--accent)"> Hybrid Approval Model
+                    </label>
+                  </div>
+                  <div>
+                    <label style="margin-top:0">Number of Admins To Restrict</label>
+                    <select><option>None (The request will be escalated to the highest-level administrator for approval)</option><option>1</option><option>2</option><option>3</option></select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Expense Backup Approval -->
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:2px">Expense Backup Approval</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Define Backup approvers who can take act on expenses if the listed approvers are not available.</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  <select><option value="">Backup Approver One</option></select>
+                  <select><option value="">Backup Approver Two</option></select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Travel Zone Configuration -->
+            <div class="settings-section-card">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:2px">Travel Zone Configuration</div>
+                  <div style="font-size:11px;color:var(--text-muted)">Configure travel zone rules based on different location parameters and restrictions. Drag and drop rows to reorder priority.</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <button class="btn btn-secondary btn-sm" title="Refresh" onclick="showToast('Travel zones refreshed','info')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  </button>
+                  <button class="btn btn-primary btn-sm" onclick="addTravelZoneRow()">+ Add Travel Zone</button>
+                  <button class="btn btn-primary btn-sm" onclick="showToast('Travel zones saved','success')">Save</button>
+                </div>
+              </div>
+              <div style="overflow-x:auto">
+                <table style="min-width:900px">
+                  <thead><tr>
+                    <th style="width:80px">Priority</th>
+                    <th>Travel Zone</th>
+                    <th>Punch In</th><th>Punch Out</th>
+                    <th>Movement Restriction</th><th>Stayed Overnight</th>
+                    <th style="width:80px">Weightage</th><th>Actions</th>
+                  </tr></thead>
+                  <tbody id="travel-zone-body">
+                    <tr>
+                      <td><span style="color:#a8a29e;cursor:grab;margin-right:6px">⠿</span><span>1</span></td>
+                      <td><input value="HQ" style="width:120px;padding:5px 8px;font-size:12px"></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option selected>Work Location</option><option>Any Location</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option selected>Work Location</option><option>Any Location</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option selected>Must Stay Within...</option><option>Must Exit</option><option>No Restriction</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option selected>Any Location</option><option>Work Location</option><option>Not Work Location</option></select></td>
+                      <td><input type="number" value="29" style="width:60px;padding:5px 8px;font-size:12px"></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="removeTravelZoneRow(this)">🗑</button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span style="color:#a8a29e;cursor:grab;margin-right:6px">⠿</span><span>2</span></td>
+                      <td><input value="EX-HQ" style="width:120px;padding:5px 8px;font-size:12px"></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option selected>Work Location</option><option>Any Location</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option selected>Work Location</option><option>Any Location</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option>Must Stay Within...</option><option selected>Must Exit</option><option>No Restriction</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option>Any Location</option><option selected>Work Location</option><option>Not Work Location</option></select></td>
+                      <td><input type="number" value="30" style="width:60px;padding:5px 8px;font-size:12px"></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="removeTravelZoneRow(this)">🗑</button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span style="color:#a8a29e;cursor:grab;margin-right:6px">⠿</span><span>3</span></td>
+                      <td><input value="OUT-STATION" style="width:120px;padding:5px 8px;font-size:12px"></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option>Work Location</option><option selected>Any Location</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option>Work Location</option><option selected>Any Location</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option>Must Stay Within...</option><option>Must Exit</option><option selected>No Restriction</option></select></td>
+                      <td><select style="font-size:11px;padding:5px 6px"><option>Any Location</option><option>Work Location</option><option selected>Not Work Location</option></select></td>
+                      <td><input type="number" value="1" style="width:60px;padding:5px 8px;font-size:12px"></td>
+                      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="removeTravelZoneRow(this)">🗑</button></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── Create Expense/Conveyance Category Modal ── -->
+        <div id="exp-cat-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(26,28,26,.45);z-index:500;display:none;align-items:center;justify-content:center" onclick="if(event.target===this)closeExpCatModal()">
+          <div id="exp-cat-modal" style="background:var(--card-bg);border-radius:10px;width:440px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.22);overflow:hidden">
+            <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+              <div id="exp-cat-modal-title" style="font-size:15px;font-weight:700;color:var(--text-primary)">Create Expense Category</div>
+              <button onclick="closeExpCatModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted);line-height:1">&times;</button>
+            </div>
+            <div style="padding:20px">
+              <label style="margin-top:0">Category Name</label>
+              <input id="exp-cat-name" placeholder="Enter your category name here">
+
+              <div id="exp-vehicle-type-section" style="display:none;margin-top:14px">
+                <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Vehicle Type</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Please choose the type of vehicle you will be using.</div>
+                <div style="display:flex;gap:20px">
+                  <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0;cursor:pointer">
+                    <input type="radio" name="exp-vehicle" value="private" checked style="width:auto;accent-color:var(--accent)"> Private Vehicle
+                  </label>
+                  <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0;cursor:pointer">
+                    <input type="radio" name="exp-vehicle" value="public" style="width:auto;accent-color:var(--accent)"> Public Transport
+                  </label>
+                </div>
+              </div>
+
+              <div style="margin-top:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Select Drivers</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Drivers are utilized to determine the visibility and constraints of categories based on the specified criteria.</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <div style="font-size:12px;font-weight:600;color:var(--text-primary)">Primary Drivers</div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+                  <span class="driver-chip active" onclick="toggleDriverChip(this)">Team</span>
+                  <span class="driver-chip" onclick="toggleDriverChip(this)">Designation</span>
+                  <span class="driver-chip locked">🔒 Travel Zone</span>
+                  <span class="driver-chip locked">🔒 City Tiers</span>
+                  <span class="driver-chip locked">🔒 Traveling Distance</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text-primary);margin-top:0;cursor:pointer">
+                    <input type="checkbox" id="exp-custom-fields" style="width:auto;accent-color:var(--accent)"> Custom Fields
+                  </label>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <div style="font-size:11px;color:#695d4a;margin-top:10px">
+                  Note: You have the ability to adjust the driver later to suit your requirement and also can use custom fields on employees.
+                </div>
+              </div>
+            </div>
+            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+              <button class="btn btn-secondary" onclick="closeExpCatModal()">Cancel</button>
+              <button class="btn btn-primary" id="exp-cat-submit-btn" onclick="submitExpCat()">Create</button>
+            </div>
           </div>
         </div>
 
@@ -5469,6 +5826,114 @@ async function submitSupportTicket(){
   }finally{btn.textContent='Submit Ticket';btn.disabled=false;}
 }
 
+// ── Expense Settings ─────────────────────────────────────────────────────────
+const EXP_TABS = ['expense','conveyance','advances','additional'];
+function switchExpTab(name){
+  EXP_TABS.forEach(t=>{
+    document.getElementById('exppanel-'+t).style.display = t===name ? 'block' : 'none';
+    document.getElementById('exptab-'+t).classList.toggle('active', t===name);
+  });
+}
+
+let _expCatType = 'expense';
+function openExpCatModal(type){
+  _expCatType = type;
+  document.getElementById('exp-cat-modal-title').textContent =
+    type === 'conveyance' ? 'Create Conveyance Category' : 'Create Expense Category';
+  document.getElementById('exp-vehicle-type-section').style.display =
+    type === 'conveyance' ? 'block' : 'none';
+  document.getElementById('exp-cat-name').value = '';
+  const bg = document.getElementById('exp-cat-modal-bg');
+  bg.style.display = 'flex';
+}
+function closeExpCatModal(){
+  document.getElementById('exp-cat-modal-bg').style.display = 'none';
+}
+function submitExpCat(){
+  const name = document.getElementById('exp-cat-name').value.trim();
+  if(!name){ showToast('Please enter a category name','error'); return; }
+  const today = new Date();
+  const d = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`;
+  if(_expCatType === 'conveyance'){
+    const vType = document.querySelector('input[name="exp-vehicle"]:checked').value;
+    const typeLabel = vType === 'private' ? 'Private Vehicle' : 'Public Transport';
+    const tbody = document.getElementById('conv-cat-body');
+    tbody.insertAdjacentHTML('beforeend',
+      `<tr><td><input type="checkbox" style="width:auto"></td>
+       <td style="color:var(--accent);font-weight:500;cursor:pointer">${name}</td>
+       <td>${d}</td><td>${d}</td><td>${typeLabel}</td>
+       <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+       <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+       <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+       </tr>`);
+  } else {
+    const tbody = document.getElementById('exp-cat-body');
+    tbody.insertAdjacentHTML('beforeend',
+      `<tr><td><input type="checkbox" style="width:auto"></td>
+       <td style="color:var(--accent);font-weight:500;cursor:pointer">${name}</td>
+       <td>${d}</td><td>${d}</td>
+       <td><label class="tog"><input type="checkbox" checked onchange="syncExpAdvances()"><span class="tog-slider"></span></label></td>
+       <td><label class="tog"><input type="checkbox" checked><span class="tog-slider"></span></label></td>
+       <td><button class="icon-btn">⋮</button></td>
+       <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="this.closest('tr').remove();syncExpAdvances()">🗑</button></div></td>
+       </tr>`);
+  }
+  syncExpAdvances();
+  closeExpCatModal();
+  showToast('Category created','success');
+}
+
+function syncExpAdvances(){
+  const tbody = document.getElementById('advances-body');
+  tbody.innerHTML = '';
+  // expense rows
+  document.querySelectorAll('#exp-cat-body tr').forEach(tr=>{
+    const name = tr.cells[1]?.textContent?.trim();
+    if(name) tbody.insertAdjacentHTML('beforeend',
+      `<tr><td>${name}</td><td style="border-left:1px solid var(--border)">Expense</td></tr>`);
+  });
+  // conveyance rows
+  document.querySelectorAll('#conv-cat-body tr').forEach(tr=>{
+    const name = tr.cells[1]?.textContent?.trim();
+    const type = tr.cells[4]?.textContent?.trim() || 'Private Vehicle';
+    if(name) tbody.insertAdjacentHTML('beforeend',
+      `<tr><td>${name}</td><td style="border-left:1px solid var(--border)">Conveyance (${type})</td></tr>`);
+  });
+}
+
+function addTravelZoneRow(){
+  const tbody = document.getElementById('travel-zone-body');
+  const n = tbody.querySelectorAll('tr').length + 1;
+  const opts = (sel='') => ['Work Location','Any Location','Not Work Location','Must Stay Within...','Must Exit','No Restriction']
+    .map(o=>`<option${o===sel?' selected':''}>${o}</option>`).join('');
+  tbody.insertAdjacentHTML('beforeend',
+    `<tr>
+      <td><span style="color:#a8a29e;cursor:grab;margin-right:6px">⠿</span><span>${n}</span></td>
+      <td><input value="NEW ZONE" style="width:120px;padding:5px 8px;font-size:12px"></td>
+      <td><select style="font-size:11px;padding:5px 6px">${opts('Any Location')}</select></td>
+      <td><select style="font-size:11px;padding:5px 6px">${opts('Any Location')}</select></td>
+      <td><select style="font-size:11px;padding:5px 6px">${opts('No Restriction')}</select></td>
+      <td><select style="font-size:11px;padding:5px 6px">${opts('Any Location')}</select></td>
+      <td><input type="number" value="1" style="width:60px;padding:5px 8px;font-size:12px"></td>
+      <td><div style="display:flex;gap:6px"><button class="lh-action-btn edit">⧉</button><button class="lh-action-btn del" onclick="removeTravelZoneRow(this)">🗑</button></div></td>
+     </tr>`);
+  renumberTravelZones();
+}
+function removeTravelZoneRow(btn){
+  btn.closest('tr').remove();
+  renumberTravelZones();
+}
+function renumberTravelZones(){
+  document.querySelectorAll('#travel-zone-body tr').forEach((tr,i)=>{
+    const numEl = tr.querySelector('td:first-child span:last-child');
+    if(numEl) numEl.textContent = i+1;
+  });
+}
+function toggleDriverChip(el){
+  if(el.classList.contains('locked')) return;
+  el.classList.toggle('active');
+}
+
 // ── Leaves & Holidays ────────────────────────────────────────────────────────
 function switchLHTab(name){
   ['leaves','holidays'].forEach(t=>{
@@ -5521,7 +5986,7 @@ function submitLeavePolicy(){
 }
 
 // ── Settings sub-navigation ──────────────────────────────────────────────────
-const SETTINGS_SUBS=['account','att-settings','leave-settings','location-settings'];
+const SETTINGS_SUBS=['account','att-settings','leave-settings','location-settings','expense-settings'];
 function showSettingsSub(name){
   SETTINGS_SUBS.forEach(s=>{
     const el=document.getElementById('ssub-'+s);
